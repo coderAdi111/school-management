@@ -184,6 +184,13 @@ A full-stack School Management System designed to manage students, teachers, cla
 
 \---
 
+## 👨‍💻 Developer
+
+**Aditya Gaur**
+
+GitHub: [@coderAdi111](https://github.com/coderAdi111)
+
+
 
 
 \## 📁 Project Structure
@@ -230,9 +237,3 @@ school-management/
 
 └── .gitignore
 
-
-## 👨‍💻 Developer
-
-**Aditya Gaur**
-
-GitHub: [@coderAdi111](https://github.com/coderAdi111)
