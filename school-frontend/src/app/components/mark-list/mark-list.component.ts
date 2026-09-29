@@ -1,4 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ChangeDetectorRef
+} from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -45,13 +50,14 @@ export class MarkListComponent implements OnInit {
   formMark: Mark = this.emptyMark();
 
   private classUrl =
-  'https://school-management-vy1j.onrender.com/api/classes';
+    'https://school-management-vy1j.onrender.com/api/classes';
 
 
   constructor(
     private markService: MarkService,
     private studentService: StudentService,
-    private http: HttpClient
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
   ) {}
 
 
@@ -79,24 +85,40 @@ export class MarkListComponent implements OnInit {
 
     this.errorMessage = '';
 
+    this.cdr.detectChanges();
+
     this.markService.getAll().subscribe({
 
       next: (data: Mark[]) => {
 
         console.log(
-          'Marks loaded:',
+          'MARKS DATA RECEIVED:',
           data
         );
 
         this.marks = data ?? [];
 
         this.loading = false;
+
+        this.errorMessage = '';
+
+        console.log(
+          'MARKS ARRAY:',
+          this.marks
+        );
+
+        console.log(
+          'LOADING:',
+          this.loading
+        );
+
+        this.cdr.detectChanges();
       },
 
       error: (error: any) => {
 
         console.error(
-          'Error loading marks:',
+          'ERROR LOADING MARKS:',
           error
         );
 
@@ -104,6 +126,8 @@ export class MarkListComponent implements OnInit {
 
         this.errorMessage =
           'Unable to load marks.';
+
+        this.cdr.detectChanges();
       }
 
     });
@@ -126,6 +150,8 @@ export class MarkListComponent implements OnInit {
         );
 
         this.students = data ?? [];
+
+        this.cdr.detectChanges();
       },
 
       error: (error: any) => {
@@ -158,6 +184,8 @@ export class MarkListComponent implements OnInit {
           );
 
           this.classes = data ?? [];
+
+          this.cdr.detectChanges();
         },
 
         error: (error: any) => {
@@ -214,6 +242,8 @@ export class MarkListComponent implements OnInit {
       this.emptyMark();
 
     this.showForm = true;
+
+    this.cdr.detectChanges();
   }
 
 
@@ -255,6 +285,8 @@ export class MarkListComponent implements OnInit {
     };
 
     this.showForm = true;
+
+    this.cdr.detectChanges();
   }
 
 
@@ -272,6 +304,8 @@ export class MarkListComponent implements OnInit {
 
     this.formMark =
       this.emptyMark();
+
+    this.cdr.detectChanges();
   }
 
 
@@ -328,6 +362,8 @@ export class MarkListComponent implements OnInit {
         selectedClass ??
         selectedStudent.classRoom;
     }
+
+    this.cdr.detectChanges();
   }
 
 
@@ -361,6 +397,8 @@ export class MarkListComponent implements OnInit {
 
     this.formMark.classRoom =
       selectedClass;
+
+    this.cdr.detectChanges();
   }
 
 
@@ -480,6 +518,8 @@ export class MarkListComponent implements OnInit {
 
     this.saving = true;
 
+    this.cdr.detectChanges();
+
 
     // =========================
     // PREPARE MARK
@@ -577,6 +617,8 @@ export class MarkListComponent implements OnInit {
 
           this.saving = false;
 
+          this.cdr.detectChanges();
+
           alert(
             'Failed to update marks.'
           );
@@ -613,6 +655,8 @@ export class MarkListComponent implements OnInit {
           );
 
           this.saving = false;
+
+          this.cdr.detectChanges();
 
           alert(
             'Failed to add marks.'
