@@ -1,0 +1,416 @@
+<div class="student-form-page">
+
+  <!-- ================================
+       HEADER
+  ================================= -->
+
+  <div class="page-header">
+
+    <div>
+
+      <h2>
+        {{ editing ? 'Edit Student' : 'Add New Student' }}
+      </h2>
+
+      <p>
+        {{
+          editing
+            ? 'Update student information'
+            : 'Enter student information'
+        }}
+      </p>
+
+    </div>
+
+    <button
+      type="button"
+      class="btn-back"
+      (click)="cancel()"
+    >
+      ← Back to Students
+    </button>
+
+  </div>
+
+
+  <!-- ================================
+       ERROR
+  ================================= -->
+
+  <div
+    *ngIf="errorMessage"
+    class="error-message"
+  >
+    {{ errorMessage }}
+  </div>
+
+
+  <!-- ================================
+       LOADING
+  ================================= -->
+
+  <div
+    *ngIf="loading"
+    class="loading-box"
+  >
+    Loading student...
+  </div>
+
+
+  <!-- ================================
+       FORM
+  ================================= -->
+
+  <div
+    *ngIf="!loading"
+    class="form-card"
+  >
+
+    <form
+      (ngSubmit)="saveStudent()"
+      #studentForm="ngForm"
+    >
+
+
+      <!-- ================================
+           PERSONAL INFORMATION
+      ================================= -->
+
+      <div class="section-title">
+
+        <div class="section-icon">
+          👨‍🎓
+        </div>
+
+        <div>
+
+          <h3>
+            Personal Information
+          </h3>
+
+          <p>
+            Basic details of the student
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="form-grid">
+
+
+        <!-- FIRST NAME -->
+
+        <div class="form-group">
+
+          <label>
+            First Name
+            <span>*</span>
+          </label>
+
+          <input
+            type="text"
+            name="firstName"
+            [(ngModel)]="student.firstName"
+            placeholder="Enter first name"
+            required
+          />
+
+        </div>
+
+
+        <!-- LAST NAME -->
+
+        <div class="form-group">
+
+          <label>
+            Last Name
+            <span>*</span>
+          </label>
+
+          <input
+            type="text"
+            name="lastName"
+            [(ngModel)]="student.lastName"
+            placeholder="Enter last name"
+            required
+          />
+
+        </div>
+
+
+        <!-- EMAIL -->
+
+        <div class="form-group">
+
+          <label>
+            Email
+            <span>*</span>
+          </label>
+
+          <input
+            type="email"
+            name="email"
+            [(ngModel)]="student.email"
+            placeholder="student@example.com"
+            required
+          />
+
+        </div>
+
+
+        <!-- PHONE -->
+
+        <div class="form-group">
+
+          <label>
+            Phone
+          </label>
+
+          <input
+            type="tel"
+            name="phone"
+            [(ngModel)]="student.phone"
+            placeholder="Enter phone number"
+          />
+
+        </div>
+
+
+        <!-- DATE OF BIRTH -->
+
+        <div class="form-group">
+
+          <label>
+            Date of Birth
+          </label>
+
+          <input
+            type="date"
+            name="dateOfBirth"
+            [(ngModel)]="student.dateOfBirth"
+          />
+
+        </div>
+
+
+        <!-- ENROLLMENT DATE -->
+
+        <div class="form-group">
+
+          <label>
+            Enrollment Date
+          </label>
+
+          <input
+            type="date"
+            name="enrollmentDate"
+            [(ngModel)]="student.enrollmentDate"
+          />
+
+        </div>
+
+
+        <!-- ================================
+             CLASS
+        ================================= -->
+
+        <div class="form-group">
+
+          <label>
+            Class
+            <span>*</span>
+          </label>
+
+          <select
+            name="classRoom"
+            [ngModel]="student.classRoom?.id || ''"
+            (ngModelChange)="selectClass($event)"
+            [disabled]="loadingClasses"
+            required
+          >
+
+            <option
+              value=""
+              disabled
+            >
+              {{
+                loadingClasses
+                  ? 'Loading classes...'
+                  : 'Select class'
+              }}
+            </option>
+
+            <option
+              *ngFor="let classroom of classes"
+              [value]="classroom.id"
+            >
+
+              {{ classroom.name }}
+
+              <span
+                *ngIf="classroom.section"
+              >
+                - {{ classroom.section }}
+              </span>
+
+              <span
+                *ngIf="classroom.grade"
+              >
+                (Grade {{ classroom.grade }})
+              </span>
+
+            </option>
+
+          </select>
+
+        </div>
+
+
+      </div>
+
+
+      <!-- ================================
+           ADDRESS
+      ================================= -->
+
+      <div class="section-title">
+
+        <div class="section-icon">
+          📍
+        </div>
+
+        <div>
+
+          <h3>
+            Address
+          </h3>
+
+          <p>
+            Student residential address
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group full-width">
+
+        <label>
+          Address
+        </label>
+
+        <textarea
+          name="address"
+          [(ngModel)]="student.address"
+          placeholder="Enter student address"
+          rows="4"
+        ></textarea>
+
+      </div>
+
+
+      <!-- ================================
+           STATUS
+      ================================= -->
+
+      <div class="section-title">
+
+        <div class="section-icon">
+          ⚙️
+        </div>
+
+        <div>
+
+          <h3>
+            Student Status
+          </h3>
+
+          <p>
+            Current student status
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="form-group">
+
+        <label>
+          Status
+        </label>
+
+        <select
+          name="status"
+          [(ngModel)]="student.status"
+        >
+
+          <option value="ACTIVE">
+            Active
+          </option>
+
+          <option value="INACTIVE">
+            Inactive
+          </option>
+
+          <option value="GRADUATED">
+            Graduated
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- ================================
+           ACTIONS
+      ================================= -->
+
+      <div class="form-actions">
+
+        <button
+          type="button"
+          class="btn-cancel"
+          (click)="cancel()"
+          [disabled]="saving"
+        >
+          Cancel
+        </button>
+
+
+        <button
+          type="submit"
+          class="btn-submit"
+          [disabled]="
+            saving ||
+            studentForm.invalid ||
+            !student.classRoom?.id
+          "
+        >
+
+          <span *ngIf="!saving">
+
+            {{
+              editing
+                ? 'Update Student'
+                : 'Add Student'
+            }}
+
+          </span>
+
+          <span *ngIf="saving">
+            Saving...
+          </span>
+
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>

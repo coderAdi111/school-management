@@ -1,0 +1,481 @@
+<div class="container-fluid py-4">
+
+  <!-- HEADER -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+
+    <h2 class="mb-0">
+      Marks
+    </h2>
+
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="openAddForm()"
+    >
+      + Add Marks
+    </button>
+
+  </div>
+
+
+  <!-- ADD / EDIT FORM -->
+  <div
+    class="card mb-4"
+    *ngIf="showForm"
+  >
+
+    <div class="card-header">
+
+      <h5 class="mb-0">
+        {{ editing ? 'Edit Marks' : 'Add New Marks' }}
+      </h5>
+
+    </div>
+
+
+    <div class="card-body">
+
+      <div class="row g-3">
+
+
+        <!-- STUDENT -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Student
+          </label>
+
+          <select
+            class="form-select"
+            [value]="formMark.student?.id ?? ''"
+            (change)="onStudentChange($event)"
+          >
+
+            <option value="">
+              -- Select Student --
+            </option>
+
+            <option
+              *ngFor="let student of students"
+              [value]="student.id"
+            >
+
+              {{ student.firstName }}
+              {{ student.lastName }}
+
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <!-- CLASS -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Class
+          </label>
+
+          <select
+            class="form-select"
+            [value]="formMark.classRoom?.id ?? ''"
+            (change)="onClassChange($event)"
+          >
+
+            <option value="">
+              -- Select Class --
+            </option>
+
+            <option
+              *ngFor="let cls of classes"
+              [value]="cls.id"
+            >
+
+              {{ cls.name }}
+
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <!-- SUBJECT -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Subject
+          </label>
+
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="formMark.subject"
+            placeholder="e.g. Mathematics"
+          >
+
+        </div>
+
+
+        <!-- EXAM TYPE -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Exam Type
+          </label>
+
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="formMark.examType"
+            placeholder="e.g. Mid Term"
+          >
+
+        </div>
+
+
+        <!-- MARKS OBTAINED -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Marks Obtained
+          </label>
+
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="formMark.marksObtained"
+            min="0"
+            step="0.01"
+            placeholder="Enter marks"
+          >
+
+        </div>
+
+
+        <!-- TOTAL MARKS -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Total Marks
+          </label>
+
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="formMark.totalMarks"
+            min="1"
+            step="0.01"
+            placeholder="e.g. 100"
+          >
+
+        </div>
+
+
+        <!-- EXAM DATE -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Exam Date
+          </label>
+
+          <input
+            type="date"
+            class="form-control"
+            [(ngModel)]="formMark.examDate"
+          >
+
+        </div>
+
+
+        <!-- REMARKS -->
+        <div class="col-md-8">
+
+          <label class="form-label">
+            Remarks
+          </label>
+
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="formMark.remarks"
+            placeholder="Optional remarks"
+          >
+
+        </div>
+
+      </div>
+
+
+      <!-- BUTTONS -->
+      <div class="mt-4">
+
+        <button
+          type="button"
+          class="btn btn-success me-2"
+          [disabled]="saving"
+          (click)="saveMark()"
+        >
+
+          {{
+            saving
+              ? 'Saving...'
+              : (editing ? 'Update Marks' : 'Save Marks')
+          }}
+
+        </button>
+
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="saving"
+          (click)="closeForm()"
+        >
+
+          Cancel
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- LOADING -->
+  <div
+    *ngIf="loading"
+    class="alert alert-info"
+  >
+
+    Loading marks...
+
+  </div>
+
+
+  <!-- ERROR -->
+  <div
+    *ngIf="errorMessage"
+    class="alert alert-danger"
+  >
+
+    {{ errorMessage }}
+
+  </div>
+
+
+  <!-- MARKS TABLE -->
+  <div
+    class="card"
+    *ngIf="!loading && !errorMessage"
+  >
+
+    <div class="card-header">
+
+      <h5 class="mb-0">
+        Marks Records
+      </h5>
+
+    </div>
+
+
+    <div class="card-body p-0">
+
+      <div class="table-responsive">
+
+        <table
+          class="table table-striped table-hover mb-0"
+        >
+
+          <thead class="table-dark">
+
+            <tr>
+
+              <th>
+                Student
+              </th>
+
+              <th>
+                Class
+              </th>
+
+              <th>
+                Subject
+              </th>
+
+              <th>
+                Exam
+              </th>
+
+              <th>
+                Marks
+              </th>
+
+              <th>
+                %
+              </th>
+
+              <th>
+                Grade
+              </th>
+
+              <th>
+                Exam Date
+              </th>
+
+              <th style="width: 160px;">
+                Actions
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            <tr
+              *ngFor="let m of marks"
+            >
+
+              <!-- STUDENT -->
+              <td>
+
+                <strong>
+
+                  {{ m.student?.firstName }}
+                  {{ m.student?.lastName }}
+
+                </strong>
+
+              </td>
+
+
+              <!-- CLASS -->
+              <td>
+
+                {{ m.classRoom?.name }}
+
+              </td>
+
+
+              <!-- SUBJECT -->
+              <td>
+
+                {{ m.subject }}
+
+              </td>
+
+
+              <!-- EXAM -->
+              <td>
+
+                {{ m.examType }}
+
+              </td>
+
+
+              <!-- MARKS -->
+              <td>
+
+                {{ m.marksObtained }}
+                /
+                {{ m.totalMarks }}
+
+              </td>
+
+
+              <!-- PERCENTAGE -->
+              <td>
+
+                {{ getPercentage(m) | number:'1.1-1' }}%
+
+              </td>
+
+
+              <!-- GRADE -->
+              <td>
+
+                <span
+                  class="badge"
+                  [class.bg-success]="getGrade(m) === 'A+' || getGrade(m) === 'A'"
+                  [class.bg-primary]="getGrade(m) === 'B'"
+                  [class.bg-warning]="getGrade(m) === 'C' || getGrade(m) === 'D'"
+                  [class.text-dark]="getGrade(m) === 'C' || getGrade(m) === 'D'"
+                  [class.bg-danger]="getGrade(m) === 'F'"
+                >
+
+                  {{ getGrade(m) }}
+
+                </span>
+
+              </td>
+
+
+              <!-- DATE -->
+              <td>
+
+                {{ m.examDate }}
+
+              </td>
+
+
+              <!-- ACTIONS -->
+              <td>
+
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary me-2"
+                  (click)="openEditForm(m)"
+                >
+
+                  Edit
+
+                </button>
+
+
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="deleteMark(m)"
+                >
+
+                  Delete
+
+                </button>
+
+              </td>
+
+            </tr>
+
+
+            <!-- EMPTY -->
+            <tr
+              *ngIf="marks.length === 0"
+            >
+
+              <td
+                colspan="9"
+                class="text-center py-4"
+              >
+
+                No marks records found.
+
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,255 @@
+.dashboard-container {
+  padding: 30px;
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.dashboard-header p {
+  margin: 6px 0 0;
+  color: #6b7280;
+}
+
+.refresh-btn {
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 11px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.refresh-btn:hover {
+  background: #1d4ed8;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+/* MAIN STAT CARDS */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 14px;
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.stat-icon {
+  width: 55px;
+  height: 55px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 27px;
+  background: #eef2ff;
+}
+
+.stat-title {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.stat-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
+
+/* SUMMARY */
+
+.summary-card {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.section-title {
+  margin-bottom: 20px;
+}
+
+.section-title h2 {
+  margin: 0;
+  font-size: 21px;
+  color: #172033;
+}
+
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.summary-item {
+  padding: 18px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+}
+
+.summary-item span {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.summary-item strong {
+  font-size: 22px;
+}
+
+
+/* ATTENDANCE */
+
+.present strong {
+  color: #16a34a;
+}
+
+.absent strong {
+  color: #dc2626;
+}
+
+.late strong {
+  color: #d97706;
+}
+
+.excused strong {
+  color: #2563eb;
+}
+
+
+/* FEES */
+
+.pending strong {
+  color: #d97706;
+}
+
+.paid strong {
+  color: #16a34a;
+}
+
+.overdue strong {
+  color: #dc2626;
+}
+
+.waived strong {
+  color: #6b7280;
+}
+
+
+/* MARKS */
+
+.average-box {
+  text-align: center;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.average-label {
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.average-number {
+  font-size: 42px;
+  font-weight: 700;
+  color: #2563eb;
+  margin: 8px 0;
+}
+
+.average-info {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+
+/* LOADING */
+
+.loading-box {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  text-align: center;
+  color: #2563eb;
+}
+
+
+/* ERROR */
+
+.error-box {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 1000px) {
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+
+  .dashboard-container {
+    padding: 15px;
+  }
+
+  .dashboard-header {
+    align-items: flex-start;
+    gap: 15px;
+    flex-direction: column;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

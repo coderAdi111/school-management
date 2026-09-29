@@ -1,0 +1,178 @@
+<div class="container-fluid py-4">
+
+  <h2>Attendance</h2>
+
+  <!-- Filter Section -->
+  <div class="card mb-3">
+    <div class="card-body">
+
+      <div class="row g-3">
+
+        <!-- Class -->
+        <div class="col-md-4">
+          <label class="form-label">Class</label>
+
+          <select
+            class="form-select"
+            [value]="selectedClassId ?? ''"
+            (change)="onClassChange($event)"
+          >
+            <option value="">-- Select Class --</option>
+
+            <option
+              *ngFor="let c of classes"
+              [value]="c.id"
+            >
+              {{ c.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Date -->
+        <div class="col-md-3">
+          <label class="form-label">Date</label>
+
+          <input
+            type="date"
+            class="form-control"
+            [value]="selectedDate"
+            (input)="selectedDate = $any($event.target).value"
+          />
+        </div>
+
+        <!-- Load Button -->
+        <div class="col-md-2 d-flex align-items-end">
+          <button
+            type="button"
+            class="btn btn-primary w-100"
+            (click)="loadAttendance()"
+          >
+            Load
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- Attendance Table -->
+  <div class="card" *ngIf="markingMode">
+
+    <div class="card-body p-0">
+
+      <div class="table-responsive">
+
+        <table class="table table-hover mb-0">
+
+          <thead class="table-dark">
+            <tr>
+              <th>Student</th>
+              <th>Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            <tr *ngFor="let a of attendanceList">
+
+              <!-- Student -->
+              <td>
+                <strong>
+                  {{ a.student?.firstName }}
+                  {{ a.student?.lastName }}
+                </strong>
+              </td>
+
+              <!-- Status -->
+              <td>
+
+                <div class="btn-group btn-group-sm">
+
+                  <!-- PRESENT -->
+                  <button
+                    type="button"
+                    class="btn"
+                    [class.btn-success]="a.status === 'PRESENT'"
+                    [class.btn-outline-success]="a.status !== 'PRESENT'"
+                    (click)="updateStatus(a, 'PRESENT')"
+                  >
+                    PRESENT
+                  </button>
+
+                  <!-- ABSENT -->
+                  <button
+                    type="button"
+                    class="btn"
+                    [class.btn-danger]="a.status === 'ABSENT'"
+                    [class.btn-outline-danger]="a.status !== 'ABSENT'"
+                    (click)="updateStatus(a, 'ABSENT')"
+                  >
+                    ABSENT
+                  </button>
+
+                  <!-- LATE -->
+                  <button
+                    type="button"
+                    class="btn"
+                    [class.btn-warning]="a.status === 'LATE'"
+                    [class.btn-outline-warning]="a.status !== 'LATE'"
+                    (click)="updateStatus(a, 'LATE')"
+                  >
+                    LATE
+                  </button>
+
+                  <!-- EXCUSED -->
+                  <button
+                    type="button"
+                    class="btn"
+                    [class.btn-info]="a.status === 'EXCUSED'"
+                    [class.btn-outline-info]="a.status !== 'EXCUSED'"
+                    (click)="updateStatus(a, 'EXCUSED')"
+                  >
+                    EXCUSED
+                  </button>
+
+                </div>
+
+              </td>
+
+              <!-- Remarks -->
+              <td>
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  [value]="a.remarks || ''"
+                  (input)="a.remarks = $any($event.target).value"
+                  placeholder="Optional remarks"
+                />
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+    <!-- Save -->
+    <div class="card-footer">
+
+      <button
+        type="button"
+        class="btn btn-success"
+        (click)="saveAttendance()"
+      >
+        Save Attendance
+      </button>
+
+    </div>
+
+  </div>
+
+</div>

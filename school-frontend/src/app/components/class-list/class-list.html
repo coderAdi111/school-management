@@ -1,0 +1,488 @@
+<div class="classes-page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+
+    <div>
+      <h1>Classes</h1>
+
+      <p>
+        Manage school classes and class teachers
+      </p>
+    </div>
+
+    <button
+      class="add-btn"
+      type="button"
+      (click)="openAddForm()"
+    >
+      + Add Class
+    </button>
+
+  </div>
+
+
+  <!-- ERROR -->
+  <div
+    class="error-message"
+    *ngIf="errorMessage"
+  >
+    {{ errorMessage }}
+  </div>
+
+
+  <!-- LOADING -->
+  <div
+    class="loading-box"
+    *ngIf="loading"
+  >
+    Loading classes...
+  </div>
+
+
+  <!-- CLASS LIST -->
+  <div
+    class="table-card"
+    *ngIf="!loading"
+  >
+
+    <div class="table-header">
+
+      <div>
+        <h2>Class List</h2>
+
+        <span>
+          {{ classes.length }} class(es)
+        </span>
+      </div>
+
+    </div>
+
+
+    <!-- EMPTY -->
+    <div
+      class="empty-state"
+      *ngIf="classes.length === 0"
+    >
+
+      <div class="empty-icon">
+        🏫
+      </div>
+
+      <h3>No classes found</h3>
+
+      <p>
+        Add a class to get started.
+      </p>
+
+    </div>
+
+
+    <!-- TABLE -->
+    <div
+      class="table-wrapper"
+      *ngIf="classes.length > 0"
+    >
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>ID</th>
+
+            <th>Class</th>
+
+            <th>Grade</th>
+
+            <th>Section</th>
+
+            <th>Class Teacher</th>
+
+            <th>Capacity</th>
+
+            <th>Actions</th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody>
+
+          <tr
+            *ngFor="let classRoom of classes"
+          >
+
+            <!-- ID -->
+            <td>
+
+              <span class="id-badge">
+                #{{ classRoom.id }}
+              </span>
+
+            </td>
+
+
+            <!-- CLASS -->
+            <td>
+
+              <div class="class-info">
+
+                <div class="class-icon">
+                  🏫
+                </div>
+
+                <div>
+
+                  <strong>
+                    {{ classRoom.name }}
+                  </strong>
+
+                  <small>
+                    School Class
+                  </small>
+
+                </div>
+
+              </div>
+
+            </td>
+
+
+            <!-- GRADE -->
+            <td>
+              <span class="grade-badge">
+                Grade {{ classRoom.grade }}
+              </span>
+            </td>
+
+
+            <!-- SECTION -->
+            <td>
+              {{ classRoom.section || '—' }}
+            </td>
+
+
+            <!-- TEACHER -->
+            <td>
+
+              <div
+                class="teacher-info"
+                *ngIf="classRoom.teacher"
+              >
+
+                <div class="teacher-avatar">
+
+                  {{
+                    classRoom.teacher.firstName
+                      ? classRoom.teacher.firstName.charAt(0)
+                      : 'T'
+                  }}
+
+                </div>
+
+                <div>
+
+                  <strong>
+                    {{
+                      getTeacherName(
+                        classRoom.teacher
+                      )
+                    }}
+                  </strong>
+
+                  <small>
+                    {{
+                      classRoom.teacher.subject
+                        || 'Teacher'
+                    }}
+                  </small>
+
+                </div>
+
+              </div>
+
+
+              <span
+                class="not-assigned"
+                *ngIf="!classRoom.teacher"
+              >
+                Not Assigned
+              </span>
+
+            </td>
+
+
+            <!-- CAPACITY -->
+            <td>
+
+              <span class="capacity-badge">
+                👥 {{ classRoom.capacity || 0 }}
+              </span>
+
+            </td>
+
+
+            <!-- ACTIONS -->
+            <td>
+
+              <div class="action-buttons">
+
+                <button
+                  class="edit-btn"
+                  type="button"
+                  (click)="openEditForm(classRoom)"
+                  title="Edit"
+                >
+                  ✏️
+                </button>
+
+                <button
+                  class="delete-btn"
+                  type="button"
+                  (click)="deleteClass(classRoom)"
+                  title="Delete"
+                >
+                  🗑️
+                </button>
+
+              </div>
+
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+  <!-- ADD / EDIT MODAL -->
+  <div
+    class="modal-backdrop"
+    *ngIf="showForm"
+    (click)="closeForm()"
+  >
+
+    <div
+      class="class-modal"
+      (click)="$event.stopPropagation()"
+    >
+
+      <!-- MODAL HEADER -->
+      <div class="modal-header">
+
+        <div>
+
+          <h2>
+            {{
+              editing
+                ? 'Edit Class'
+                : 'Add Class'
+            }}
+          </h2>
+
+          <p>
+            {{
+              editing
+                ? 'Update class information'
+                : 'Enter class information'
+            }}
+          </p>
+
+        </div>
+
+
+        <button
+          class="close-btn"
+          type="button"
+          (click)="closeForm()"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <!-- FORM -->
+      <form
+        (ngSubmit)="saveClass()"
+      >
+
+        <div class="form-grid">
+
+          <!-- CLASS NAME -->
+          <div class="form-group">
+
+            <label>
+              Class Name *
+            </label>
+
+            <input
+              type="text"
+              name="name"
+              [(ngModel)]="formClass.name"
+              placeholder="e.g. Class 10-A"
+            />
+
+          </div>
+
+
+          <!-- GRADE -->
+          <div class="form-group">
+
+            <label>
+              Grade *
+            </label>
+
+            <input
+              type="text"
+              name="grade"
+              [(ngModel)]="formClass.grade"
+              placeholder="e.g. 10"
+            />
+
+          </div>
+
+
+          <!-- SECTION -->
+          <div class="form-group">
+
+            <label>
+              Section
+            </label>
+
+            <input
+              type="text"
+              name="section"
+              [(ngModel)]="formClass.section"
+              placeholder="e.g. A"
+            />
+
+          </div>
+
+
+          <!-- CAPACITY -->
+          <div class="form-group">
+
+            <label>
+              Capacity *
+            </label>
+
+            <input
+              type="number"
+              name="capacity"
+              [(ngModel)]="formClass.capacity"
+              min="1"
+              placeholder="30"
+            />
+
+          </div>
+
+
+          <!-- TEACHER -->
+          <div class="form-group full-width">
+
+            <label>
+              Class Teacher *
+            </label>
+
+
+            <select
+              name="teacher"
+              [ngModel]="formClass.teacher?.id || ''"
+              (ngModelChange)="
+                formClass.teacher =
+                  teachers.find(
+                    t => t.id === +$event
+                  )
+              "
+              [disabled]="loadingTeachers"
+            >
+
+              <option
+                value=""
+                disabled
+              >
+                {{
+                  loadingTeachers
+                    ? 'Loading teachers...'
+                    : 'Select class teacher'
+                }}
+              </option>
+
+
+              <option
+                *ngFor="let teacher of teachers"
+                [value]="teacher.id"
+              >
+
+                {{ teacher.firstName }}
+                {{ teacher.lastName }}
+
+                <span
+                  *ngIf="teacher.subject"
+                >
+                  - {{ teacher.subject }}
+                </span>
+
+              </option>
+
+            </select>
+
+            <small
+              class="field-help"
+              *ngIf="teachers.length === 0 && !loadingTeachers"
+            >
+              No teachers available. Add a teacher first.
+            </small>
+
+          </div>
+
+        </div>
+
+
+        <!-- ACTIONS -->
+        <div class="form-actions">
+
+          <button
+            type="button"
+            class="cancel-btn"
+            (click)="closeForm()"
+            [disabled]="saving"
+          >
+            Cancel
+          </button>
+
+
+          <button
+            type="submit"
+            class="save-btn"
+            [disabled]="saving || loadingTeachers"
+          >
+
+            {{
+              saving
+                ? 'Saving...'
+                : editing
+                  ? 'Update Class'
+                  : 'Add Class'
+            }}
+
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</div>

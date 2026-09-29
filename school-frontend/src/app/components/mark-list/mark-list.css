@@ -1,0 +1,18 @@
+/* Shared table styling */
+table {
+  font-size: 0.95rem;
+}
+
+h2 {
+  font-weight: 600;
+  color: #343a40;
+}
+
+.card {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* Status badges */
+.badge.bg-success { background-color: #28a745 !important; }
+.badge.bg-warning { background-color: #ffc107 !important; }
+.badge.bg-danger { background-color: #dc3545 !important; }

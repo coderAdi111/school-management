@@ -1,0 +1,6 @@
+/* Import Bootstrap CSS. This makes all Bootstrap classes available site-wide. */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+/* Import Bootstrap Icons */
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+/* Global overrides */
+body { background-color: #f8f9fa; }

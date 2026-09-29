@@ -1,0 +1,151 @@
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- BRAND -->
+    <div class="brand">
+
+      <div class="brand-icon">
+        🏫
+      </div>
+
+      <div>
+        <h2>School</h2>
+        <span>Management</span>
+      </div>
+
+    </div>
+
+
+    <!-- NAVIGATION -->
+    <nav class="sidebar-nav">
+
+      <!-- DASHBOARD -->
+      <a
+        href="/dashboard"
+        class="nav-item"
+      >
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </a>
+
+
+      <!-- STUDENTS -->
+      <a
+        href="/students"
+        class="nav-item"
+      >
+        <span class="nav-icon">👨‍🎓</span>
+        <span>Students</span>
+      </a>
+
+
+      <!-- TEACHERS -->
+      <a
+        href="/teachers"
+        class="nav-item"
+      >
+        <span class="nav-icon">👨‍🏫</span>
+        <span>Teachers</span>
+      </a>
+
+
+      <!-- CLASSES -->
+      <a
+        href="/classes"
+        class="nav-item"
+      >
+        <span class="nav-icon">🏫</span>
+        <span>Classes</span>
+      </a>
+
+
+      <!-- ATTENDANCE -->
+      <a
+        href="/attendance"
+        class="nav-item"
+      >
+        <span class="nav-icon">📅</span>
+        <span>Attendance</span>
+      </a>
+
+
+      <!-- FEES -->
+      <a
+        href="/fees"
+        class="nav-item"
+      >
+        <span class="nav-icon">💰</span>
+        <span>Fees</span>
+      </a>
+
+
+      <!-- MARKS -->
+      <a
+        href="/marks"
+        class="nav-item"
+      >
+        <span class="nav-icon">📊</span>
+        <span>Marks</span>
+      </a>
+
+    </nav>
+
+
+    <!-- SIDEBAR FOOTER -->
+    <div class="sidebar-footer">
+
+      <div class="footer-icon">
+        🎓
+      </div>
+
+      <div>
+        <strong>School Admin</strong>
+        <small>Management System</small>
+      </div>
+
+    </div>
+
+  </aside>
+
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+
+      <div>
+        <h3>School Management System</h3>
+        <p>Manage your school easily</p>
+      </div>
+
+
+      <!-- ADMIN PROFILE -->
+      <div class="admin-profile">
+
+        <div class="admin-avatar">
+          A
+        </div>
+
+        <div>
+          <strong>Admin</strong>
+          <span>Administrator</span>
+        </div>
+
+      </div>
+
+    </header>
+
+
+    <!-- PAGE CONTENT -->
+    <section class="page-content">
+
+      <router-outlet></router-outlet>
+
+    </section>
+
+  </main>
+
+</div>

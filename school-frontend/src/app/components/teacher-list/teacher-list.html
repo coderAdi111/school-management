@@ -1,0 +1,484 @@
+<div class="teacher-page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+
+    <div>
+      <h1>Teachers</h1>
+
+      <p>
+        Manage school teachers and their information
+      </p>
+    </div>
+
+    <button
+      class="add-btn"
+      type="button"
+      (click)="openAddForm()"
+    >
+      + Add Teacher
+    </button>
+
+  </div>
+
+
+  <!-- SEARCH -->
+  <div class="toolbar">
+
+    <div class="search-box">
+
+      <span class="search-icon">🔍</span>
+
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Search teacher by name..."
+        (keyup.enter)="search()"
+      />
+
+    </div>
+
+    <button
+      class="search-btn"
+      type="button"
+      (click)="search()"
+    >
+      Search
+    </button>
+
+    <button
+      class="reset-btn"
+      type="button"
+      (click)="searchTerm=''; loadTeachers()"
+    >
+      Reset
+    </button>
+
+  </div>
+
+
+  <!-- ERROR -->
+  <div
+    class="error-message"
+    *ngIf="errorMessage"
+  >
+    {{ errorMessage }}
+  </div>
+
+
+  <!-- LOADING -->
+  <div
+    class="loading-box"
+    *ngIf="loading"
+  >
+    Loading teachers...
+  </div>
+
+
+  <!-- TEACHER TABLE -->
+  <div
+    class="table-card"
+    *ngIf="!loading"
+  >
+
+    <div class="table-header">
+
+      <div>
+        <h2>Teacher List</h2>
+
+        <span>
+          {{ teachers.length }} teacher(s)
+        </span>
+      </div>
+
+    </div>
+
+
+    <div
+      class="empty-state"
+      *ngIf="teachers.length === 0"
+    >
+
+      <div class="empty-icon">
+        👨‍🏫
+      </div>
+
+      <h3>No teachers found</h3>
+
+      <p>
+        Add a teacher to get started.
+      </p>
+
+    </div>
+
+
+    <div
+      class="table-wrapper"
+      *ngIf="teachers.length > 0"
+    >
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>ID</th>
+
+            <th>Teacher</th>
+
+            <th>Email</th>
+
+            <th>Phone</th>
+
+            <th>Subject</th>
+
+            <th>Qualification</th>
+
+            <th>Status</th>
+
+            <th>Actions</th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody>
+
+          <tr
+            *ngFor="let teacher of teachers"
+          >
+
+            <td>
+              <span class="id-badge">
+                #{{ teacher.id }}
+              </span>
+            </td>
+
+
+            <td>
+
+              <div class="teacher-info">
+
+                <div class="teacher-avatar">
+                  {{ teacher.firstName.charAt(0) }}
+                </div>
+
+                <div>
+
+                  <strong>
+                    {{ getFullName(teacher) }}
+                  </strong>
+
+                  <small>
+                    Teacher
+                  </small>
+
+                </div>
+
+              </div>
+
+            </td>
+
+
+            <td>
+              {{ teacher.email || '—' }}
+            </td>
+
+
+            <td>
+              {{ teacher.phone || '—' }}
+            </td>
+
+
+            <td>
+              <span
+                class="subject-badge"
+                *ngIf="teacher.subject"
+              >
+                {{ teacher.subject }}
+              </span>
+
+              <span
+                *ngIf="!teacher.subject"
+              >
+                —
+              </span>
+            </td>
+
+
+            <td>
+              {{ teacher.qualification || '—' }}
+            </td>
+
+
+            <td>
+
+              <span
+                class="status-badge active"
+                *ngIf="teacher.status === 'ACTIVE'"
+              >
+                ● Active
+              </span>
+
+              <span
+                class="status-badge inactive"
+                *ngIf="teacher.status === 'INACTIVE'"
+              >
+                ● Inactive
+              </span>
+
+            </td>
+
+
+            <td>
+
+              <div class="action-buttons">
+
+                <button
+                  class="edit-btn"
+                  type="button"
+                  (click)="openEditForm(teacher)"
+                >
+                  ✏️
+                </button>
+
+                <button
+                  class="delete-btn"
+                  type="button"
+                  (click)="deleteTeacher(teacher)"
+                >
+                  🗑️
+                </button>
+
+              </div>
+
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+  <!-- ADD / EDIT FORM -->
+  <div
+    class="modal-backdrop"
+    *ngIf="showForm"
+    (click)="closeForm()"
+  >
+
+    <div
+      class="teacher-modal"
+      (click)="$event.stopPropagation()"
+    >
+
+      <!-- MODAL HEADER -->
+      <div class="modal-header">
+
+        <div>
+
+          <h2>
+            {{ editing ? 'Edit Teacher' : 'Add Teacher' }}
+          </h2>
+
+          <p>
+            {{
+              editing
+                ? 'Update teacher information'
+                : 'Enter teacher information'
+            }}
+          </p>
+
+        </div>
+
+        <button
+          class="close-btn"
+          type="button"
+          (click)="closeForm()"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <!-- FORM -->
+      <form
+        (ngSubmit)="saveTeacher()"
+      >
+
+        <div class="form-grid">
+
+          <!-- FIRST NAME -->
+          <div class="form-group">
+
+            <label>
+              First Name *
+            </label>
+
+            <input
+              type="text"
+              name="firstName"
+              [(ngModel)]="formTeacher.firstName"
+              placeholder="Enter first name"
+            />
+
+          </div>
+
+
+          <!-- LAST NAME -->
+          <div class="form-group">
+
+            <label>
+              Last Name *
+            </label>
+
+            <input
+              type="text"
+              name="lastName"
+              [(ngModel)]="formTeacher.lastName"
+              placeholder="Enter last name"
+            />
+
+          </div>
+
+
+          <!-- EMAIL -->
+          <div class="form-group">
+
+            <label>
+              Email
+            </label>
+
+            <input
+              type="email"
+              name="email"
+              [(ngModel)]="formTeacher.email"
+              placeholder="teacher@example.com"
+            />
+
+          </div>
+
+
+          <!-- PHONE -->
+          <div class="form-group">
+
+            <label>
+              Phone
+            </label>
+
+            <input
+              type="text"
+              name="phone"
+              [(ngModel)]="formTeacher.phone"
+              placeholder="Enter phone number"
+            />
+
+          </div>
+
+
+          <!-- SUBJECT -->
+          <div class="form-group">
+
+            <label>
+              Subject
+            </label>
+
+            <input
+              type="text"
+              name="subject"
+              [(ngModel)]="formTeacher.subject"
+              placeholder="e.g. Mathematics"
+            />
+
+          </div>
+
+
+          <!-- QUALIFICATION -->
+          <div class="form-group">
+
+            <label>
+              Qualification
+            </label>
+
+            <input
+              type="text"
+              name="qualification"
+              [(ngModel)]="formTeacher.qualification"
+              placeholder="e.g. M.Sc Mathematics"
+            />
+
+          </div>
+
+
+          <!-- STATUS -->
+          <div class="form-group full-width">
+
+            <label>
+              Status
+            </label>
+
+            <select
+              name="status"
+              [(ngModel)]="formTeacher.status"
+            >
+
+              <option value="ACTIVE">
+                Active
+              </option>
+
+              <option value="INACTIVE">
+                Inactive
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <!-- FORM ACTIONS -->
+        <div class="form-actions">
+
+          <button
+            type="button"
+            class="cancel-btn"
+            (click)="closeForm()"
+            [disabled]="saving"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="save-btn"
+            [disabled]="saving"
+          >
+
+            {{
+              saving
+                ? 'Saving...'
+                : editing
+                  ? 'Update Teacher'
+                  : 'Add Teacher'
+            }}
+
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,368 @@
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+
+    <h2 class="mb-0">Fees</h2>
+
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="openAddForm()"
+    >
+      + Add Fee
+    </button>
+
+  </div>
+
+
+  <!-- Add / Edit Form -->
+  <div
+    class="card mb-4"
+    *ngIf="showForm"
+  >
+
+    <div class="card-header">
+      <h5 class="mb-0">
+        {{ editing ? 'Edit Fee' : 'Add New Fee' }}
+      </h5>
+    </div>
+
+    <div class="card-body">
+
+      <div class="row g-3">
+
+        <!-- Student -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Student
+          </label>
+
+          <select
+            class="form-select"
+            [value]="formFee.student?.id ?? ''"
+            (change)="onStudentChange($event)"
+          >
+
+            <option value="">
+              -- Select Student --
+            </option>
+
+            <option
+              *ngFor="let student of students"
+              [value]="student.id"
+            >
+              {{ student.firstName }} {{ student.lastName }}
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <!-- Fee Type -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Fee Type
+          </label>
+
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="formFee.feeType"
+            placeholder="e.g. Tuition Fee"
+          >
+
+        </div>
+
+
+        <!-- Amount -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Amount
+          </label>
+
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="formFee.amount"
+            min="0.01"
+            step="0.01"
+            placeholder="Enter amount"
+          >
+
+        </div>
+
+
+        <!-- Due Date -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Due Date
+          </label>
+
+          <input
+            type="date"
+            class="form-control"
+            [(ngModel)]="formFee.dueDate"
+          >
+
+        </div>
+
+
+        <!-- Status -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Status
+          </label>
+
+          <select
+            class="form-select"
+            [(ngModel)]="formFee.status"
+          >
+
+            <option value="PENDING">
+              PENDING
+            </option>
+
+            <option value="PAID">
+              PAID
+            </option>
+
+            <option value="OVERDUE">
+              OVERDUE
+            </option>
+
+            <option value="WAIVED">
+              WAIVED
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <!-- Paid Date -->
+        <div class="col-md-4">
+
+          <label class="form-label">
+            Paid Date
+          </label>
+
+          <input
+            type="date"
+            class="form-control"
+            [(ngModel)]="formFee.paidDate"
+          >
+
+        </div>
+
+
+        <!-- Remarks -->
+        <div class="col-md-8">
+
+          <label class="form-label">
+            Remarks
+          </label>
+
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="formFee.remarks"
+            placeholder="Optional remarks"
+          >
+
+        </div>
+
+      </div>
+
+
+      <!-- Form Buttons -->
+      <div class="mt-4">
+
+        <button
+          type="button"
+          class="btn btn-success me-2"
+          [disabled]="saving"
+          (click)="saveFee()"
+        >
+          {{ saving ? 'Saving...' : (editing ? 'Update Fee' : 'Save Fee') }}
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="saving"
+          (click)="closeForm()"
+        >
+          Cancel
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- Loading -->
+  <div
+    *ngIf="loading"
+    class="alert alert-info"
+  >
+    Loading fees...
+  </div>
+
+
+  <!-- Error -->
+  <div
+    *ngIf="errorMessage"
+    class="alert alert-danger"
+  >
+    {{ errorMessage }}
+  </div>
+
+
+  <!-- Fee Records -->
+  <div
+    class="card"
+    *ngIf="!loading && !errorMessage"
+  >
+
+    <div class="card-header">
+      <h5 class="mb-0">
+        Fee Records
+      </h5>
+    </div>
+
+
+    <div class="card-body p-0">
+
+      <div class="table-responsive">
+
+        <table class="table table-striped table-hover mb-0">
+
+          <thead class="table-dark">
+
+            <tr>
+
+              <th>Student</th>
+
+              <th>Type</th>
+
+              <th>Amount</th>
+
+              <th>Due Date</th>
+
+              <th>Status</th>
+
+              <th style="width: 150px;">
+                Actions
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            <tr *ngFor="let f of fees">
+
+              <!-- Student -->
+              <td>
+
+                <strong>
+                  {{ f.student?.firstName }}
+                  {{ f.student?.lastName }}
+                </strong>
+
+              </td>
+
+
+              <!-- Fee Type -->
+              <td>
+                {{ f.feeType }}
+              </td>
+
+
+              <!-- Amount -->
+              <td>
+                ₹ {{ f.amount | number:'1.2-2' }}
+              </td>
+
+
+              <!-- Due Date -->
+              <td>
+                {{ f.dueDate }}
+              </td>
+
+
+              <!-- Status -->
+              <td>
+
+                <span
+                  class="badge"
+                  [class.bg-warning]="f.status === 'PENDING'"
+                  [class.text-dark]="f.status === 'PENDING'"
+                  [class.bg-success]="f.status === 'PAID'"
+                  [class.bg-danger]="f.status === 'OVERDUE'"
+                  [class.bg-secondary]="f.status === 'WAIVED'"
+                >
+                  {{ f.status }}
+                </span>
+
+              </td>
+
+
+              <!-- Actions -->
+              <td>
+
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary me-2"
+                  (click)="openEditForm(f)"
+                >
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="deleteFee(f)"
+                >
+                  Delete
+                </button>
+
+              </td>
+
+            </tr>
+
+
+            <!-- No Data -->
+            <tr *ngIf="fees.length === 0">
+
+              <td
+                colspan="6"
+                class="text-center py-4"
+              >
+                No fee records found.
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
