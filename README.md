@@ -230,3 +230,9 @@ school-management/
 
 └── .gitignore
 
+
+## 👨‍💻 Developer
+
+**Aditya Gaur**
+
+GitHub: [@coderAdi111](https://github.com/coderAdi111)
