@@ -45,7 +45,7 @@ export class MarkListComponent implements OnInit {
   formMark: Mark = this.emptyMark();
 
   private classUrl =
-    'http://localhost:8080/api/classes';
+  'https://school-management-vy1j.onrender.com/api/classes';
 
 
   constructor(

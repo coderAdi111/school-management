@@ -9,7 +9,8 @@ import { Fee } from '../models/models';
 })
 export class FeeService {
 
-  private baseUrl = 'http://localhost:8080/api/fees';
+ private baseUrl =
+  'https://school-management-vy1j.onrender.com/api/fees';
 
   constructor(private http: HttpClient) {}
 
