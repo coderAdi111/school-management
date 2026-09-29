@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/fees")
-@CrossOrigin(origins = "http://localhost:4200")
+
 public class FeeController {
 
     private final FeeService feeService;
