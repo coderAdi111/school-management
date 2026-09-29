@@ -1,4 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ChangeDetectorRef
+} from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -23,157 +28,336 @@ import {
 export class AttendanceListComponent implements OnInit {
 
   attendanceList: Attendance[] = [];
+
   classes: ClassRoom[] = [];
 
   selectedClassId: number | null = null;
-  selectedDate = new Date().toISOString().substring(0, 10);
+
+  selectedDate =
+    new Date().toISOString().substring(0, 10);
 
   markingMode = false;
+
   loading = false;
+
 
   constructor(
     private attendanceService: AttendanceService,
     private classRoomService: ClassroomService,
-    private studentService: StudentService
+    private studentService: StudentService,
+    private cdr: ChangeDetectorRef
   ) {}
 
+
+  // =========================
+  // INIT
+  // =========================
+
   ngOnInit(): void {
+
+    this.loadClasses();
+  }
+
+
+  // =========================
+  // LOAD CLASSES
+  // =========================
+
+  loadClasses(): void {
+
+    console.log(
+      'Loading classes for attendance...'
+    );
+
     this.classRoomService.getAll().subscribe({
+
       next: (data: ClassRoom[]) => {
-        this.classes = data;
+
+        console.log(
+          'Attendance classes received:',
+          data
+        );
+
+        this.classes = data ?? [];
+
+        console.log(
+          'Attendance classes array:',
+          this.classes
+        );
+
+        this.cdr.detectChanges();
       },
-      error: (error) => {
-        console.error('Error loading classes:', error);
+
+      error: (error: any) => {
+
+        console.error(
+          'Error loading classes:',
+          error
+        );
+
+        this.classes = [];
+
+        this.cdr.detectChanges();
       }
+
     });
   }
 
-  // Class dropdown change
-  onClassChange(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
 
-    this.selectedClassId = value ? Number(value) : null;
+  // =========================
+  // CLASS DROPDOWN CHANGE
+  // =========================
+
+  onClassChange(event: Event): void {
+
+    const value =
+      (event.target as HTMLSelectElement).value;
+
+    this.selectedClassId =
+      value ? Number(value) : null;
+
+    console.log(
+      'Selected class:',
+      this.selectedClassId
+    );
+
+    this.cdr.detectChanges();
   }
+
+
+  // =========================
+  // LOAD ATTENDANCE
+  // =========================
 
   loadAttendance(): void {
 
     if (this.selectedClassId === null) {
+
       alert('Please select a class.');
+
       return;
     }
 
     this.loading = true;
 
-    forkJoin({
-      students: this.studentService.getByClass(this.selectedClassId),
+    this.cdr.detectChanges();
 
-      attendance: this.attendanceService.getByClassAndDate(
-        this.selectedClassId,
-        this.selectedDate
-      )
+
+    forkJoin({
+
+      students:
+        this.studentService.getByClass(
+          this.selectedClassId
+        ),
+
+      attendance:
+        this.attendanceService.getByClassAndDate(
+          this.selectedClassId,
+          this.selectedDate
+        )
+
     }).subscribe({
 
-      next: ({ students, attendance }) => {
+      next: ({
+        students,
+        attendance
+      }) => {
 
-        const selectedClass = this.classes.find(
-          c => c.id === this.selectedClassId
+        console.log(
+          'Attendance students:',
+          students
         );
 
-        this.attendanceList = students.map((student: Student) => {
+        console.log(
+          'Attendance records:',
+          attendance
+        );
 
-          const existingAttendance = attendance.find(
-            a => a.student?.id === student.id
+
+        const selectedClass =
+          this.classes.find(
+            c =>
+              c.id === this.selectedClassId
           );
 
-          // Already saved attendance
-          if (existingAttendance) {
-            return existingAttendance;
-          }
 
-          // New attendance record
-          return {
-            student: student,
-            classRoom: selectedClass,
-            date: this.selectedDate,
-            status: 'PRESENT',
-            remarks: ''
-          } as Attendance;
+        this.attendanceList =
+          students.map(
+            (student: Student) => {
 
-        });
+              const existingAttendance =
+                attendance.find(
+                  a =>
+                    a.student?.id ===
+                    student.id
+                );
+
+
+              // Already saved attendance
+              if (existingAttendance) {
+
+                return existingAttendance;
+              }
+
+
+              // New attendance record
+              return {
+
+                student: student,
+
+                classRoom: selectedClass,
+
+                date: this.selectedDate,
+
+                status: 'PRESENT',
+
+                remarks: ''
+
+              } as Attendance;
+
+            }
+          );
+
 
         this.markingMode = true;
+
         this.loading = false;
+
+
+        console.log(
+          'Attendance list:',
+          this.attendanceList
+        );
+
+        console.log(
+          'Attendance loading:',
+          this.loading
+        );
+
+
+        this.cdr.detectChanges();
       },
 
-      error: (error) => {
 
-        console.error('Error loading attendance:', error);
+      error: (error: any) => {
+
+        console.error(
+          'Error loading attendance:',
+          error
+        );
 
         this.loading = false;
 
-        alert('Unable to load attendance.');
+        this.cdr.detectChanges();
+
+        alert(
+          'Unable to load attendance.'
+        );
       }
 
     });
   }
 
+
+  // =========================
+  // UPDATE STATUS
+  // =========================
+
   updateStatus(
     record: Attendance,
-    status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'
+    status:
+      'PRESENT'
+      | 'ABSENT'
+      | 'LATE'
+      | 'EXCUSED'
   ): void {
 
     record.status = status;
+
+    this.cdr.detectChanges();
   }
+
+
+  // =========================
+  // SAVE ATTENDANCE
+  // =========================
 
   saveAttendance(): void {
 
     if (this.selectedClassId === null) {
-      alert('Please select a class.');
-      return;
-    }
 
-    if (this.attendanceList.length === 0) {
-      alert('No students found.');
-      return;
-    }
-
-    const requests = this.attendanceList.map(record => {
-
-      // Existing attendance → UPDATE
-      if (record.id != null) {
-
-        return this.attendanceService.update(
-          record.id,
-          record
-        );
-
-      }
-
-      // New attendance → CREATE
-      return this.attendanceService.create(
-        record.student!.id!,
-        this.selectedClassId!,
-        this.selectedDate,
-        record.status,
-        record.remarks || ''
+      alert(
+        'Please select a class.'
       );
 
-    });
+      return;
+    }
+
+
+    if (
+      this.attendanceList.length === 0
+    ) {
+
+      alert(
+        'No students found.'
+      );
+
+      return;
+    }
+
+
+    const requests =
+      this.attendanceList.map(
+        record => {
+
+          // Existing attendance → UPDATE
+          if (record.id != null) {
+
+            return this.attendanceService.update(
+              record.id,
+              record
+            );
+          }
+
+
+          // New attendance → CREATE
+          return this.attendanceService.create(
+            record.student!.id!,
+            this.selectedClassId!,
+            this.selectedDate,
+            record.status,
+            record.remarks || ''
+          );
+
+        }
+      );
+
 
     forkJoin(requests).subscribe({
 
-     next: () => {
-  alert('Attendance saved successfully!');
-  window.location.reload();
-},
+      next: () => {
 
-      error: (error) => {
+        alert(
+          'Attendance saved successfully!'
+        );
 
-        console.error('Error saving attendance:', error);
+        window.location.reload();
+      },
 
-        alert('Failed to save attendance.');
+
+      error: (error: any) => {
+
+        console.error(
+          'Error saving attendance:',
+          error
+        );
+
+        alert(
+          'Failed to save attendance.'
+        );
       }
 
     });
   }
+
 }
