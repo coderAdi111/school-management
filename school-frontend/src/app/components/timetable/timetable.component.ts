@@ -1,5 +1,5 @@
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimetableEntry, TimetableService } from '../../services/timetable.service';
@@ -43,7 +43,10 @@ export class TimetableComponent implements OnInit {
   ocrText = '';
   ocrBusy = false;
 
-  constructor(private service: TimetableService) {}
+ constructor(
+  private service: TimetableService,
+  private cdr: ChangeDetectorRef
+) {}
 
   ngOnInit(): void {
     this.load();
@@ -65,34 +68,46 @@ export class TimetableComponent implements OnInit {
   }
 
   // LOAD TIMETABLE
-  load(): void {
-    this.loading = true;
-    this.error = '';
+ load(): void {
+  this.loading = true;
+  this.error = '';
 
-    this.service.get(this.section)
-      .pipe(
-        timeout({ first: 20000 }),
-        finalize(() => {
-          this.loading = false;
-        })
-      )
-      .subscribe({
-        next: (data) => {
-          this.entries = Array.isArray(data) ? data : [];
-          console.log('Timetable loaded:', this.entries);
-        },
-        error: (err) => {
-          console.error('Timetable load error:', err);
-          this.entries = [];
+  this.cdr.detectChanges();
 
-          if (err?.name === 'TimeoutError') {
-            this.error = 'Server se 20 seconds mein response nahi aaya. Please Refresh karein.';
-          } else {
-            this.error = 'Timetable load nahi ho paayi. Backend/API check karein.';
-          }
+  this.service.get(this.section)
+    .pipe(
+      timeout({ first: 20000 }),
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      })
+    )
+    .subscribe({
+      next: (data) => {
+        this.entries = Array.isArray(data) ? data : [];
+
+        console.log('Timetable loaded:', this.entries);
+
+        this.cdr.detectChanges();
+      },
+
+      error: (err) => {
+        console.error('Timetable load error:', err);
+
+        this.entries = [];
+
+        if (err?.name === 'TimeoutError') {
+          this.error =
+            'Server se 20 seconds mein response nahi aaya. Please Refresh karein.';
+        } else {
+          this.error =
+            'Timetable load nahi ho paayi. Backend/API check karein.';
         }
-      });
-  }
+
+        this.cdr.detectChanges();
+      }
+    });
+}
 
   // CHANGE SECTION
   changeSection(): void {
