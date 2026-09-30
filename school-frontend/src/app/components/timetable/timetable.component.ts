@@ -3,7 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimetableEntry, TimetableService } from '../../services/timetable.service';
-import { firstValueFrom, timeout } from 'rxjs';
+import { firstValueFrom, timeout, finalize } from 'rxjs';
 
 @Component({
   selector: 'app-timetable',
@@ -69,20 +69,29 @@ export class TimetableComponent implements OnInit {
     this.loading = true;
     this.error = '';
 
-    this.service.get(this.section).subscribe({
-      next: data => {
-        this.entries = data || [];
-        this.loading = false;
-      },
-      error: err => {
-        console.error('Timetable load error:', err);
+    this.service.get(this.section)
+      .pipe(
+        timeout({ first: 20000 }),
+        finalize(() => {
+          this.loading = false;
+        })
+      )
+      .subscribe({
+        next: (data) => {
+          this.entries = Array.isArray(data) ? data : [];
+          console.log('Timetable loaded:', this.entries);
+        },
+        error: (err) => {
+          console.error('Timetable load error:', err);
+          this.entries = [];
 
-        this.error =
-          'Timetable API load nahi ho paayi. Backend deploy/update hua hai ya nahi check karein.';
-
-        this.loading = false;
-      }
-    });
+          if (err?.name === 'TimeoutError') {
+            this.error = 'Server se 20 seconds mein response nahi aaya. Please Refresh karein.';
+          } else {
+            this.error = 'Timetable load nahi ho paayi. Backend/API check karein.';
+          }
+        }
+      });
   }
 
   // CHANGE SECTION
