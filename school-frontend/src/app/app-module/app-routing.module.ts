@@ -16,6 +16,7 @@ import { AttendanceListComponent } from '../components/attendance-list/attendanc
 import { FeeList } from '../components/fee-list/fee-list.component';
 
 import { MarkListComponent } from '../components/mark-list/mark-list.component';
+import { TimetableComponent } from '../components/timetable/timetable.component';
 
 
 export const routes: Routes = [
@@ -59,6 +60,9 @@ export const routes: Routes = [
   // =========================
 
   { path: 'attendance', component: AttendanceListComponent },
+
+  // TIMETABLE
+  { path: 'timetable', component: TimetableComponent },
 
 
   // =========================
