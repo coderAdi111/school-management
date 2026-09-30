@@ -5,6 +5,7 @@ import {
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 
 import { StudentService } from '../../services/student.services';
 
@@ -14,8 +15,14 @@ import { Student } from '../../models/models';
 @Component({
   selector: 'app-student-list',
   standalone: true,
-  imports: [CommonModule],
+
+  imports: [
+    CommonModule,
+    RouterModule
+  ],
+
   templateUrl: './student-list.component.html',
+
   styleUrls: ['./student-list.component.css']
 })
 export class StudentListComponent implements OnInit {
@@ -78,47 +85,43 @@ export class StudentListComponent implements OnInit {
     this.cdr.detectChanges();
 
 
-    this.studentService.getAll().subscribe({
+    this.studentService
+      .getAll()
+      .subscribe({
 
-      next: (data: Student[]) => {
+        next: (data: Student[]) => {
 
-        console.log(
-          'Students loaded:',
-          data
-        );
+          console.log(
+            'Students loaded:',
+            data
+          );
 
+          this.students =
+            data ?? [];
 
-        this.students = data ?? [];
+          this.loading = false;
 
+          this.cdr.detectChanges();
 
-        this.loading = false;
+        },
 
+        error: (err: any) => {
 
-        this.cdr.detectChanges();
+          console.error(
+            'Student load error:',
+            err
+          );
 
-      },
+          this.loading = false;
 
+          this.errorMsg =
+            'Failed to load students. Is Spring Boot running?';
 
-      error: (err: any) => {
+          this.cdr.detectChanges();
 
-        console.error(
-          'Student load error:',
-          err
-        );
+        }
 
-
-        this.loading = false;
-
-
-        this.errorMsg =
-          'Failed to load students. Is Spring Boot running?';
-
-
-        this.cdr.detectChanges();
-
-      }
-
-    });
+      });
 
   }
 
@@ -133,7 +136,6 @@ export class StudentListComponent implements OnInit {
       this.searchTerm.trim();
 
 
-    // Empty search
     if (!term) {
 
       this.loadStudents();
@@ -161,18 +163,14 @@ export class StudentListComponent implements OnInit {
             data
           );
 
-
           this.students =
             data ?? [];
 
-
           this.loading = false;
-
 
           this.cdr.detectChanges();
 
         },
-
 
         error: (err: any) => {
 
@@ -181,13 +179,10 @@ export class StudentListComponent implements OnInit {
             err
           );
 
-
           this.loading = false;
-
 
           this.errorMsg =
             'Failed to search students.';
-
 
           this.cdr.detectChanges();
 
@@ -227,23 +222,19 @@ export class StudentListComponent implements OnInit {
                 student.id !== id
             );
 
-
           this.cdr.detectChanges();
 
         },
 
-
         error: (err: any) => {
-
-          this.errorMsg =
-            'Failed to delete student.';
-
 
           console.error(
             'Delete student error:',
             err
           );
 
+          this.errorMsg =
+            'Failed to delete student.';
 
           this.cdr.detectChanges();
 

@@ -1,83 +1,284 @@
-<p>student-list works!</p>
 <div class="container-fluid py-4">
 
- <div class="d-flex justify-content-between align-items-center mb-4">
- <h2 class="mb-0">Students</h2>
- 
- <a class="btn btn-primary" href="/students/new">
- <i class="bi bi-person-plus me-1"></i> Add Student
- </a>
- </div>
- 
- <div class="alert alert-danger" *ngIf="errorMsg">{{ errorMsg }}</div>
+  <!-- =========================
+       HEADER
+  ========================== -->
 
- <div class="card mb-3">
- <div class="card-body">
- <div class="input-group">
- 
- <input class="form-control" [value]="searchTerm"
- (input)="searchTerm = $any($event.target).value"
- placeholder="Search by name…"
- (keyup.enter)="search()" />
- <button class="btn btn-outline-secondary" (click)="search()">Search</button>
- <button class="btn btn-outline-secondary" (click)="searchTerm=''; loadStudents()">Clear</button>
- </div>
- </div>
- </div>
+  <div class="d-flex justify-content-between align-items-center mb-4">
 
- <div class="card">
- <div class="card-body p-0">
- <!-- Spinner while loading -->
- <div class="text-center p-4" *ngIf="loading">
- <div class="spinner-border text-primary" role="status"></div>
- <p class="mt-2">Loading students…</p>
- </div>
+    <h2 class="mb-0">
+      Students
+    </h2>
 
- <table class="table table-hover mb-0" *ngIf="!loading">
- <thead class="table-dark">
- <tr>
- <th>#</th>
- <th>Name</th>
- <th>Email</th>
- <th>Class</th>
- <th>Status</th>
- <th>Actions</th>
- </tr>
- </thead>
- <tbody>
+    <a
+      class="btn btn-primary"
+      routerLink="/students/new">
 
- <tr *ngFor="let s of students">
- <td>{{ s.id }}</td>
- <td>{{ s.firstName }} {{ s.lastName }}</td>
- <td>{{ s.email }}</td>
- 
- <td>{{ s.classRoom?.name || '—' }}</td>
- <td>
+      <i class="bi bi-person-plus me-1"></i>
 
- <span class="badge"
- [class.bg-success]="s.status === 'ACTIVE'"
- [class.bg-secondary]="s.status === 'INACTIVE'"
- [class.bg-info]="s.status === 'GRADUATED'">
- {{ s.status }}
- </span>
- </td>
- <td>
- <a class="btn btn-sm btn-outline-primary me-1"
- href="/students/{{ s.id }}/edit">
- <i class="bi bi-pencil"></i>
- </a>
- <button class="btn btn-sm btn-outline-danger"
- (click)="deleteStudent(s.id!)">
- <i class="bi bi-trash"></i>
- </button>
- </td>
- </tr>
- <!-- Empty state row -->
- <tr *ngIf="students.length === 0">
- <td colspan="6" class="text-center text-muted py-4">No students found.</td>
- </tr>
- </tbody>
- </table>
- </div>
- </div>
+      Add Student
+
+    </a>
+
+  </div>
+
+
+  <!-- =========================
+       ERROR
+  ========================== -->
+
+  <div
+    class="alert alert-danger"
+    *ngIf="errorMsg">
+
+    {{ errorMsg }}
+
+  </div>
+
+
+  <!-- =========================
+       SEARCH
+  ========================== -->
+
+  <div class="card mb-3">
+
+    <div class="card-body">
+
+      <div class="input-group">
+
+        <input
+          class="form-control"
+          [value]="searchTerm"
+
+          (input)="
+            searchTerm =
+            $any($event.target).value
+          "
+
+          placeholder="Search by name…"
+
+          (keyup.enter)="search()"
+        />
+
+
+        <button
+          class="btn btn-outline-secondary"
+          (click)="search()">
+
+          Search
+
+        </button>
+
+
+        <button
+          class="btn btn-outline-secondary"
+
+          (click)="
+            searchTerm='';
+            loadStudents()
+          ">
+
+          Clear
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       STUDENT TABLE
+  ========================== -->
+
+  <div class="card">
+
+    <div class="card-body p-0">
+
+
+      <!-- LOADING -->
+
+      <div
+        class="text-center p-4"
+        *ngIf="loading">
+
+        <div
+          class="spinner-border text-primary"
+          role="status">
+
+        </div>
+
+        <p class="mt-2">
+          Loading students…
+        </p>
+
+      </div>
+
+
+      <!-- TABLE -->
+
+      <table
+        class="table table-hover mb-0"
+        *ngIf="!loading">
+
+
+        <!-- TABLE HEADER -->
+
+        <thead class="table-dark">
+
+          <tr>
+
+            <th>#</th>
+
+            <th>Name</th>
+
+            <th>Email</th>
+
+            <th>Class</th>
+
+            <th>Status</th>
+
+            <th>Actions</th>
+
+          </tr>
+
+        </thead>
+
+
+        <!-- TABLE BODY -->
+
+        <tbody>
+
+
+          <tr
+            *ngFor="let s of students">
+
+
+            <!-- ID -->
+
+            <td>
+              {{ s.id }}
+            </td>
+
+
+            <!-- NAME -->
+
+            <td>
+
+              {{ s.firstName }}
+              {{ s.lastName }}
+
+            </td>
+
+
+            <!-- EMAIL -->
+
+            <td>
+
+              {{ s.email }}
+
+            </td>
+
+
+            <!-- CLASS -->
+
+            <td>
+
+              {{ s.classRoom?.name || '—' }}
+
+            </td>
+
+
+            <!-- STATUS -->
+
+            <td>
+
+              <span
+                class="badge"
+
+                [class.bg-success]="
+                  s.status === 'ACTIVE'
+                "
+
+                [class.bg-secondary]="
+                  s.status === 'INACTIVE'
+                "
+
+                [class.bg-info]="
+                  s.status === 'GRADUATED'
+                ">
+
+                {{ s.status }}
+
+              </span>
+
+            </td>
+
+
+            <!-- ACTIONS -->
+
+            <td>
+
+
+              <!-- EDIT -->
+
+              <a
+                class="btn btn-sm btn-outline-primary me-1"
+
+                [routerLink]="[
+                  '/students',
+                  s.id,
+                  'edit'
+                ]">
+
+                <i class="bi bi-pencil"></i>
+
+              </a>
+
+
+              <!-- DELETE -->
+
+              <button
+                class="btn btn-sm btn-outline-danger"
+
+                (click)="
+                  deleteStudent(s.id!)
+                ">
+
+                <i class="bi bi-trash"></i>
+
+              </button>
+
+
+            </td>
+
+          </tr>
+
+
+          <!-- EMPTY STATE -->
+
+          <tr
+            *ngIf="students.length === 0">
+
+            <td
+              colspan="6"
+              class="text-center text-muted py-4">
+
+              No students found.
+
+            </td>
+
+          </tr>
+
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
 </div>

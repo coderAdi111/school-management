@@ -1,4 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ChangeDetectorRef
+} from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -36,24 +41,41 @@ export class StudentFormComponent implements OnInit {
 
   student: Student = this.emptyStudent();
 
+
   constructor(
     private studentService: StudentService,
     private classroomService: ClassroomService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
+
+
+  // ================================
+  // INIT
+  // ================================
 
   ngOnInit(): void {
 
-    // Load classes for dropdown
     this.loadClasses();
 
-    const id = this.route.snapshot.paramMap.get('id');
+    const id =
+      this.route.snapshot.paramMap.get('id');
 
     if (id) {
+
       this.editing = true;
+
       this.studentId = Number(id);
-      this.loadStudent(this.studentId);
+
+      console.log(
+        'Edit student ID:',
+        this.studentId
+      );
+
+      this.loadStudent(
+        this.studentId
+      );
     }
   }
 
@@ -63,7 +85,9 @@ export class StudentFormComponent implements OnInit {
   // ================================
 
   emptyStudent(): Student {
+
     return {
+
       firstName: '',
       lastName: '',
       email: '',
@@ -73,6 +97,7 @@ export class StudentFormComponent implements OnInit {
       enrollmentDate: '',
       status: 'ACTIVE',
       classRoom: undefined
+
     };
   }
 
@@ -85,31 +110,49 @@ export class StudentFormComponent implements OnInit {
 
     this.loadingClasses = true;
 
-    this.classroomService.getAll().subscribe({
+    this.cdr.detectChanges();
 
-      next: (data: ClassRoom[]) => {
+    console.log(
+      'Loading classes for student form...'
+    );
 
-        console.log('Classes loaded:', data);
 
-        this.classes = data ?? [];
+    this.classroomService
+      .getAll()
+      .subscribe({
 
-        this.loadingClasses = false;
-      },
+        next: (data: ClassRoom[]) => {
 
-      error: (error: any) => {
+          console.log(
+            'Classes loaded:',
+            data
+          );
 
-        console.error(
-          'Error loading classes:',
-          error
-        );
+          this.classes =
+            data ?? [];
 
-        this.loadingClasses = false;
+          this.loadingClasses = false;
 
-        this.errorMessage =
-          'Unable to load classes.';
-      }
+          this.cdr.detectChanges();
+        },
 
-    });
+
+        error: (error: any) => {
+
+          console.error(
+            'Error loading classes:',
+            error
+          );
+
+          this.loadingClasses = false;
+
+          this.errorMessage =
+            'Unable to load classes.';
+
+          this.cdr.detectChanges();
+        }
+
+      });
   }
 
 
@@ -120,33 +163,61 @@ export class StudentFormComponent implements OnInit {
   loadStudent(id: number): void {
 
     this.loading = true;
+
     this.errorMessage = '';
 
-    this.studentService.getById(id).subscribe({
+    console.log(
+      'Loading student ID:',
+      id
+    );
 
-      next: (data: Student) => {
+    this.cdr.detectChanges();
 
-        this.student = {
-          ...data
-        };
 
-        this.loading = false;
-      },
+    this.studentService
+      .getById(id)
+      .subscribe({
 
-      error: (error: any) => {
+        next: (data: Student) => {
 
-        console.error(
-          'Error loading student:',
-          error
-        );
+          console.log(
+            'Student loaded:',
+            data
+          );
 
-        this.loading = false;
+          this.student = {
+            ...data
+          };
 
-        this.errorMessage =
-          'Unable to load student.';
-      }
+          this.loading = false;
 
-    });
+          this.errorMessage = '';
+
+          console.log(
+            'Student loading:',
+            this.loading
+          );
+
+          this.cdr.detectChanges();
+        },
+
+
+        error: (error: any) => {
+
+          console.error(
+            'Error loading student:',
+            error
+          );
+
+          this.loading = false;
+
+          this.errorMessage =
+            'Unable to load student.';
+
+          this.cdr.detectChanges();
+        }
+
+      });
   }
 
 
@@ -154,19 +225,29 @@ export class StudentFormComponent implements OnInit {
   // CLASS CHANGE
   // ================================
 
-  selectClass(classId: string | number): void {
+  selectClass(
+    classId: string | number
+  ): void {
 
-    const id = Number(classId);
+    const id =
+      Number(classId);
 
     if (!id) {
 
-      this.student.classRoom = undefined;
+      this.student.classRoom =
+        undefined;
+
+      this.cdr.detectChanges();
 
       return;
     }
 
+
     const selectedClass =
-      this.classes.find(c => c.id === id);
+      this.classes.find(
+        c => c.id === id
+      );
+
 
     if (selectedClass) {
 
@@ -178,6 +259,8 @@ export class StudentFormComponent implements OnInit {
         'Selected class:',
         selectedClass
       );
+
+      this.cdr.detectChanges();
     }
   }
 
@@ -190,40 +273,59 @@ export class StudentFormComponent implements OnInit {
 
     if (!this.student.firstName?.trim()) {
 
-      alert('Please enter first name.');
+      alert(
+        'Please enter first name.'
+      );
 
       return;
     }
+
 
     if (!this.student.lastName?.trim()) {
 
-      alert('Please enter last name.');
+      alert(
+        'Please enter last name.'
+      );
 
       return;
     }
+
 
     if (!this.student.email?.trim()) {
 
-      alert('Please enter email.');
+      alert(
+        'Please enter email.'
+      );
 
       return;
     }
+
 
     if (!this.student.classRoom?.id) {
 
-      alert('Please select a class.');
+      alert(
+        'Please select a class.'
+      );
 
       return;
     }
 
+
     this.saving = true;
+
     this.errorMessage = '';
+
+    this.cdr.detectChanges();
+
 
     const classId =
       this.student.classRoom.id;
 
 
-    // Only send class ID to backend
+    // ================================
+    // STUDENT TO SAVE
+    // ================================
+
     const studentToSave: Student = {
 
       ...this.student,
@@ -244,6 +346,7 @@ export class StudentFormComponent implements OnInit {
         this.student.address?.trim() || '',
 
       classRoom: {
+
         id: classId,
 
         name:
@@ -260,8 +363,15 @@ export class StudentFormComponent implements OnInit {
 
         capacity:
           this.student.classRoom.capacity
+
       }
     };
+
+
+    console.log(
+      'Student to save:',
+      studentToSave
+    );
 
 
     // ================================
@@ -282,6 +392,10 @@ export class StudentFormComponent implements OnInit {
 
           next: () => {
 
+            console.log(
+              'Student updated successfully.'
+            );
+
             alert(
               'Student updated successfully!'
             );
@@ -291,6 +405,7 @@ export class StudentFormComponent implements OnInit {
             ]);
           },
 
+
           error: (error: any) => {
 
             console.error(
@@ -299,6 +414,8 @@ export class StudentFormComponent implements OnInit {
             );
 
             this.saving = false;
+
+            this.cdr.detectChanges();
 
             alert(
               'Failed to update student.'
@@ -319,7 +436,9 @@ export class StudentFormComponent implements OnInit {
       .create(studentToSave)
       .subscribe({
 
-        next: (createdStudent: Student) => {
+        next: (
+          createdStudent: Student
+        ) => {
 
           console.log(
             'Student created:',
@@ -335,6 +454,7 @@ export class StudentFormComponent implements OnInit {
           ]);
         },
 
+
         error: (error: any) => {
 
           console.error(
@@ -343,6 +463,9 @@ export class StudentFormComponent implements OnInit {
           );
 
           this.saving = false;
+
+          this.cdr.detectChanges();
+
 
           if (
             error?.status === 409
