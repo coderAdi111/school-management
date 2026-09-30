@@ -1,0 +1,70 @@
+<div class="tt-page">
+  <header class="tt-heading">
+    <div><p class="eyebrow">ENGINEERING COLLEGE AJMER · INFORMATION TECHNOLOGY</p><h1>Class Timetable</h1><p>5th Semester · Session 2026–27</p></div>
+    <div class="section-switch"><button [class.active]="section === 'I1'" (click)="section='I1'; changeSection()">Section I1</button><button [class.active]="section === 'I2'" (click)="section='I2'; changeSection()">Section I2</button></div>
+  </header>
+
+  <section class="bulk-import panel">
+    <div class="bulk-head">
+      <div><h2>Bulk Import Timetable</h2><p class="muted">I1 aur I2 ka timetable CSV se import karein, ya image/PDF se text extract karein.</p></div>
+      <button class="secondary" type="button" (click)="downloadTemplate()">⬇ Download CSV Template</button>
+    </div>
+    <div class="upload-row">
+      <label class="file-picker">Choose CSV file
+        <input type="file" accept=".csv,text/csv" (change)="onImportFile($event)">
+      </label>
+      <label class="file-picker">Upload timetable image / PDF
+        <input type="file" accept="image/*,.pdf,application/pdf" (change)="onImageOrPdf($event)" [disabled]="ocrBusy">
+      </label>
+      <span class="muted" *ngIf="importFileName">{{importFileName}}</span>
+    </div>
+    <p class="muted" *ngIf="ocrBusy">OCR processing… please wait.</p>
+    <div class="ocr-result" *ngIf="ocrText">
+      <h3>Extracted text — verify before use</h3>
+      <textarea rows="10" [(ngModel)]="ocrText" aria-label="Extracted timetable text"></textarea>
+      <button class="secondary" type="button" (click)="copyOcrText()">Copy extracted text</button>
+      <p class="muted">Note: OCR text extraction is supported. For accurate bulk save, organize the extracted rows in the CSV template and upload that CSV. Always verify subjects, times, and I1/I2 labels.</p>
+    </div>
+    <p class="import-message" *ngIf="importMessage">{{importMessage}}</p>
+    <p class="error" *ngIf="error">{{error}}</p>
+    <div class="preview-wrap" *ngIf="importPreview.length">
+      <h3>Import Preview</h3>
+      <div class="preview-table">
+        <table>
+          <thead><tr><th>Section</th><th>Day</th><th>Time</th><th>Subject</th><th>Faculty</th><th>Room</th><th>Type</th></tr></thead>
+          <tbody><tr *ngFor="let row of importPreview"><td>{{row.section}}</td><td>{{row.dayOfWeek}}</td><td>{{row.startTime}}–{{row.endTime}}</td><td>{{row.subject}}</td><td>{{row.faculty || '—'}}</td><td>{{row.room || '—'}}</td><td>{{row.practical ? 'Lab' : 'Theory'}}</td></tr></tbody>
+        </table>
+      </div>
+      <div class="actions import-actions">
+        <button class="primary" type="button" [disabled]="importing" (click)="saveImport()">{{importing ? 'Importing…' : 'Save All Classes'}}</button>
+        <button class="secondary" type="button" [disabled]="importing" (click)="clearImport()">Cancel</button>
+      </div>
+    </div>
+  </section>
+\n  <div class="tt-layout">
+    <section class="panel editor">
+      <h2>{{ editingId ? 'Edit class' : 'Add timetable class' }}</h2>
+      <p class="muted">Selected section: <strong>{{ section }}</strong></p>
+      <form (ngSubmit)="save()">
+        <label>Day<select name="day" [(ngModel)]="form.dayOfWeek"><option *ngFor="let day of days" [value]="day">{{day}}</option></select></label>
+        <label>Subject<input name="subject" [(ngModel)]="form.subject" placeholder="e.g. CN / CN Lab" required></label>
+        <div class="two"><label>Start time<input type="time" name="start" [(ngModel)]="form.startTime" required></label><label>End time<input type="time" name="end" [(ngModel)]="form.endTime" required></label></div>
+        <label>Faculty<input name="faculty" [(ngModel)]="form.faculty" placeholder="Faculty initials/name"></label>
+        <label>Room / Lab<input name="room" [(ngModel)]="form.room" placeholder="Room number"></label>
+        <label class="check"><input type="checkbox" name="practical" [(ngModel)]="form.practical"> Practical / Lab</label>
+        <div class="actions"><button class="primary" type="submit" [disabled]="saving">{{ saving ? 'Saving…' : editingId ? 'Update class' : 'Add class' }}</button><button class="secondary" type="button" *ngIf="editingId" (click)="cancelEdit()">Cancel</button></div>
+      </form>
+      <p class="error" *ngIf="error">{{error}}</p>
+    </section>
+    <section class="schedule">
+      <div class="schedule-title"><div><h2>Section {{section}} weekly schedule</h2><p class="muted">Manage classes for the selected section.</p></div><button class="secondary" (click)="load()">↻ Refresh</button></div>
+      <div *ngIf="loading" class="empty">Loading timetable…</div>
+      <div *ngIf="!loading" class="day-grid">
+        <article class="day-card" *ngFor="let day of days"><h3>{{day}}</h3>
+          <div class="class-item" *ngFor="let item of forDay(day)"><div class="time">{{item.startTime}} – {{item.endTime}}</div><strong>{{item.subject}}</strong><span *ngIf="item.faculty">{{item.faculty}}</span><span *ngIf="item.room">Room: {{item.room}}</span><span class="lab" *ngIf="item.practical">PRACTICAL</span><div class="item-actions"><button (click)="edit(item)">Edit</button><button class="delete" (click)="remove(item)">Delete</button></div></div>
+          <p class="no-class" *ngIf="forDay(day).length===0">No classes added</p>
+        </article>
+      </div>
+    </section>
+  </div>
+</div>
