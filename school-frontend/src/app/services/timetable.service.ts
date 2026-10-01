@@ -18,7 +18,7 @@ export interface TimetableEntry {
 
 @Injectable({ providedIn: 'root' })
 export class TimetableService {
-  private readonly baseUrl = 'https://school-management-vylj.onrender.com/api/timetable';
+  private readonly baseUrl = 'https://school-management-vy1j.onrender.com/api/timetable';
   constructor(private http: HttpClient) {}
 
   get(section: string): Observable<TimetableEntry[]> {
