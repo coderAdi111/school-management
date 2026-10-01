@@ -78,7 +78,10 @@ export class AttendanceListComponent implements OnInit {
           data
         );
 
-        this.classes = data ?? [];
+        this.classes = (data ?? []).filter(classRoom =>
+  classRoom.grade === '5th Semester' &&
+  (classRoom.section === 'I1' || classRoom.section === 'I2')
+);
 
         console.log(
           'Attendance classes array:',

@@ -96,7 +96,14 @@ export class MarkListComponent implements OnInit {
           data
         );
 
-        this.marks = data ?? [];
+        this.marks = (data ?? []).filter(mark =>
+  (mark.student?.classRoom?.grade === '5th Semester' &&
+   (mark.student?.classRoom?.section === 'I1' ||
+    mark.student?.classRoom?.section === 'I2')) ||
+  (mark.classRoom?.grade === '5th Semester' &&
+   (mark.classRoom?.section === 'I1' ||
+    mark.classRoom?.section === 'I2'))
+);
 
         this.loading = false;
 
@@ -149,7 +156,11 @@ export class MarkListComponent implements OnInit {
           data
         );
 
-        this.students = data ?? [];
+        this.students = (data ?? []).filter(student =>
+  student.classRoom?.grade === '5th Semester' &&
+  (student.classRoom?.section === 'I1' ||
+   student.classRoom?.section === 'I2')
+);
 
         this.cdr.detectChanges();
       },
@@ -183,7 +194,11 @@ export class MarkListComponent implements OnInit {
             data
           );
 
-          this.classes = data ?? [];
+          this.classes = (data ?? []).filter(classRoom =>
+  classRoom.grade === '5th Semester' &&
+  (classRoom.section === 'I1' ||
+   classRoom.section === 'I2')
+);
 
           this.cdr.detectChanges();
         },

@@ -67,6 +67,35 @@ export class TeacherListComponent implements OnInit {
   // LOAD TEACHERS
   // =========================
 
+  private isCurrentTimetableTeacher(teacher: Teacher): boolean {
+
+    const allowed = new Set([
+      'Shikha Gupta',
+      'Deepak Gupta',
+      'Rakesh Rathi',
+      'Bhanupriya Sharma',
+      'Avinash Bhandiya',
+      'Sammah Rasheed',
+      'Monica Sharma',
+      'Mangi Lal',
+      'Satya Narayan Tazi'
+    ]);
+
+    const name =
+      `${teacher.firstName ?? ''} ${teacher.lastName ?? ''}`
+        .trim()
+        .replace(/\s+/g, ' ');
+
+    return allowed.has(name);
+  }
+
+  private filterCurrentTeachers(data: Teacher[]): Teacher[] {
+    return (data ?? []).filter(teacher =>
+      teacher.status !== 'INACTIVE' &&
+      this.isCurrentTimetableTeacher(teacher)
+    );
+  }
+
   loadTeachers(): void {
 
     this.loading = true;
@@ -78,7 +107,7 @@ export class TeacherListComponent implements OnInit {
 
         console.log('Teachers loaded:', data);
 
-        this.teachers = data ?? [];
+        this.teachers = this.filterCurrentTeachers(data);
 
         this.loading = false;
 
@@ -129,7 +158,7 @@ export class TeacherListComponent implements OnInit {
           data
         );
 
-        this.teachers = data ?? [];
+        this.teachers = this.filterCurrentTeachers(data);
 
         this.loading = false;
 
