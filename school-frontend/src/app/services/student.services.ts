@@ -13,7 +13,7 @@ import { Student } from '../models/models';
 export class StudentService {
 
   private baseUrl =
-    'http://localhost:8080/api/students';
+    'https://school-management-vylj.onrender.com/api/students';
 
 
   constructor(

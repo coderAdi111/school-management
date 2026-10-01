@@ -10,7 +10,7 @@ import { Fee } from '../models/models';
 export class FeeService {
 
  private baseUrl =
-  'https://school-management-vy1j.onrender.com/api/fees';
+  'https://school-management-vylj.onrender.com/api/fees';
 
   constructor(private http: HttpClient) {}
 

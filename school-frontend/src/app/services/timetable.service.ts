@@ -18,7 +18,7 @@ export interface TimetableEntry {
 
 @Injectable({ providedIn: 'root' })
 export class TimetableService {
-  private readonly baseUrl = 'https://school-management-vy1j.onrender.com/api/timetable';
+  private readonly baseUrl = 'https://school-management-vylj.onrender.com/api/timetable';
   constructor(private http: HttpClient) {}
 
   get(section: string): Observable<TimetableEntry[]> {
@@ -29,3 +29,4 @@ export class TimetableService {
   update(id: number, entry: TimetableEntry): Observable<TimetableEntry> { return this.http.put<TimetableEntry>(`${this.baseUrl}/${id}`, entry); }
   delete(id: number): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/${id}`); }
 }
+

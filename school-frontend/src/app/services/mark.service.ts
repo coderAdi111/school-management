@@ -10,7 +10,7 @@ import { Mark } from '../models/models';
 export class MarkService {
 
   private baseUrl =
-  'https://school-management-vy1j.onrender.com/api/marks';
+  'https://school-management-vylj.onrender.com/api/marks';
 
   constructor(
     private http: HttpClient
