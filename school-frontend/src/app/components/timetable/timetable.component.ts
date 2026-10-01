@@ -84,17 +84,19 @@ export class TimetableComponent implements OnInit {
     )
     .subscribe({
       next: (data) => {
-        this.entries = Array.isArray(data) ? data : [];
+  this.entries = Array.isArray(data) ? data : [];
 
-        console.log('Timetable loaded:', this.entries);
+  console.log('Timetable loaded:', this.entries);
 
-        this.cdr.detectChanges();
-      },
+  this.loading = false;
+  this.cdr.detectChanges();
+},
 
       error: (err) => {
         console.error('Timetable load error:', err);
 
         this.entries = [];
+        this.loading = false;
 
         if (err?.name === 'TimeoutError') {
           this.error =
