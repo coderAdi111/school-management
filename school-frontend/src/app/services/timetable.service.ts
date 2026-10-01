@@ -6,7 +6,7 @@ export interface TimetableEntry {
   id?: number;
   branch: string;
   semester: number;
-  section: 'I1' | 'I2';
+ section: string;
   dayOfWeek: string;
   subject: string;
   faculty?: string;

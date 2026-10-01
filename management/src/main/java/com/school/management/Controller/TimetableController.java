@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/timetable")
-@CrossOrigin(origins = "*")
+
 public class TimetableController {
     private final TimetableDao timetableDao;
 

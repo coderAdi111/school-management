@@ -129,7 +129,7 @@ export class StudentFormComponent implements OnInit {
           );
 
           this.classes =
-            data ?? [];
+            (data ?? []).filter(c => c.grade === '5th Semester' && (c.section === 'I1' || c.section === 'I2'));
 
           this.loadingClasses = false;
 

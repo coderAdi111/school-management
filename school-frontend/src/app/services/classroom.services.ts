@@ -9,7 +9,7 @@ import { ClassRoom } from '../models/models';
 })
 export class ClassroomService {
 
-  private baseUrl = 'https://school-management-vy1j.onrender.com/api/classes';
+  private baseUrl = 'http://localhost:8080/api/classes';
 
   constructor(
     private http: HttpClient

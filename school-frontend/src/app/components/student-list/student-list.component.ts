@@ -97,7 +97,10 @@ export class StudentListComponent implements OnInit {
           );
 
           this.students =
-            data ?? [];
+            (data ?? []).filter(s =>
+              s.classRoom?.grade === '5th Semester' &&
+              (s.classRoom?.section === 'I1' || s.classRoom?.section === 'I2')
+            );
 
           this.loading = false;
 
@@ -164,7 +167,10 @@ export class StudentListComponent implements OnInit {
           );
 
           this.students =
-            data ?? [];
+            (data ?? []).filter(s =>
+              s.classRoom?.grade === '5th Semester' &&
+              (s.classRoom?.section === 'I1' || s.classRoom?.section === 'I2')
+            );
 
           this.loading = false;
 

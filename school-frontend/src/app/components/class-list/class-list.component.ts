@@ -102,7 +102,7 @@ export class ClassList implements OnInit {
           data
         );
 
-        this.classes = data ?? [];
+        this.classes = (data ?? []).filter(c => c.grade === '5th Semester' && (c.section === 'I1' || c.section === 'I2'));
 
         this.loading = false;
 
