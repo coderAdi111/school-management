@@ -31,75 +31,106 @@ public class AttendanceService {
         this.classRoomDao = classRoomDao;
     }
 
-    // =========================
-    // CREATE ATTENDANCE
-    // =========================
-
     @Transactional
     public Attendance markAttendance(
             Long studentId,
             Long classId,
             LocalDate date,
+            String subject,
             Attendance.AttendanceStatus status,
             String remarks
     ) {
 
         Student student = studentDao.findById(studentId)
-                .orElseThrow(
-                        () -> new RuntimeException(
-                                "Student not found"
-                        )
+                .orElseThrow(() ->
+                        new RuntimeException("Student not found")
                 );
 
         ClassRoom classRoom = classRoomDao.findById(classId)
-                .orElseThrow(
-                        () -> new RuntimeException(
-                                "Class not found"
-                        )
+                .orElseThrow(() ->
+                        new RuntimeException("Class not found")
                 );
+
+        String cleanSubject =
+                subject == null || subject.trim().isEmpty()
+                        ? null
+                        : subject.trim();
+
+        Attendance existing =
+                attendanceDao.findByStudentClassDateSubject(
+                        studentId,
+                        classId,
+                        date,
+                        cleanSubject
+                );
+
+        if (existing != null) {
+
+            existing.setStatus(status);
+            existing.setRemarks(remarks);
+            existing.setSubject(cleanSubject);
+
+            return attendanceDao.save(existing);
+        }
 
         Attendance record = new Attendance();
 
         record.setStudent(student);
         record.setClassRoom(classRoom);
         record.setDate(date);
+        record.setSubject(cleanSubject);
         record.setStatus(status);
         record.setRemarks(remarks);
 
         return attendanceDao.save(record);
     }
 
-    // =========================
-    // GET ALL ATTENDANCE
-    // =========================
-
     public List<Attendance> getAllAttendance() {
-
         return attendanceDao.findAll();
     }
-
-    // =========================
-    // GET BY CLASS + DATE
-    // =========================
 
     public List<Attendance> getAttendanceForClassOnDate(
             Long classId,
             LocalDate date
     ) {
-
         return attendanceDao.findByClassRoomIdAndDate(
                 classId,
                 date
         );
     }
 
-    // =========================
-    // UPDATE ATTENDANCE
-    // =========================
+    public List<Attendance> getAttendanceForClassOnDateAndSubject(
+            Long classId,
+            LocalDate date,
+            String subject
+    ) {
+        return attendanceDao.findByClassRoomIdAndDateAndSubject(
+                classId,
+                date,
+                subject
+        );
+    }
+
+    public List<Attendance> getAttendanceForClassAndSubject(
+            Long classId,
+            String subject
+    ) {
+        return attendanceDao.findByClassRoomIdAndSubject(
+                classId,
+                subject
+        );
+    }
+
+    public List<Attendance> getAttendanceForStudent(
+            Long studentId
+    ) {
+        return attendanceDao.findByStudentId(studentId);
+    }
 
     @Transactional
     public Attendance updateAttendance(
             Long id,
+            String subject,
             Attendance.AttendanceStatus status,
             String remarks
     ) {
@@ -108,10 +139,13 @@ public class AttendanceService {
                 attendanceDao.findById(id);
 
         if (existing == null) {
-
             throw new RuntimeException(
                     "Attendance not found: " + id
             );
+        }
+
+        if (subject != null && !subject.trim().isEmpty()) {
+            existing.setSubject(subject.trim());
         }
 
         existing.setStatus(status);
@@ -119,10 +153,6 @@ public class AttendanceService {
 
         return attendanceDao.save(existing);
     }
-
-    // =========================
-    // PRESENT COUNT
-    // =========================
 
     public long getStudentPresentCount(
             Long studentId,
@@ -135,5 +165,10 @@ public class AttendanceService {
                 from,
                 to
         );
+    }
+
+    @Transactional
+    public void deleteAttendance(Long id) {
+        attendanceDao.delete(id);
     }
 }

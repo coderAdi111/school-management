@@ -18,6 +18,7 @@ import {
   Student
 } from '../../models/models';
 
+
 @Component({
   selector: 'app-attendance-list',
   standalone: true,
@@ -27,19 +28,102 @@ import {
 })
 export class AttendanceListComponent implements OnInit {
 
+  // =========================
+  // DATA
+  // =========================
+
   attendanceList: Attendance[] = [];
 
   classes: ClassRoom[] = [];
 
+  students: Student[] = [];
+
+
+  // =========================
+  // SELECTION
+  // =========================
+
   selectedClassId: number | null = null;
+
+  selectedSubject = '';
 
   selectedDate =
     new Date().toISOString().substring(0, 10);
 
+
+  // =========================
+  // MODES
+  // =========================
+
   markingMode = false;
+
+
+  // =========================
+  // LOADING / ERROR
+  // =========================
 
   loading = false;
 
+  saving = false;
+
+  errorMessage = '';
+
+
+  // =========================
+  // TABS
+  // =========================
+
+  activeTab:
+    | 'mark'
+    | 'history'
+    | 'student'
+    | 'subject'
+    | 'overall' = 'mark';
+
+
+  // =========================
+  // REPORT DATA
+  // =========================
+
+  history: Attendance[] = [];
+
+  studentSearch = '';
+
+  selectedStudentId: number | null = null;
+
+  studentReport: Attendance[] = [];
+
+  // True only after the Student Report has actually been requested.
+  // This lets us show a proper 0-record report without affecting attendance loading.
+  studentReportLoaded = false;
+
+  subjectReport: Attendance[] = [];
+
+  overallReport: Attendance[] = [];
+
+
+  // =========================
+  // SUBJECTS
+  // =========================
+
+  subjects: string[] = [
+    'IDS',
+    'CCDT',
+    'CN',
+    'COA',
+    'IB',
+    'ML',
+    'OS',
+    'CN LAB',
+    'MAD LAB',
+    'ML LAB',
+    'IT LAB'
+  ];
+
+
+  // =========================
+  // CONSTRUCTOR
+  // =========================
 
   constructor(
     private attendanceService: AttendanceService,
@@ -56,6 +140,7 @@ export class AttendanceListComponent implements OnInit {
   ngOnInit(): void {
 
     this.loadClasses();
+
   }
 
 
@@ -65,66 +150,108 @@ export class AttendanceListComponent implements OnInit {
 
   loadClasses(): void {
 
-    console.log(
-      'Loading classes for attendance...'
-    );
+    this.loading = true;
+
+    this.errorMessage = '';
+
+    // Immediately update loading state
+    this.cdr.detectChanges();
+
 
     this.classRoomService.getAll().subscribe({
+
+      // =========================
+      // SUCCESS
+      // =========================
 
       next: (data: ClassRoom[]) => {
 
         console.log(
-          'Attendance classes received:',
+          'Attendance classes loaded:',
           data
         );
 
-        this.classes = (data ?? []).filter(classRoom =>
-          classRoom.grade === '5th Semester' &&
-          (classRoom.section === 'I1' || classRoom.section === 'I2')
-        );
+
+        this.classes =
+          (data ?? []).filter(
+            c =>
+              c.grade === '5th Semester' &&
+              (
+                c.section === 'I1' ||
+                c.section === 'I2'
+              )
+          );
+
+
+        this.loading = false;
+
+        this.errorMessage = '';
+
+
+        // Force UI update
+        this.cdr.detectChanges();
+
 
         console.log(
-          'Attendance classes array:',
-          this.classes
+          'Attendance classes loading finished.'
         );
 
-        this.cdr.detectChanges();
       },
 
-      error: (error: any) => {
+
+      // =========================
+      // ERROR
+      // =========================
+
+      error: (error) => {
 
         console.error(
-          'Error loading classes:',
+          'Attendance classes API loading error:',
           error
         );
 
+
+        this.loading = false;
+
         this.classes = [];
 
+        this.errorMessage =
+          'Unable to load classes. Please Refresh karein.';
+
+
         this.cdr.detectChanges();
+
       }
 
     });
+
   }
 
 
   // =========================
-  // CLASS DROPDOWN CHANGE
+  // CLASS CHANGE
   // =========================
 
-  onClassChange(event: Event): void {
+  onClassChange(): void {
 
-    const value =
-      (event.target as HTMLSelectElement).value;
+    this.attendanceList = [];
 
-    this.selectedClassId =
-      value ? Number(value) : null;
+    this.markingMode = false;
 
-    console.log(
-      'Selected class:',
-      this.selectedClassId
-    );
+    this.history = [];
+
+    this.studentReport = [];
+    this.studentReportLoaded = false;
+    this.selectedStudentId = null;
+
+    this.subjectReport = [];
+
+    this.overallReport = [];
+
+    this.errorMessage = '';
 
     this.cdr.detectChanges();
+
   }
 
 
@@ -139,9 +266,35 @@ export class AttendanceListComponent implements OnInit {
       alert('Please select a class.');
 
       return;
+
     }
 
+
+    if (!this.selectedSubject) {
+
+      alert('Please select a subject.');
+
+      return;
+
+    }
+
+
+    if (!this.selectedDate) {
+
+      alert('Please select a date.');
+
+      return;
+
+    }
+
+
+    // =========================
+    // START LOADING
+    // =========================
+
     this.loading = true;
+
+    this.errorMessage = '';
 
     this.cdr.detectChanges();
 
@@ -156,10 +309,15 @@ export class AttendanceListComponent implements OnInit {
       attendance:
         this.attendanceService.getByClassAndDate(
           this.selectedClassId,
-          this.selectedDate
+          this.selectedDate,
+          this.selectedSubject
         )
 
     }).subscribe({
+
+      // =========================
+      // SUCCESS
+      // =========================
 
       next: ({
         students,
@@ -167,14 +325,15 @@ export class AttendanceListComponent implements OnInit {
       }) => {
 
         console.log(
-          'Attendance students:',
-          students
+          'Attendance data loaded:',
+          {
+            students,
+            attendance
+          }
         );
 
-        console.log(
-          'Attendance records:',
-          attendance
-        );
+
+        this.students = students ?? [];
 
 
         const selectedClass =
@@ -185,32 +344,40 @@ export class AttendanceListComponent implements OnInit {
 
 
         this.attendanceList =
-          students.map(
+          this.students.map(
             (student: Student) => {
 
-              const existingAttendance =
-                attendance.find(
+              const existing =
+                (attendance ?? []).find(
                   a =>
-                    a.student?.id ===
-                    student.id
+                    a.student?.id === student.id
                 );
 
 
-              // Already saved attendance
-              if (existingAttendance) {
+              if (existing) {
 
-                return existingAttendance;
+                return {
+
+                  ...existing,
+
+                  subject:
+                    existing.subject ||
+                    this.selectedSubject
+
+                };
+
               }
 
 
-              // New attendance record
               return {
 
-                student: student,
+                student,
 
                 classRoom: selectedClass,
 
                 date: this.selectedDate,
+
+                subject: this.selectedSubject,
 
                 status: 'PRESENT',
 
@@ -226,50 +393,98 @@ export class AttendanceListComponent implements OnInit {
 
         this.loading = false;
 
+        this.errorMessage = '';
 
-        console.log(
-          'Attendance list:',
-          this.attendanceList
-        );
+        this.activeTab = 'mark';
 
-        console.log(
-          'Attendance loading:',
-          this.loading
-        );
 
+        // =========================
+        // FORCE UI UPDATE
+        // =========================
 
         this.cdr.detectChanges();
+
+
+        console.log(
+          'Attendance loading finished.'
+        );
+
       },
 
 
-      error: (error: any) => {
+      // =========================
+      // ERROR
+      // =========================
+
+      error: (error) => {
 
         console.error(
-          'Error loading attendance:',
+          'Attendance API loading error:',
           error
         );
 
+
         this.loading = false;
+
+        this.attendanceList = [];
+
+        this.markingMode = false;
+
+        this.errorMessage =
+          'Unable to load attendance. Please Refresh karein.';
+
 
         this.cdr.detectChanges();
 
-        alert(
-          'Unable to load attendance.'
-        );
       }
 
     });
+
   }
 
 
   // =========================
-  // UPDATE STATUS
+  // REFRESH ATTENDANCE
+  // =========================
+
+  refreshAttendance(): void {
+
+    console.log(
+      'Refreshing attendance...'
+    );
+
+
+    // If class + subject + date are selected,
+    // reload the attendance data.
+
+    if (
+      this.selectedClassId !== null &&
+      this.selectedSubject &&
+      this.selectedDate
+    ) {
+
+      this.loadAttendance();
+
+      return;
+
+    }
+
+
+    // Otherwise reload classes
+
+    this.loadClasses();
+
+  }
+
+
+  // =========================
+  // STATUS
   // =========================
 
   updateStatus(
     record: Attendance,
     status:
-      'PRESENT'
+      | 'PRESENT'
       | 'ABSENT'
       | 'LATE'
       | 'EXCUSED'
@@ -278,56 +493,157 @@ export class AttendanceListComponent implements OnInit {
     record.status = status;
 
     this.cdr.detectChanges();
+
   }
 
 
   // =========================
-  // SAVE ATTENDANCE
+  // MARK ALL PRESENT
+  // =========================
+
+  markAllPresent(): void {
+
+    this.attendanceList.forEach(
+      record =>
+        record.status = 'PRESENT'
+    );
+
+    this.cdr.detectChanges();
+
+  }
+
+
+  // =========================
+  // MARK ALL ABSENT
+  // =========================
+
+  markAllAbsent(): void {
+
+    this.attendanceList.forEach(
+      record =>
+        record.status = 'ABSENT'
+    );
+
+    this.cdr.detectChanges();
+
+  }
+
+
+  // =========================
+  // SUMMARY
+  // =========================
+
+  get totalCount(): number {
+
+    return this.attendanceList.length;
+
+  }
+
+
+  get presentCount(): number {
+
+    return this.attendanceList.filter(
+      a =>
+        a.status === 'PRESENT'
+    ).length;
+
+  }
+
+
+  get absentCount(): number {
+
+    return this.attendanceList.filter(
+      a =>
+        a.status === 'ABSENT'
+    ).length;
+
+  }
+
+
+  get lateCount(): number {
+
+    return this.attendanceList.filter(
+      a =>
+        a.status === 'LATE'
+    ).length;
+
+  }
+
+
+  get excusedCount(): number {
+
+    return this.attendanceList.filter(
+      a =>
+        a.status === 'EXCUSED'
+    ).length;
+
+  }
+
+
+  // =========================
+  // SAVE
   // =========================
 
   saveAttendance(): void {
 
-    if (this.selectedClassId === null) {
+    if (
+      this.selectedClassId === null ||
+      !this.selectedSubject
+    ) {
 
       alert(
-        'Please select a class.'
+        'Please select class and subject.'
       );
 
       return;
+
     }
 
 
-    if (
-      this.attendanceList.length === 0
-    ) {
+    if (!this.attendanceList.length) {
 
       alert(
         'No students found.'
       );
 
       return;
+
     }
+
+
+    this.saving = true;
+
+    this.errorMessage = '';
+
+    this.cdr.detectChanges();
 
 
     const requests =
       this.attendanceList.map(
         record => {
 
-          // Existing attendance → UPDATE
+          record.subject =
+            this.selectedSubject;
+
+          record.date =
+            this.selectedDate;
+
+
           if (record.id != null) {
 
             return this.attendanceService.update(
               record.id,
               record
             );
+
           }
 
 
-          // New attendance → CREATE
           return this.attendanceService.create(
             record.student!.id!,
             this.selectedClassId!,
             this.selectedDate,
+            this.selectedSubject,
             record.status,
             record.remarks || ''
           );
@@ -338,29 +654,565 @@ export class AttendanceListComponent implements OnInit {
 
     forkJoin(requests).subscribe({
 
+      // =========================
+      // SUCCESS
+      // =========================
+
       next: () => {
+
+        this.saving = false;
+
+        this.errorMessage = '';
+
+        this.cdr.detectChanges();
+
 
         alert(
           'Attendance saved successfully!'
         );
 
-        window.location.reload();
+
+        // Reload latest data
+        this.loadAttendance();
+
       },
 
 
-      error: (error: any) => {
+      // =========================
+      // ERROR
+      // =========================
+
+      error: (error) => {
 
         console.error(
           'Error saving attendance:',
           error
         );
 
+
+        this.saving = false;
+
+        this.errorMessage =
+          'Failed to save attendance. Please try again.';
+
+
+        this.cdr.detectChanges();
+
+
         alert(
           'Failed to save attendance.'
         );
+
       }
 
     });
+
+  }
+
+
+  // =========================
+  // HISTORY
+  // =========================
+
+  loadHistory(): void {
+
+    if (
+      this.selectedClassId === null ||
+      !this.selectedSubject
+    ) {
+
+      return;
+
+    }
+
+
+    this.loading = true;
+
+    this.errorMessage = '';
+
+    this.cdr.detectChanges();
+
+
+    this.attendanceService
+      .getByClassAndSubject(
+        this.selectedClassId,
+        this.selectedSubject
+      )
+      .subscribe({
+
+        next: data => {
+
+          this.history = data ?? [];
+
+          this.loading = false;
+
+          this.errorMessage = '';
+
+          this.activeTab = 'history';
+
+          this.cdr.detectChanges();
+
+        },
+
+
+        error: error => {
+
+          console.error(
+            'History error:',
+            error
+          );
+
+
+          this.loading = false;
+
+          this.history = [];
+
+          this.errorMessage =
+            'Unable to load attendance history.';
+
+
+          this.cdr.detectChanges();
+
+        }
+
+      });
+
+  }
+
+
+  // =========================
+  // OPEN STUDENT REPORT
+  // =========================
+
+  openStudentReport(): void {
+
+    if (this.selectedClassId === null) {
+      alert('Please select a class.');
+      return;
+    }
+
+    this.activeTab = 'student';
+
+    // Students are already loaded after Load Attendance.
+    // If not, load them here so the dropdown also works when
+    // Student Report is opened first.
+    if (this.students.length > 0) {
+      return;
+    }
+
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.cdr.detectChanges();
+
+    this.studentService
+      .getByClass(this.selectedClassId)
+      .subscribe({
+
+        next: (data: Student[]) => {
+
+          this.students = data ?? [];
+
+          this.loading = false;
+          this.errorMessage = '';
+
+          this.cdr.detectChanges();
+
+        },
+
+        error: (error) => {
+
+          console.error(
+            'Student Report student loading error:',
+            error
+          );
+
+          this.loading = false;
+          this.students = [];
+
+          this.errorMessage =
+            'Unable to load students for report.';
+
+          this.cdr.detectChanges();
+
+        }
+
+      });
+
+  }
+
+
+  // =========================
+  // STUDENT REPORT
+  // =========================
+
+  loadStudentReport(): void {
+
+    if (!this.selectedStudentId) {
+
+      alert(
+        'Please select a student.'
+      );
+
+      return;
+
+    }
+
+    if (!this.selectedSubject) {
+
+      alert(
+        'Please select a subject.'
+      );
+
+      return;
+
+    }
+
+    this.loading = true;
+    this.errorMessage = '';
+    this.studentReportLoaded = false;
+
+    this.cdr.detectChanges();
+
+    this.attendanceService
+      .getByStudent(
+        this.selectedStudentId
+      )
+      .subscribe({
+
+        next: data => {
+
+          const allRecords =
+            data ?? [];
+
+          const selectedSubject =
+            this.selectedSubject
+              .trim()
+              .toLowerCase();
+
+          // Student report is for the subject currently
+          // selected in the main filter.
+          this.studentReport =
+            allRecords.filter(
+              record =>
+                (record.subject ?? '')
+                  .trim()
+                  .toLowerCase() ===
+                selectedSubject
+            );
+
+          this.studentReportLoaded = true;
+          this.activeTab = 'student';
+          this.loading = false;
+          this.errorMessage = '';
+
+          this.cdr.detectChanges();
+
+          console.log(
+            'Student report loaded:',
+            {
+              studentId:
+                this.selectedStudentId,
+              subject:
+                this.selectedSubject,
+              records:
+                this.studentReport
+            }
+          );
+
+        },
+
+        error: error => {
+
+          console.error(
+            'Student report error:',
+            error
+          );
+
+          this.loading = false;
+          this.studentReport = [];
+          this.studentReportLoaded = false;
+
+          this.errorMessage =
+            'Unable to load student report.';
+
+          this.cdr.detectChanges();
+
+        }
+
+      });
+
+  }
+
+  // =========================
+  // SUBJECT REPORT
+  // =========================
+
+  loadSubjectReport(): void {
+
+    if (
+      this.selectedClassId === null ||
+      !this.selectedSubject
+    ) {
+
+      alert(
+        'Please select class and subject.'
+      );
+
+      return;
+
+    }
+
+
+    this.loading = true;
+
+    this.errorMessage = '';
+
+    this.cdr.detectChanges();
+
+
+    this.attendanceService
+      .getByClassAndSubject(
+        this.selectedClassId,
+        this.selectedSubject
+      )
+      .subscribe({
+
+        next: data => {
+
+          this.subjectReport =
+            data ?? [];
+
+          this.activeTab = 'subject';
+
+          this.loading = false;
+
+          this.errorMessage = '';
+
+          this.cdr.detectChanges();
+
+        },
+
+
+        error: error => {
+
+          console.error(
+            'Subject report error:',
+            error
+          );
+
+
+          this.loading = false;
+
+          this.subjectReport = [];
+
+          this.errorMessage =
+            'Unable to load subject report.';
+
+
+          this.cdr.detectChanges();
+
+        }
+
+      });
+
+  }
+
+
+  // =========================
+  // OVERALL REPORT
+  // =========================
+
+  loadOverallReport(): void {
+
+    if (this.selectedClassId === null) {
+
+      alert(
+        'Please select a class.'
+      );
+
+      return;
+
+    }
+
+
+    this.loading = true;
+
+    this.errorMessage = '';
+
+    this.cdr.detectChanges();
+
+
+    this.attendanceService
+      .getByClass(
+        this.selectedClassId
+      )
+      .subscribe({
+
+        next: data => {
+
+          this.overallReport =
+            data ?? [];
+
+          this.activeTab = 'overall';
+
+          this.loading = false;
+
+          this.errorMessage = '';
+
+          this.cdr.detectChanges();
+
+        },
+
+
+        error: error => {
+
+          console.error(
+            'Overall report error:',
+            error
+          );
+
+
+          this.loading = false;
+
+          this.overallReport = [];
+
+          this.errorMessage =
+            'Unable to load overall report.';
+
+
+          this.cdr.detectChanges();
+
+        }
+
+      });
+
+  }
+
+
+  // =========================
+  // PERCENTAGE
+  // =========================
+
+  percentage(
+    records: Attendance[]
+  ): number {
+
+    if (!records.length) {
+
+      return 0;
+
+    }
+
+
+    const attended =
+      records.filter(
+        a =>
+          a.status === 'PRESENT' ||
+          a.status === 'LATE'
+      ).length;
+
+
+    return Math.round(
+      (attended / records.length) * 100
+    );
+
+  }
+
+
+  // =========================
+  // STUDENT NAME
+  // =========================
+
+  studentName(
+    student?: Student
+  ): string {
+
+    if (!student) {
+
+      return '-';
+
+    }
+
+
+    return `${student.firstName} ${student.lastName}`;
+
+  }
+
+
+  // =========================
+  // ENROLLMENT
+  // =========================
+
+  enrollment(
+    student?: Student
+  ): string {
+
+    if (!student?.email) {
+
+      return '-';
+
+    }
+
+
+    return student.email
+      .split('@')[0]
+      .toUpperCase();
+
+  }
+
+
+  // =========================
+  // FILTER STUDENTS
+  // =========================
+
+  get filteredStudents(): Student[] {
+
+    const search =
+      this.studentSearch
+        .trim()
+        .toLowerCase();
+
+
+    if (!search) {
+
+      return this.students;
+
+    }
+
+
+    return this.students.filter(
+      s =>
+        this.studentName(s)
+          .toLowerCase()
+          .includes(search) ||
+
+        this.enrollment(s)
+          .toLowerCase()
+          .includes(search)
+    );
+
+  }
+
+
+  // =========================
+  // REPORT COUNTS
+  // =========================
+
+  countStatus(
+    records: Attendance[],
+    status:
+      | 'PRESENT'
+      | 'ABSENT'
+      | 'LATE'
+      | 'EXCUSED'
+  ): number {
+
+    return records.filter(
+      r =>
+        r.status === status
+    ).length;
+
   }
 
 }

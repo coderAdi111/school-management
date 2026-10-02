@@ -152,15 +152,15 @@
         <tbody>
 
 
-          <tr
-            *ngFor="let s of students">
+          <tr 
+  *ngFor="let s of students; let i = index">
 
 
             <!-- ID -->
 
-            <td>
-              {{ s.id }}
-            </td>
+            <td> 
+  {{ i + 1 }} 
+</td>
 
 
             <!-- NAME -->

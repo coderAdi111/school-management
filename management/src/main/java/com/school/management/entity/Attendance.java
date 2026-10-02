@@ -3,56 +3,64 @@ package com.school.management.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(
-
-name = "attendance",
-uniqueConstraints = @UniqueConstraint(
-name = "uq_attendance",
-columnNames = {"student_id", "class_id", "date"}
+    name = "attendance",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uq_attendance",
+        columnNames = {"student_id", "class_id", "date", "subject"}
+    )
 )
-)
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-
 public class Attendance {
+
     @Id
-@GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-private Long id;
-@NotNull(message = "Student is required")
-@ManyToOne(fetch = FetchType.LAZY)
-@JoinColumn(name = "student_id", nullable = false)
+    @NotNull(message = "Student is required")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_id", nullable = false)
+    private Student student;
 
-private Student student;
-@NotNull(message = "Class is required")
-@ManyToOne(fetch = FetchType.LAZY)
-@JoinColumn(name = "class_id", nullable = false)
+    @NotNull(message = "Class is required")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_id", nullable = false)
+    private ClassRoom classRoom;
 
-private ClassRoom classRoom;
-@NotNull(message = "Date is required")
-@Column(nullable = false)
+    @NotNull(message = "Date is required")
+    @Column(nullable = false)
+    private LocalDate date;
 
-private LocalDate date;
-@NotNull(message = "Status is required")
-@Enumerated(EnumType.STRING)
-@Column(nullable = false, length = 10)
+    @Column(length = 100)
+    private String subject;
 
-private AttendanceStatus status;
-public enum AttendanceStatus { PRESENT, ABSENT, LATE, EXCUSED }
-@Column(length = 255)
+    @NotNull(message = "Status is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private AttendanceStatus status;
 
-private String remarks;
-@Column(name = "created_at", updatable = false)
+    public enum AttendanceStatus {
+        PRESENT,
+        ABSENT,
+        LATE,
+        EXCUSED
+    }
 
-private LocalDateTime createdAt;
+    @Column(length = 255)
+    private String remarks;
 
-@PrePersist
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
-protected void onCreate() { createdAt = LocalDateTime.now(); }
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }

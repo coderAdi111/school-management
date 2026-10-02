@@ -16,6 +16,17 @@ public interface AttendanceDao {
             LocalDate date
     );
 
+    List<Attendance> findByClassRoomIdAndDateAndSubject(
+            Long classId,
+            LocalDate date,
+            String subject
+    );
+
+    List<Attendance> findByClassRoomIdAndSubject(
+            Long classId,
+            String subject
+    );
+
     long countPresent(
             Long studentId,
             LocalDate from,
@@ -23,6 +34,13 @@ public interface AttendanceDao {
     );
 
     Attendance findById(Long id);
+
+    Attendance findByStudentClassDateSubject(
+            Long studentId,
+            Long classId,
+            LocalDate date,
+            String subject
+    );
 
     Attendance save(Attendance attendance);
 

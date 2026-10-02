@@ -30,12 +30,13 @@ export interface Student {
  createdAt?: string;
 }
 export interface Attendance {
- id?: number;
- student?: Student;
- classRoom?: ClassRoom;
- date: string;
- status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
- remarks?: string;
+  id?: number;
+  student?: Student;
+  classRoom?: ClassRoom;
+  date: string;
+  subject?: string;
+  status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+  remarks?: string;
 }
 export interface Fee {
  id?: number;

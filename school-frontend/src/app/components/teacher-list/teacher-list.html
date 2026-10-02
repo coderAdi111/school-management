@@ -147,14 +147,14 @@
         <tbody>
 
           <tr
-            *ngFor="let teacher of teachers"
-          >
+  *ngFor="let teacher of teachers; let i = index"
+>
 
             <td>
-              <span class="id-badge">
-                #{{ teacher.id }}
-              </span>
-            </td>
+  <span class="id-badge">
+    #{{ i + 1 }}
+  </span>
+</td>
 
 
             <td>

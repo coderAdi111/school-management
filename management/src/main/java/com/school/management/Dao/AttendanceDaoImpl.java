@@ -29,7 +29,8 @@ public class AttendanceDaoImpl implements AttendanceDao {
                 "(sc.grade = :grade AND sc.section IN :sections) " +
                 "OR " +
                 "(c.grade = :grade AND c.section IN :sections)" +
-                ")",
+                ") " +
+                "ORDER BY a.date DESC, a.id DESC",
                 Attendance.class
         )
         .setParameter("grade", "5th Semester")
@@ -42,7 +43,10 @@ public class AttendanceDaoImpl implements AttendanceDao {
 
         return em.createQuery(
                 "SELECT a FROM Attendance a " +
-                "WHERE a.student.id = :sid",
+                "JOIN FETCH a.student s " +
+                "JOIN FETCH a.classRoom c " +
+                "WHERE s.id = :sid " +
+                "ORDER BY a.date DESC, a.id DESC",
                 Attendance.class
         )
         .setParameter("sid", studentId)
@@ -57,12 +61,58 @@ public class AttendanceDaoImpl implements AttendanceDao {
 
         return em.createQuery(
                 "SELECT a FROM Attendance a " +
-                "WHERE a.classRoom.id = :cid " +
-                "AND a.date = :date",
+                "JOIN FETCH a.student s " +
+                "JOIN FETCH a.classRoom c " +
+                "WHERE c.id = :cid " +
+                "AND a.date = :date " +
+                "ORDER BY s.id ASC",
                 Attendance.class
         )
         .setParameter("cid", classId)
         .setParameter("date", date)
+        .getResultList();
+    }
+
+    @Override
+    public List<Attendance> findByClassRoomIdAndDateAndSubject(
+            Long classId,
+            LocalDate date,
+            String subject
+    ) {
+
+        return em.createQuery(
+                "SELECT a FROM Attendance a " +
+                "JOIN FETCH a.student s " +
+                "JOIN FETCH a.classRoom c " +
+                "WHERE c.id = :cid " +
+                "AND a.date = :date " +
+                "AND LOWER(a.subject) = LOWER(:subject) " +
+                "ORDER BY s.id ASC",
+                Attendance.class
+        )
+        .setParameter("cid", classId)
+        .setParameter("date", date)
+        .setParameter("subject", subject)
+        .getResultList();
+    }
+
+    @Override
+    public List<Attendance> findByClassRoomIdAndSubject(
+            Long classId,
+            String subject
+    ) {
+
+        return em.createQuery(
+                "SELECT a FROM Attendance a " +
+                "JOIN FETCH a.student s " +
+                "JOIN FETCH a.classRoom c " +
+                "WHERE c.id = :cid " +
+                "AND LOWER(a.subject) = LOWER(:subject) " +
+                "ORDER BY a.date DESC, s.id ASC",
+                Attendance.class
+        )
+        .setParameter("cid", classId)
+        .setParameter("subject", subject)
         .getResultList();
     }
 
@@ -86,6 +136,35 @@ public class AttendanceDaoImpl implements AttendanceDao {
     }
 
     @Override
+    public Attendance findByStudentClassDateSubject(
+            Long studentId,
+            Long classId,
+            LocalDate date,
+            String subject
+    ) {
+
+        List<Attendance> results = em.createQuery(
+                "SELECT a FROM Attendance a " +
+                "WHERE a.student.id = :studentId " +
+                "AND a.classRoom.id = :classId " +
+                "AND a.date = :date " +
+                "AND (" +
+                "(:subject IS NULL AND a.subject IS NULL) " +
+                "OR LOWER(a.subject) = LOWER(:subject)" +
+                ")",
+                Attendance.class
+        )
+        .setParameter("studentId", studentId)
+        .setParameter("classId", classId)
+        .setParameter("date", date)
+        .setParameter("subject", subject)
+        .setMaxResults(1)
+        .getResultList();
+
+        return results.isEmpty() ? null : results.get(0);
+    }
+
+    @Override
     public Attendance findById(Long id) {
         return em.find(Attendance.class, id);
     }
@@ -106,8 +185,7 @@ public class AttendanceDaoImpl implements AttendanceDao {
     @Transactional
     public void delete(Long id) {
 
-        Attendance attendance =
-                em.find(Attendance.class, id);
+        Attendance attendance = em.find(Attendance.class, id);
 
         if (attendance != null) {
             em.remove(attendance);

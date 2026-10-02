@@ -1,153 +1,356 @@
-<div class="container-fluid py-4">
+<div class="attendance-page">
 
-  <h2>Attendance</h2>
-
-  <!-- Filter Section -->
-  <div class="card mb-3">
-    <div class="card-body">
-
-      <div class="row g-3">
-
-        <!-- Class -->
-        <div class="col-md-4">
-          <label class="form-label">Class</label>
-
-          <select
-            class="form-select"
-            [value]="selectedClassId ?? ''"
-            (change)="onClassChange($event)"
-          >
-            <option value="">-- Select Class --</option>
-
-            <option
-              *ngFor="let c of classes"
-              [value]="c.id"
-            >
-              {{ c.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Date -->
-        <div class="col-md-3">
-          <label class="form-label">Date</label>
-
-          <input
-            type="date"
-            class="form-control"
-            [value]="selectedDate"
-            (input)="selectedDate = $any($event.target).value"
-          />
-        </div>
-
-        <!-- Load Button -->
-        <div class="col-md-2 d-flex align-items-end">
-          <button
-            type="button"
-            class="btn btn-primary w-100"
-            (click)="loadAttendance()"
-          >
-            Load
-          </button>
-        </div>
-
-      </div>
-
+  <div class="page-header">
+    <div>
+      <h2>Attendance Management</h2>
+      <p>
+        Manage subject-wise attendance for 5th Semester IT
+      </p>
     </div>
   </div>
 
 
-  <!-- Attendance Table -->
-  <div class="card" *ngIf="markingMode">
+  <!-- ================= FILTER ================= -->
 
-    <div class="card-body p-0">
+  <div class="filter-card">
 
-      <div class="table-responsive">
+    <div class="filter-grid">
 
-        <table class="table table-hover mb-0">
+      <div class="filter-field">
 
-          <thead class="table-dark">
+        <label>Class</label>
+
+        <select
+          class="form-control"
+          [(ngModel)]="selectedClassId"
+          (change)="onClassChange()"
+        >
+
+          <option [ngValue]="null">
+            -- Select Class --
+          </option>
+
+          <option
+            *ngFor="let c of classes"
+            [ngValue]="c.id"
+          >
+            {{ c.name }}
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="filter-field">
+
+        <label>Subject</label>
+
+        <select
+          class="form-control"
+          [(ngModel)]="selectedSubject"
+        >
+
+          <option value="">
+            -- Select Subject --
+          </option>
+
+          <option
+            *ngFor="let subject of subjects"
+            [value]="subject"
+          >
+            {{ subject }}
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="filter-field">
+
+        <label>Date</label>
+
+        <input
+          type="date"
+          class="form-control"
+          [(ngModel)]="selectedDate"
+        />
+
+      </div>
+
+
+      <div class="filter-field button-field">
+
+        <label>&nbsp;</label>
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="loading"
+          (click)="loadAttendance()"
+        >
+          {{ loading ? 'Loading...' : 'Load Attendance' }}
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================= TABS ================= -->
+
+  <div class="tabs-card">
+
+    <button
+      [class.active]="activeTab === 'mark'"
+      (click)="activeTab = 'mark'"
+    >
+      Mark Attendance
+    </button>
+
+    <button
+      [class.active]="activeTab === 'history'"
+      (click)="loadHistory()"
+    >
+      History
+    </button>
+
+    <button
+      [class.active]="activeTab === 'student'"
+      (click)="openStudentReport()"
+    >
+      Student Report
+    </button>
+
+    <button
+      [class.active]="activeTab === 'subject'"
+      (click)="loadSubjectReport()"
+    >
+      Subject Report
+    </button>
+
+    <button
+      [class.active]="activeTab === 'overall'"
+      (click)="loadOverallReport()"
+    >
+      Overall Report
+    </button>
+
+  </div>
+
+
+  <!-- ================= MARK ATTENDANCE ================= -->
+
+  <div
+    class="content-card"
+    *ngIf="activeTab === 'mark'"
+  >
+
+    <div
+      class="empty-state"
+      *ngIf="!markingMode"
+    >
+      <div class="empty-icon">📋</div>
+
+      <h3>Select Class, Subject and Date</h3>
+
+      <p>
+        Then click "Load Attendance" to mark attendance.
+      </p>
+    </div>
+
+
+    <div *ngIf="markingMode">
+
+      <!-- SUMMARY -->
+
+      <div class="summary-grid">
+
+        <div class="summary-card total">
+          <span>Total</span>
+          <strong>{{ totalCount }}</strong>
+        </div>
+
+        <div class="summary-card present">
+          <span>Present</span>
+          <strong>{{ presentCount }}</strong>
+        </div>
+
+        <div class="summary-card absent">
+          <span>Absent</span>
+          <strong>{{ absentCount }}</strong>
+        </div>
+
+        <div class="summary-card late">
+          <span>Late</span>
+          <strong>{{ lateCount }}</strong>
+        </div>
+
+        <div class="summary-card excused">
+          <span>Excused</span>
+          <strong>{{ excusedCount }}</strong>
+        </div>
+
+      </div>
+
+
+      <!-- ACTIONS -->
+
+      <div class="action-bar">
+
+        <div>
+
+          <button
+            type="button"
+            class="btn btn-success"
+            (click)="markAllPresent()"
+          >
+            ✓ Mark All Present
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-danger"
+            (click)="markAllAbsent()"
+          >
+            ✕ Mark All Absent
+          </button>
+
+        </div>
+
+
+        <button
+          type="button"
+          class="btn btn-primary save-btn"
+          [disabled]="saving"
+          (click)="saveAttendance()"
+        >
+          {{ saving ? 'Saving...' : 'Save Attendance' }}
+        </button>
+
+      </div>
+
+
+      <!-- TABLE -->
+
+      <div class="table-wrapper">
+
+        <table>
+
+          <thead>
+
             <tr>
+              <th>No.</th>
               <th>Student</th>
+              <th>Enrollment</th>
               <th>Status</th>
               <th>Remarks</th>
             </tr>
+
           </thead>
+
 
           <tbody>
 
-            <tr *ngFor="let a of attendanceList">
+            <tr
+              *ngFor="
+                let a of attendanceList;
+                let i = index
+              "
+            >
 
-              <!-- Student -->
               <td>
-                <strong>
-                  {{ a.student?.firstName }}
-                  {{ a.student?.lastName }}
-                </strong>
+                <span class="serial">
+                  {{ i + 1 }}
+                </span>
               </td>
 
-              <!-- Status -->
+
               <td>
 
-                <div class="btn-group btn-group-sm">
+                <div class="student-cell">
 
-                  <!-- PRESENT -->
+                  <div class="student-avatar">
+                    {{ a.student?.firstName?.charAt(0) }}
+                  </div>
+
+                  <div>
+
+                    <strong>
+                      {{ studentName(a.student) }}
+                    </strong>
+
+                  </div>
+
+                </div>
+
+              </td>
+
+
+              <td>
+                <span class="enrollment">
+                  {{ enrollment(a.student) }}
+                </span>
+              </td>
+
+
+              <td>
+
+                <div class="status-buttons">
+
                   <button
                     type="button"
-                    class="btn"
-                    [class.btn-success]="a.status === 'PRESENT'"
-                    [class.btn-outline-success]="a.status !== 'PRESENT'"
+                    [class.selected]="a.status === 'PRESENT'"
+                    class="status present"
                     (click)="updateStatus(a, 'PRESENT')"
                   >
-                    PRESENT
+                    Present
                   </button>
 
-                  <!-- ABSENT -->
                   <button
                     type="button"
-                    class="btn"
-                    [class.btn-danger]="a.status === 'ABSENT'"
-                    [class.btn-outline-danger]="a.status !== 'ABSENT'"
+                    [class.selected]="a.status === 'ABSENT'"
+                    class="status absent"
                     (click)="updateStatus(a, 'ABSENT')"
                   >
-                    ABSENT
+                    Absent
                   </button>
 
-                  <!-- LATE -->
                   <button
                     type="button"
-                    class="btn"
-                    [class.btn-warning]="a.status === 'LATE'"
-                    [class.btn-outline-warning]="a.status !== 'LATE'"
+                    [class.selected]="a.status === 'LATE'"
+                    class="status late"
                     (click)="updateStatus(a, 'LATE')"
                   >
-                    LATE
+                    Late
                   </button>
 
-                  <!-- EXCUSED -->
                   <button
                     type="button"
-                    class="btn"
-                    [class.btn-info]="a.status === 'EXCUSED'"
-                    [class.btn-outline-info]="a.status !== 'EXCUSED'"
+                    [class.selected]="a.status === 'EXCUSED'"
+                    class="status excused"
                     (click)="updateStatus(a, 'EXCUSED')"
                   >
-                    EXCUSED
+                    Excused
                   </button>
 
                 </div>
 
               </td>
 
-              <!-- Remarks -->
+
               <td>
+
                 <input
                   type="text"
-                  class="form-control form-control-sm"
-                  [value]="a.remarks || ''"
-                  (input)="a.remarks = $any($event.target).value"
+                  class="remarks-input"
+                  [(ngModel)]="a.remarks"
                   placeholder="Optional remarks"
                 />
+
               </td>
 
             </tr>
@@ -160,16 +363,465 @@
 
     </div>
 
-    <!-- Save -->
-    <div class="card-footer">
+  </div>
+
+
+  <!-- ================= HISTORY ================= -->
+
+  <div
+    class="content-card"
+    *ngIf="activeTab === 'history'"
+  >
+
+    <div class="section-header">
+
+      <div>
+        <h3>Attendance History</h3>
+
+        <p>
+          {{ selectedSubject || 'Select a subject' }}
+        </p>
+      </div>
+
+    </div>
+
+
+    <div
+      class="empty-state"
+      *ngIf="!history.length"
+    >
+      <div class="empty-icon">📅</div>
+      <h3>No attendance history</h3>
+      <p>
+        Select a class and subject to view history.
+      </p>
+    </div>
+
+
+    <div
+      class="table-wrapper"
+      *ngIf="history.length"
+    >
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Date</th>
+            <th>Student</th>
+            <th>Enrollment</th>
+            <th>Status</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          <tr
+            *ngFor="
+              let a of history;
+              let i = index
+            "
+          >
+
+            <td>{{ i + 1 }}</td>
+
+            <td>{{ a.date }}</td>
+
+            <td>
+              {{ studentName(a.student) }}
+            </td>
+
+            <td>
+              {{ enrollment(a.student) }}
+            </td>
+
+            <td>
+              <span
+                class="status-badge"
+                [ngClass]="a.status.toLowerCase()"
+              >
+                {{ a.status }}
+              </span>
+            </td>
+
+            <td>
+              {{ a.remarks || '-' }}
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================= STUDENT REPORT ================= -->
+
+  <div
+    class="content-card"
+    *ngIf="activeTab === 'student'"
+  >
+
+    <div class="report-controls">
+
+      <div class="filter-field">
+
+        <label>Student</label>
+
+        <select
+          class="form-control"
+          [(ngModel)]="selectedStudentId"
+        >
+
+          <option [ngValue]="null">
+            -- Select Student --
+          </option>
+
+          <option
+            *ngFor="let s of students"
+            [ngValue]="s.id"
+          >
+            {{ studentName(s) }}
+            - {{ enrollment(s) }}
+          </option>
+
+        </select>
+
+      </div>
 
       <button
+        class="btn btn-primary"
         type="button"
-        class="btn btn-success"
-        (click)="saveAttendance()"
+        [disabled]="loading"
+        (click)="loadStudentReport()"
       >
-        Save Attendance
+        {{ loading ? 'Loading...' : 'View Report' }}
       </button>
+
+    </div>
+
+
+    <!-- REPORT SUMMARY -->
+
+    <div
+      class="report-summary"
+      *ngIf="studentReportLoaded"
+    >
+
+      <div class="big-percentage">
+        {{ percentage(studentReport) }}%
+      </div>
+
+      <div>
+        <strong>Overall Attendance</strong>
+
+        <p>
+          {{ studentReport.length }} attendance records
+        </p>
+
+        <p *ngIf="!studentReport.length">
+          No attendance has been marked for
+          <strong>{{ selectedSubject }}</strong>
+          for this student yet.
+        </p>
+      </div>
+
+    </div>
+
+
+    <!-- NO RECORDS -->
+
+    <div
+      class="empty-state"
+      *ngIf="
+        studentReportLoaded &&
+        !studentReport.length
+      "
+    >
+
+      <div class="empty-icon">📊</div>
+
+      <h3>No Attendance Records</h3>
+
+      <p>
+        No attendance has been marked for
+        <strong>{{ selectedSubject }}</strong>
+        for this student yet.
+      </p>
+
+    </div>
+
+
+    <!-- SUBJECT REPORT TABLE -->
+
+    <div
+      class="table-wrapper"
+      *ngIf="studentReport.length"
+    >
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>Subject</th>
+            <th>Total</th>
+            <th>Present</th>
+            <th>Absent</th>
+            <th>Late</th>
+            <th>Percentage</th>
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr>
+
+            <td>
+              {{ selectedSubject }}
+            </td>
+
+            <td>
+              {{ studentReport.length }}
+            </td>
+
+            <td>
+              {{ countStatus(
+                studentReport,
+                'PRESENT'
+              ) }}
+            </td>
+
+            <td>
+              {{ countStatus(
+                studentReport,
+                'ABSENT'
+              ) }}
+            </td>
+
+            <td>
+              {{ countStatus(
+                studentReport,
+                'LATE'
+              ) }}
+            </td>
+
+            <td>
+              <strong>
+                {{ percentage(studentReport) }}%
+              </strong>
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================= SUBJECT REPORT ================= -->
+
+  <div
+    class="content-card"
+    *ngIf="activeTab === 'subject'"
+  >
+
+    <div class="section-header">
+
+      <div>
+
+        <h3>Subject-wise Attendance</h3>
+
+        <p>
+          {{ selectedSubject }}
+        </p>
+
+      </div>
+
+      <div class="big-percentage">
+        {{ percentage(subjectReport) }}%
+      </div>
+
+    </div>
+
+
+    <div class="summary-grid">
+
+      <div class="summary-card total">
+        <span>Total Records</span>
+        <strong>{{ subjectReport.length }}</strong>
+      </div>
+
+      <div class="summary-card present">
+        <span>Present</span>
+        <strong>
+          {{ countStatus(subjectReport, 'PRESENT') }}
+        </strong>
+      </div>
+
+      <div class="summary-card absent">
+        <span>Absent</span>
+        <strong>
+          {{ countStatus(subjectReport, 'ABSENT') }}
+        </strong>
+      </div>
+
+      <div class="summary-card late">
+        <span>Late</span>
+        <strong>
+          {{ countStatus(subjectReport, 'LATE') }}
+        </strong>
+      </div>
+
+    </div>
+
+
+    <div
+      class="table-wrapper"
+      *ngIf="subjectReport.length"
+    >
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Date</th>
+            <th>Student</th>
+            <th>Enrollment</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          <tr
+            *ngFor="
+              let a of subjectReport;
+              let i = index
+            "
+          >
+
+            <td>{{ i + 1 }}</td>
+
+            <td>{{ a.date }}</td>
+
+            <td>
+              {{ studentName(a.student) }}
+            </td>
+
+            <td>
+              {{ enrollment(a.student) }}
+            </td>
+
+            <td>
+              <span
+                class="status-badge"
+                [ngClass]="a.status.toLowerCase()"
+              >
+                {{ a.status }}
+              </span>
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================= OVERALL ================= -->
+
+  <div
+    class="content-card"
+    *ngIf="activeTab === 'overall'"
+  >
+
+    <div class="section-header">
+
+      <div>
+        <h3>Overall Class Attendance</h3>
+
+        <p>
+          All subjects for selected class
+        </p>
+      </div>
+
+      <div class="big-percentage">
+        {{ percentage(overallReport) }}%
+      </div>
+
+    </div>
+
+
+    <div class="table-wrapper">
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>No.</th>
+            <th>Date</th>
+            <th>Subject</th>
+            <th>Student</th>
+            <th>Status</th>
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr
+            *ngFor="
+              let a of overallReport;
+              let i = index
+            "
+          >
+
+            <td>{{ i + 1 }}</td>
+
+            <td>{{ a.date }}</td>
+
+            <td>
+              {{ a.subject || 'Old Record' }}
+            </td>
+
+            <td>
+              {{ studentName(a.student) }}
+            </td>
+
+            <td>
+
+              <span
+                class="status-badge"
+                [ngClass]="a.status.toLowerCase()"
+              >
+                {{ a.status }}
+              </span>
+
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
 
     </div>
 

@@ -111,18 +111,16 @@
 
         <tbody>
 
-          <tr
-            *ngFor="let classRoom of classes"
-          >
+         <tr 
+  *ngFor="let classRoom of classes; let i = index" 
+>
 
             <!-- ID -->
-            <td>
-
-              <span class="id-badge">
-                #{{ classRoom.id }}
-              </span>
-
-            </td>
+           <td>
+  <span class="id-badge"> 
+    #{{ i + 1 }} 
+  </span>
+</td>
 
 
             <!-- CLASS -->
