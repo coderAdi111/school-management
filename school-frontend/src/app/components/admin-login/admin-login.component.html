@@ -1,0 +1,75 @@
+<div class="login-shell">
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <section class="login-card">
+    <div class="brand-mark">🏫</div>
+
+    <div class="heading">
+      <span class="eyebrow">SECURE ADMIN ACCESS</span>
+      <h1>Welcome back.</h1>
+      <p>Sign in to manage your School Management System.</p>
+    </div>
+
+    <form (ngSubmit)="submit()" #loginForm="ngForm" novalidate>
+      <label class="field">
+        <span>Admin username</span>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input
+            name="username"
+            [(ngModel)]="username"
+            autocomplete="username"
+            placeholder="Enter username"
+            required
+          />
+        </div>
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input
+            name="password"
+            [(ngModel)]="password"
+            [type]="showPassword ? 'text' : 'password'"
+            autocomplete="current-password"
+            placeholder="Enter password"
+            required
+          />
+          <button
+            type="button"
+            class="eye-btn"
+            (click)="showPassword = !showPassword"
+            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          >
+            {{ showPassword ? '🙈' : '👁️' }}
+          </button>
+        </div>
+      </label>
+
+      <div class="error-box" *ngIf="errorMessage">
+        <span>⚠️</span>
+        {{ errorMessage }}
+      </div>
+
+      <button class="login-btn" type="submit" [disabled]="loading || loginForm.invalid">
+        <span *ngIf="!loading">Sign in securely <b>→</b></span>
+        <span *ngIf="loading" class="loading-state">
+          <i></i><i></i><i></i> Signing in…
+        </span>
+      </button>
+    </form>
+
+    <div class="security-note">
+      <span>🛡️</span>
+      <div>
+        <strong>Admin only</strong>
+        <small>Management pages are protected after login.</small>
+      </div>
+    </div>
+
+    <div class="login-footer">Engineering College Ajmer · IT · 5th Semester</div>
+  </section>
+</div>

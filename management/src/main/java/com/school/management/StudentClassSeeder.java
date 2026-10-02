@@ -12,8 +12,12 @@ import java.util.*;
 
 /**
  * Seeds the real 2024 B.Tech Information Technology students used by the
- * 5th-semester IT timetable. It intentionally does not touch timetable or
- * teacher records.
+ * 5th-semester IT timetable.
+ *
+ * IMPORTANT:
+ * - Timetable records are NOT modified.
+ * - Teacher records are NOT modified.
+ * - Deleted students are NOT automatically reactivated.
  *
  * I1: 24IT01 through 24IT32
  * I2: 24IT33 through 24IT65
@@ -24,9 +28,18 @@ public class StudentClassSeeder implements CommandLineRunner {
     @PersistenceContext
     private EntityManager em;
 
-    private record StudentData(String collegeId, String name, String section) {}
+    private record StudentData(
+            String collegeId,
+            String name,
+            String section
+    ) {}
 
     private static final List<StudentData> STUDENTS = List.of(
+
+            // =========================
+            // I1
+            // =========================
+
             new StudentData("24IT01", "Aaditya SIKHWAL", "I1"),
             new StudentData("24IT02", "Aditya Dubey", "I1"),
             new StudentData("24IT03", "Aditya GAUR", "I1"),
@@ -59,6 +72,11 @@ public class StudentClassSeeder implements CommandLineRunner {
             new StudentData("24IT30", "Pawan Tunwal", "I1"),
             new StudentData("24IT31", "Payal Kanwar", "I1"),
             new StudentData("24IT32", "Pranjal Sunariya", "I1"),
+
+            // =========================
+            // I2
+            // =========================
+
             new StudentData("24IT33", "Preetish Moyal", "I2"),
             new StudentData("24IT34", "Prince Sharma", "I2"),
             new StudentData("24IT35", "Priyanshu Chouhan", "I2"),
@@ -97,96 +115,316 @@ public class StudentClassSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        // This migration is intentionally limited to Classes + Students.
-        // Timetable and Teacher tables are never modified here.
-        ClassRoom i1 = findOrCreateClass("5th Semester IT - I1", "5th Semester", "I1", 32);
-        ClassRoom i2 = findOrCreateClass("5th Semester IT - I2", "5th Semester", "I2", 33);
 
-        // Hide the original demo classes from the Classes page without deleting
-        // them. This keeps any old Attendance/Marks/Fee foreign-key references safe.
-        em.createQuery("UPDATE ClassRoom c SET c.name = :name, c.grade = :grade, c.section = :section " +
-                        "WHERE c.name IN ('Class 10-A','Class 10-B','Class 12-A')")
-                .setParameter("name", "Legacy / Unused")
-                .setParameter("grade", "Legacy")
-                .setParameter("section", "OLD")
-                .executeUpdate();
+        // =========================================================
+        // CURRENT CLASSES
+        // =========================================================
+
+        ClassRoom i1 = findOrCreateClass(
+                "5th Semester IT - I1",
+                "5th Semester",
+                "I1",
+                32
+        );
+
+        ClassRoom i2 = findOrCreateClass(
+                "5th Semester IT - I2",
+                "5th Semester",
+                "I2",
+                33
+        );
+
+        // =========================================================
+        // HIDE OLD DEMO CLASSES
+        // =========================================================
+
+        /*
+         * Old demo classes are NOT deleted because Attendance / Marks /
+         * Fees may still reference them.
+         */
+        em.createQuery(
+                "UPDATE ClassRoom c " +
+                "SET c.name = :name, " +
+                "c.grade = :grade, " +
+                "c.section = :section " +
+                "WHERE c.name IN (" +
+                "'Class 10-A', " +
+                "'Class 10-B', " +
+                "'Class 12-A'" +
+                ")"
+        )
+        .setParameter("name", "Legacy / Unused")
+        .setParameter("grade", "Legacy")
+        .setParameter("section", "OLD")
+        .executeUpdate();
+
+        // =========================================================
+        // LOAD EXISTING STUDENTS
+        // =========================================================
 
         List<Student> existing = em.createQuery(
-                "SELECT s FROM Student s ORDER BY s.id", Student.class)
-                .getResultList();
+                "SELECT s FROM Student s ORDER BY s.id",
+                Student.class
+        ).getResultList();
 
         Map<String, Student> byEmail = new HashMap<>();
+
         for (Student s : existing) {
+
             if (s.getEmail() != null) {
-                byEmail.put(s.getEmail().toLowerCase(Locale.ROOT), s);
+
+                byEmail.put(
+                        s.getEmail()
+                                .toLowerCase(Locale.ROOT),
+                        s
+                );
             }
         }
 
-        Set<Long> actualStudentIds = new HashSet<>();
+        Set<Long> actualStudentIds =
+                new HashSet<>();
+
+        // =========================================================
+        // SYNC OFFICIAL STUDENTS
+        // =========================================================
 
         for (StudentData data : STUDENTS) {
-            String email = data.collegeId().toLowerCase(Locale.ROOT) + "@student.eca.local";
-            Student student = byEmail.get(email);
 
-            // If this migration has already run, update the same student record.
-            // Otherwise create a new real student instead of overwriting demo data.
+            String email =
+                    data.collegeId()
+                            .toLowerCase(Locale.ROOT)
+                            + "@student.eca.local";
+
+            Student student =
+                    byEmail.get(email);
+
+            /*
+             * =====================================================
+             * NEW STUDENT
+             * =====================================================
+             */
+
             if (student == null) {
+
                 student = new Student();
+
                 student.setEmail(email);
-                student.setStatus(Student.Status.ACTIVE);
-            }
 
-            String[] parts = splitName(data.name());
-            student.setFirstName(parts[0]);
-            student.setLastName(parts[1]);
-            student.setEmail(email);
-            student.setClassRoom("I1".equals(data.section()) ? i1 : i2);
-            student.setStatus(Student.Status.ACTIVE);
+                String[] parts =
+                        splitName(data.name());
 
-            if (student.getId() == null) {
+                student.setFirstName(parts[0]);
+                student.setLastName(parts[1]);
+
+                student.setClassRoom(
+                        "I1".equals(data.section())
+                                ? i1
+                                : i2
+                );
+
+                student.setStatus(
+                        Student.Status.ACTIVE
+                );
+
                 em.persist(student);
-            } else {
-                em.merge(student);
+
+                /*
+                 * New student is part of the official list.
+                 */
+                em.flush();
+
+                if (student.getId() != null) {
+
+                    actualStudentIds.add(
+                            student.getId()
+                    );
+                }
+
             }
 
-            if (student.getId() != null) {
-                actualStudentIds.add(student.getId());
+            /*
+             * =====================================================
+             * EXISTING ACTIVE STUDENT
+             * =====================================================
+             */
+
+            else if (
+                    student.getStatus()
+                            == Student.Status.ACTIVE
+            ) {
+
+                String[] parts =
+                        splitName(data.name());
+
+                student.setFirstName(parts[0]);
+                student.setLastName(parts[1]);
+                student.setEmail(email);
+
+                student.setClassRoom(
+                        "I1".equals(data.section())
+                                ? i1
+                                : i2
+                );
+
+                /*
+                 * IMPORTANT:
+                 * Status remains ACTIVE.
+                 */
+                student.setStatus(
+                        Student.Status.ACTIVE
+                );
+
+                em.merge(student);
+
+                actualStudentIds.add(
+                        student.getId()
+                );
+            }
+
+            /*
+             * =====================================================
+             * EXISTING INACTIVE STUDENT
+             * =====================================================
+             */
+
+            else {
+
+                /*
+                 * This student was intentionally deleted
+                 * by the admin.
+                 *
+                 * DO NOT:
+                 * - reactivate
+                 * - assign class
+                 * - change status
+                 * - create duplicate
+                 *
+                 * Simply leave it INACTIVE.
+                 */
+
+                continue;
             }
         }
 
-        // Old demo students are retained (so related records do not break), but
-        // detached from Classes and marked inactive. They therefore cannot appear
-        // in the I1/I2 Students page.
+        // =========================================================
+        // OLD / DEMO STUDENTS
+        // =========================================================
+
+        /*
+         * Students which are not part of the official current
+         * list are kept safely in database but detached from
+         * current classes and marked INACTIVE.
+         *
+         * This prevents old Attendance / Marks / Fees references
+         * from breaking.
+         */
         for (Student student : existing) {
-            if (student.getId() != null && !actualStudentIds.contains(student.getId())) {
+
+            if (
+                    student.getId() != null
+                    && !actualStudentIds.contains(
+                            student.getId()
+                    )
+            ) {
+
                 student.setClassRoom(null);
-                student.setStatus(Student.Status.INACTIVE);
+
+                student.setStatus(
+                        Student.Status.INACTIVE
+                );
+
                 em.merge(student);
             }
         }
     }
 
-    private ClassRoom findOrCreateClass(String name, String grade, String section, int capacity) {
-        List<ClassRoom> rows = em.createQuery(
-                "SELECT c FROM ClassRoom c WHERE c.section = :section", ClassRoom.class)
-                .setParameter("section", section)
+    // =============================================================
+    // FIND OR CREATE CLASS
+    // =============================================================
+
+    private ClassRoom findOrCreateClass(
+            String name,
+            String grade,
+            String section,
+            int capacity
+    ) {
+
+        List<ClassRoom> rows =
+                em.createQuery(
+                        "SELECT c FROM ClassRoom c " +
+                        "WHERE c.section = :section",
+                        ClassRoom.class
+                )
+                .setParameter(
+                        "section",
+                        section
+                )
                 .setMaxResults(1)
                 .getResultList();
 
-        ClassRoom c = rows.isEmpty() ? new ClassRoom() : rows.get(0);
+        ClassRoom c;
+
+        if (rows.isEmpty()) {
+
+            c = new ClassRoom();
+
+        } else {
+
+            c = rows.get(0);
+        }
+
         c.setName(name);
         c.setGrade(grade);
         c.setSection(section);
         c.setCapacity(capacity);
-        if (c.getId() == null) em.persist(c);
-        else em.merge(c);
+
+        if (c.getId() == null) {
+
+            em.persist(c);
+
+        } else {
+
+            em.merge(c);
+        }
+
         return c;
     }
 
-    private String[] splitName(String fullName) {
-        String clean = fullName.trim().replaceAll("\\s+", " ");
-        int space = clean.indexOf(' ');
-        if (space < 0) return new String[]{clean, "Student"};
-        return new String[]{clean.substring(0, space), clean.substring(space + 1)};
+    // =============================================================
+    // SPLIT NAME
+    // =============================================================
+
+    private String[] splitName(
+            String fullName
+    ) {
+
+        String clean =
+                fullName
+                        .trim()
+                        .replaceAll(
+                                "\\s+",
+                                " "
+                        );
+
+        int space =
+                clean.indexOf(' ');
+
+        if (space < 0) {
+
+            return new String[]{
+                    clean,
+                    "Student"
+            };
+        }
+
+        return new String[]{
+                clean.substring(
+                        0,
+                        space
+                ),
+                clean.substring(
+                        space + 1
+                )
+        };
     }
 }

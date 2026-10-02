@@ -1,224 +1,195 @@
-<div class="dashboard-container">
+<div class="dashboard">
 
-  <!-- HEADER -->
-  <div class="dashboard-header">
-
+  <header class="dash-top">
     <div>
-      <h1>School Dashboard</h1>
-      <p>School management system overview</p>
+      <div class="eyebrow">OVERVIEW · 5TH SEMESTER IT</div>
+      <h1>Good evening, Admin<span class="wave">.</span></h1>
+      <p>{{ todayLabel }} <span class="dot">•</span> Information Technology</p>
     </div>
 
-    <button
-      class="refresh-btn"
-      (click)="refreshDashboard()"
-      [disabled]="loading"
-    >
-      {{ loading ? 'Loading...' : '↻ Refresh' }}
+    <button class="refresh" (click)="refreshDashboard()" [disabled]="loading">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 11a8.1 8.1 0 0 0-14.7-4.5L4 9"/>
+        <path d="M4 5v4h4"/>
+        <path d="M4 13a8.1 8.1 0 0 0 14.7 4.5L20 15"/>
+        <path d="M20 19v-4h-4"/>
+      </svg>
+      {{ loading ? 'Updating' : 'Refresh' }}
     </button>
+  </header>
 
-  </div>
+  <div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
 
+  <section class="metric-grid">
+    <article class="metric">
+      <div class="metric-head">
+        <span class="metric-label">Students</span>
+        <span class="metric-icon blue">
+          <span class="emoji-icon">🎓</span>
+        </span>
+      </div>
+      <strong>{{ students.length }}</strong>
+      <small>I1 {{ students.filter(s => s.classRoom?.section === 'I1').length }} <i></i> I2 {{ students.filter(s => s.classRoom?.section === 'I2').length }}</small>
+    </article>
 
-  <!-- LOADING -->
-  <div
-    class="loading-box"
-    *ngIf="loading"
-  >
-    Loading dashboard...
-  </div>
+    <article class="metric">
+      <div class="metric-head">
+        <span class="metric-label">Active Teachers</span>
+        <span class="metric-icon purple">
+          <span class="emoji-icon">🧑‍🏫</span>
+        </span>
+      </div>
+      <strong>{{ teachers.length }}</strong>
+      <small>Faculty currently active</small>
+    </article>
 
+    <article class="metric">
+      <div class="metric-head">
+        <span class="metric-label">Classes</span>
+        <span class="metric-icon green">
+          <span class="emoji-icon">🏫</span>
+        </span>
+      </div>
+      <strong>{{ classes.length }}</strong>
+      <small>I1 <i></i> I2</small>
+    </article>
 
-  <!-- ERROR -->
-  <div
-    class="error-box"
-    *ngIf="errorMessage"
-  >
-    {{ errorMessage }}
-  </div>
+    <article class="metric">
+      <div class="metric-head">
+        <span class="metric-label">Average Marks</span>
+        <span class="metric-icon orange">
+          <span class="emoji-icon">📊</span>
+        </span>
+      </div>
+      <strong>{{ averagePercentage | number:'1.1-1' }}<em>%</em></strong>
+      <small>{{ marks.length }} records</small>
+    </article>
+  </section>
 
+  <section class="main-grid">
 
-  <div
-    *ngIf="!loading && !errorMessage"
-  >
-
-    <!-- MAIN CARDS -->
-    <div class="stats-grid">
-
-      <!-- STUDENTS -->
-      <div class="stat-card students-card">
-
-        <div class="stat-icon">
-          👨‍🎓
-        </div>
-
+    <article class="card attendance-card">
+      <div class="card-top">
         <div>
-          <div class="stat-title">
-            Students
-          </div>
-
-          <div class="stat-number">
-            {{ students.length }}
-          </div>
+          <span class="card-kicker">TODAY · {{ todayMarked }} MARKED</span>
+          <h2><span class="title-emoji">📅</span> Attendance</h2>
         </div>
-
+        <button class="text-action" (click)="open('/attendance')">
+          Manage <span>↗</span>
+        </button>
       </div>
 
-
-      <!-- CLASSES -->
-      <div class="stat-card classes-card">
-
-        <div class="stat-icon">
-          🏫
+      <div class="attendance-content">
+        <div class="ring" [style.--progress]="attendancePercentage + '%'">
+          <div class="ring-inner">
+            <strong>{{ attendancePercentage }}%</strong>
+            <span>attended</span>
+          </div>
         </div>
 
+        <div class="attendance-stats">
+          <div><span><b class="green-dot"></b>Present</span><strong>{{ presentCount }}</strong></div>
+          <div><span><b class="red-dot"></b>Absent</span><strong>{{ absentCount }}</strong></div>
+          <div><span><b class="amber-dot"></b>Late</span><strong>{{ lateCount }}</strong></div>
+          <div><span><b class="slate-dot"></b>Excused</span><strong>{{ excusedCount }}</strong></div>
+        </div>
+      </div>
+
+      <div class="attendance-footer">
+        <span>{{ todayMarked ? 'Today’s attendance is live' : 'No attendance marked today' }}</span>
         <div>
-          <div class="stat-title">
-            Classes
-          </div>
-
-          <div class="stat-number">
-            {{ classes.length }}
-          </div>
+          <label>I1 <b>{{ i1Attendance }}%</b></label>
+          <label>I2 <b>{{ i2Attendance }}%</b></label>
         </div>
-
       </div>
+    </article>
 
-
-      <!-- FEES -->
-      <div class="stat-card fees-card">
-
-        <div class="stat-icon">
-          💰
-        </div>
-
+    <article class="card finance-card">
+      <div class="card-top">
         <div>
-          <div class="stat-title">
-            Fee Records
-          </div>
-
-          <div class="stat-number">
-            {{ fees.length }}
-          </div>
+          <span class="card-kicker">FEES</span>
+          <h2><span class="title-emoji">💳</span> Finance</h2>
         </div>
-
+        <button class="text-action" (click)="open('/fees')">
+          View <span>↗</span>
+        </button>
       </div>
 
+      <div class="money-grid">
+        <div><span>Paid</span><strong>{{ formattedPaid }}</strong></div>
+        <div><span>Pending</span><strong>{{ formattedPending }}</strong></div>
+        <div><span>Overdue</span><strong class="danger">{{ formattedOverdue }}</strong></div>
+      </div>
 
-      <!-- MARKS -->
-      <div class="stat-card marks-card">
+      <div class="progress">
+        <span [style.width.%]="feeProgress"></span>
+      </div>
 
-        <div class="stat-icon">
-          📊
-        </div>
+      <div class="finance-foot">
+        <span>Collection progress</span>
+        <strong>{{ feeProgress }}%</strong>
+      </div>
+    </article>
 
+  </section>
+
+  <section class="bottom-grid">
+
+    <article class="card subjects-card">
+      <div class="card-top">
         <div>
-          <div class="stat-title">
-            Mark Records
-          </div>
-
-          <div class="stat-number">
-            {{ marks.length }}
-          </div>
+          <span class="card-kicker">TODAY</span>
+          <h2><span class="title-emoji">📚</span> Subject attendance</h2>
         </div>
-
+        <button class="text-action" (click)="open('/attendance')">
+          Open <span>↗</span>
+        </button>
       </div>
 
-    </div>
-
-
-    <!-- ATTENDANCE -->
-    <div class="summary-card">
-
-      <div class="section-title">
-        <h2>Attendance Summary</h2>
+      <div class="subject-list" *ngIf="subjectStats.length; else noSubjects">
+        <div class="subject-row" *ngFor="let item of subjectStats">
+          <span>{{ item.subject }}</span>
+          <div class="subject-bar"><i [style.width.%]="item.percentage"></i></div>
+          <strong>{{ item.percentage }}%</strong>
+        </div>
       </div>
 
-      <div class="summary-grid">
+      <ng-template #noSubjects>
+        <div class="empty">No subject attendance marked today.</div>
+      </ng-template>
+    </article>
 
-        <div class="summary-item present">
-          <span>Present</span>
-          <strong>{{ presentCount }}</strong>
+    <article class="card actions-card">
+      <div class="card-top">
+        <div>
+          <span class="card-kicker">SHORTCUTS</span>
+          <h2><span class="title-emoji">⚡</span> Quick actions</h2>
         </div>
-
-        <div class="summary-item absent">
-          <span>Absent</span>
-          <strong>{{ absentCount }}</strong>
-        </div>
-
-        <div class="summary-item late">
-          <span>Late</span>
-          <strong>{{ lateCount }}</strong>
-        </div>
-
-        <div class="summary-item excused">
-          <span>Excused</span>
-          <strong>{{ excusedCount }}</strong>
-        </div>
-
       </div>
 
-    </div>
+      <div class="actions">
+        <button (click)="open('/attendance')">
+          <span class="action-icon blue">✓</span>
+          <span>Attendance</span><b>›</b>
+        </button>
 
+        <button (click)="open('/students/new')">
+          <span class="action-icon green">👨‍🎓</span>
+          <span>Student</span><b>›</b>
+        </button>
 
-    <!-- FEES -->
-    <div class="summary-card">
+        <button (click)="open('/marks')">
+          <span class="action-icon purple">📈</span>
+          <span>Marks</span><b>›</b>
+        </button>
 
-      <div class="section-title">
-        <h2>Fee Summary</h2>
+        <button (click)="open('/fees')">
+          <span class="action-icon orange">💰</span>
+          <span>Fees</span><b>›</b>
+        </button>
       </div>
+    </article>
 
-      <div class="summary-grid">
-
-        <div class="summary-item pending">
-          <span>Pending</span>
-          <strong>{{ pendingFees }}</strong>
-        </div>
-
-        <div class="summary-item paid">
-          <span>Paid</span>
-          <strong>{{ paidFees }}</strong>
-        </div>
-
-        <div class="summary-item overdue">
-          <span>Overdue</span>
-          <strong>{{ overdueFees }}</strong>
-        </div>
-
-        <div class="summary-item waived">
-          <span>Waived</span>
-          <strong>{{ waivedFees }}</strong>
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- MARKS -->
-    <div class="summary-card marks-summary">
-
-      <div class="section-title">
-        <h2>Marks Summary</h2>
-      </div>
-
-      <div class="average-box">
-
-        <div class="average-label">
-          Average Percentage
-        </div>
-
-        <div class="average-number">
-          {{ averagePercentage | number:'1.1-1' }}%
-        </div>
-
-        <div class="average-info">
-          Based on {{ marks.length }} mark record(s)
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
+  </section>
 
 </div>

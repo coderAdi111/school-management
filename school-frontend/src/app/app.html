@@ -1,6 +1,8 @@
 <div class="app-layout">
 
-  <!-- SIDEBAR -->
+  <!-- =========================
+       SIDEBAR
+  ========================== -->
   <aside class="sidebar">
 
     <!-- BRAND -->
@@ -18,7 +20,9 @@
     </div>
 
 
-    <!-- NAVIGATION -->
+    <!-- =========================
+         NAVIGATION
+    ========================== -->
     <nav class="sidebar-nav">
 
       <!-- DASHBOARD -->
@@ -103,7 +107,9 @@
     </nav>
 
 
-    <!-- SIDEBAR FOOTER -->
+    <!-- =========================
+         SIDEBAR FOOTER
+    ========================== -->
     <div class="sidebar-footer">
 
       <div class="footer-icon">
@@ -120,36 +126,69 @@
   </aside>
 
 
-  <!-- MAIN CONTENT -->
+  <!-- =========================
+       MAIN CONTENT
+  ========================== -->
   <main class="main-content">
 
-    <!-- TOP BAR -->
+
+    <!-- =========================
+         TOP BAR
+    ========================== -->
     <header class="topbar">
 
-      <div>
-        <h3>School Management System</h3>
-        <p>Manage your school easily</p>
+      <!-- TITLE -->
+      <div class="topbar-title">
+
+        <h3>
+          School Management System
+        </h3>
+
+        <p>
+          Manage your school easily
+        </p>
+
       </div>
 
 
-      <!-- ADMIN PROFILE -->
-      <div class="admin-profile">
+      <!-- =========================
+           ADMIN ACTIONS
+      ========================== -->
+      <div class="admin-actions">
 
-        <div class="admin-avatar">
-          A
+        <!-- ADMIN PROFILE -->
+        <div class="admin-profile">
+
+          <div class="admin-avatar">
+            A
+          </div>
+
+          <div class="admin-info">
+            <strong>Admin</strong>
+            <span>Administrator</span>
+          </div>
+
         </div>
 
-        <div>
-          <strong>Admin</strong>
-          <span>Administrator</span>
-        </div>
+
+        <!-- LOGOUT -->
+        <a
+          class="admin-logout"
+          href="/login"
+          onclick="localStorage.removeItem('school_admin_token'); localStorage.removeItem('school_admin_user');"
+        >
+          <span class="logout-icon">🔒</span>
+          <span>Logout</span>
+        </a>
 
       </div>
 
     </header>
 
 
-    <!-- PAGE CONTENT -->
+    <!-- =========================
+         PAGE CONTENT
+    ========================== -->
     <section class="page-content">
 
       <router-outlet></router-outlet>
