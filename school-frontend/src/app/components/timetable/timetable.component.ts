@@ -691,14 +691,19 @@ export class TimetableComponent implements OnInit {
       this.importMessage = 'Loading the OCR engine...';
       this.cdr.detectChanges();
 
-      const tesseract = await import('tesseract.js');
+      const tesseractModule = await import('tesseract.js');
+
+const tesseract: any =
+  (tesseractModule as any).default ?? tesseractModule;
+
+const createWorker = tesseract.createWorker;
 
       this.importProgress = 30;
       this.importStage = 'Reading text';
       this.importMessage = 'Reading text from the uploaded timetable...';
       this.cdr.detectChanges();
 
-      ocrWorker = await tesseract.createWorker('eng', undefined, {
+      ocrWorker = await createWorker('eng', undefined, {
         logger: (info: any) => {
           if (typeof info?.progress === 'number') {
             const pct = Math.round(info.progress * 55);
