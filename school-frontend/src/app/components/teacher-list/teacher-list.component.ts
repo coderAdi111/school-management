@@ -67,8 +67,8 @@ export class TeacherListComponent implements OnInit {
   // LOAD TEACHERS
   // =========================
 
+  // Only faculty used by the current 5th-semester IT timetable is shown.
   private isCurrentTimetableTeacher(teacher: Teacher): boolean {
-
     const allowed = new Set([
       'Shikha Gupta',
       'Deepak Gupta',
@@ -81,18 +81,13 @@ export class TeacherListComponent implements OnInit {
       'Satya Narayan Tazi'
     ]);
 
-    const name =
-      `${teacher.firstName ?? ''} ${teacher.lastName ?? ''}`
-        .trim()
-        .replace(/\s+/g, ' ');
-
+    const name = `${teacher.firstName ?? ''} ${teacher.lastName ?? ''}`.trim().replace(/\s+/g, ' ');
     return allowed.has(name);
   }
 
   private filterCurrentTeachers(data: Teacher[]): Teacher[] {
     return (data ?? []).filter(teacher =>
-      teacher.status !== 'INACTIVE' &&
-      this.isCurrentTimetableTeacher(teacher)
+      teacher.status !== 'INACTIVE' && this.isCurrentTimetableTeacher(teacher)
     );
   }
 

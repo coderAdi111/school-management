@@ -107,10 +107,9 @@ export class FeeList implements OnInit {
 
 
         this.fees = (data ?? []).filter(fee =>
-  fee.student?.classRoom?.grade === '5th Semester' &&
-  (fee.student?.classRoom?.section === 'I1' ||
-   fee.student?.classRoom?.section === 'I2')
-);
+          fee.student?.classRoom?.grade === '5th Semester' &&
+          (fee.student?.classRoom?.section === 'I1' || fee.student?.classRoom?.section === 'I2')
+        );
 
 
         this.loading = false;
@@ -176,10 +175,9 @@ export class FeeList implements OnInit {
 
 
         this.students = (data ?? []).filter(student =>
-  student.classRoom?.grade === '5th Semester' &&
-  (student.classRoom?.section === 'I1' ||
-   student.classRoom?.section === 'I2')
-);
+          student.classRoom?.grade === '5th Semester' &&
+          (student.classRoom?.section === 'I1' || student.classRoom?.section === 'I2')
+        );
 
 
         this.cdr.detectChanges();

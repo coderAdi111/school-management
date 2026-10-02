@@ -10,42 +10,59 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-
 public class ClassRoomDaoImpl implements ClassRoomDao {
-@PersistenceContext
 
-private EntityManager em;
-@Override
+    @PersistenceContext
+    private EntityManager em;
 
-public List<ClassRoom> findAll() {
-return em.createQuery("SELECT c FROM ClassRoom c", ClassRoom.class).getResultList();
-}
-@Override
+    @Override
+    public List<ClassRoom> findAll() {
+        return em.createQuery(
+                "SELECT c FROM ClassRoom c " +
+                "WHERE c.grade = :grade " +
+                "AND c.section IN :sections",
+                ClassRoom.class
+        )
+        .setParameter("grade", "5th Semester")
+        .setParameter("sections", List.of("I1", "I2"))
+        .getResultList();
+    }
 
-public Optional<ClassRoom> findById(Long id) {
-return Optional.ofNullable(em.find(ClassRoom.class, id));
-}
-@Override
+    @Override
+    public Optional<ClassRoom> findById(Long id) {
+        return Optional.ofNullable(em.find(ClassRoom.class, id));
+    }
 
-public List<ClassRoom> findByGrade(String grade) {
-return em.createQuery(
-"SELECT c FROM ClassRoom c WHERE c.grade = :grade", ClassRoom.class)
-.setParameter("grade", grade)
-.getResultList();
-}
-@Override
-@Transactional
+    @Override
+    public List<ClassRoom> findByGrade(String grade) {
+        return em.createQuery(
+                "SELECT c FROM ClassRoom c WHERE c.grade = :grade",
+                ClassRoom.class
+        )
+        .setParameter("grade", grade)
+        .getResultList();
+    }
 
-public ClassRoom save(ClassRoom classRoom) {
-return classRoom.getId() == null ? persist(classRoom) : em.merge(classRoom);
-}
+    @Override
+    @Transactional
+    public ClassRoom save(ClassRoom classRoom) {
+        return classRoom.getId() == null
+                ? persist(classRoom)
+                : em.merge(classRoom);
+    }
 
-private ClassRoom persist(ClassRoom c) { em.persist(c); return c; }
-@Override
-@Transactional
+    private ClassRoom persist(ClassRoom c) {
+        em.persist(c);
+        return c;
+    }
 
-public void delete(Long id) {
-ClassRoom c = em.find(ClassRoom.class, id);
-if (c != null) em.remove(c);
-}
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        ClassRoom c = em.find(ClassRoom.class, id);
+
+        if (c != null) {
+            em.remove(c);
+        }
+    }
 }

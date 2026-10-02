@@ -21,9 +21,20 @@ public class AttendanceDaoImpl implements AttendanceDao {
     public List<Attendance> findAll() {
 
         return em.createQuery(
-                "SELECT a FROM Attendance a",
+                "SELECT DISTINCT a FROM Attendance a " +
+                "JOIN FETCH a.student s " +
+                "JOIN FETCH s.classRoom sc " +
+                "JOIN FETCH a.classRoom c " +
+                "WHERE (" +
+                "(sc.grade = :grade AND sc.section IN :sections) " +
+                "OR " +
+                "(c.grade = :grade AND c.section IN :sections)" +
+                ")",
                 Attendance.class
-        ).getResultList();
+        )
+        .setParameter("grade", "5th Semester")
+        .setParameter("sections", List.of("I1", "I2"))
+        .getResultList();
     }
 
     @Override
@@ -76,11 +87,7 @@ public class AttendanceDaoImpl implements AttendanceDao {
 
     @Override
     public Attendance findById(Long id) {
-
-        return em.find(
-                Attendance.class,
-                id
-        );
+        return em.find(Attendance.class, id);
     }
 
     @Override

@@ -50,7 +50,7 @@ export class MarkListComponent implements OnInit {
   formMark: Mark = this.emptyMark();
 
   private classUrl =
-    'https://school-management-vy1j.onrender.com/api/classes';
+    'http://localhost:8080/api/classes';
 
 
   constructor(
@@ -97,13 +97,11 @@ export class MarkListComponent implements OnInit {
         );
 
         this.marks = (data ?? []).filter(mark =>
-  (mark.student?.classRoom?.grade === '5th Semester' &&
-   (mark.student?.classRoom?.section === 'I1' ||
-    mark.student?.classRoom?.section === 'I2')) ||
-  (mark.classRoom?.grade === '5th Semester' &&
-   (mark.classRoom?.section === 'I1' ||
-    mark.classRoom?.section === 'I2'))
-);
+          (mark.student?.classRoom?.grade === '5th Semester' &&
+           (mark.student?.classRoom?.section === 'I1' || mark.student?.classRoom?.section === 'I2')) ||
+          (mark.classRoom?.grade === '5th Semester' &&
+           (mark.classRoom?.section === 'I1' || mark.classRoom?.section === 'I2'))
+        );
 
         this.loading = false;
 
@@ -157,10 +155,9 @@ export class MarkListComponent implements OnInit {
         );
 
         this.students = (data ?? []).filter(student =>
-  student.classRoom?.grade === '5th Semester' &&
-  (student.classRoom?.section === 'I1' ||
-   student.classRoom?.section === 'I2')
-);
+          student.classRoom?.grade === '5th Semester' &&
+          (student.classRoom?.section === 'I1' || student.classRoom?.section === 'I2')
+        );
 
         this.cdr.detectChanges();
       },
@@ -195,10 +192,9 @@ export class MarkListComponent implements OnInit {
           );
 
           this.classes = (data ?? []).filter(classRoom =>
-  classRoom.grade === '5th Semester' &&
-  (classRoom.section === 'I1' ||
-   classRoom.section === 'I2')
-);
+          classRoom.grade === '5th Semester' &&
+          (classRoom.section === 'I1' || classRoom.section === 'I2')
+        );
 
           this.cdr.detectChanges();
         },

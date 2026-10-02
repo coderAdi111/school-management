@@ -135,6 +135,22 @@ export class ClassList implements OnInit {
   // LOAD TEACHERS
   // =========================
 
+  private isCurrentTimetableTeacher(teacher: Teacher): boolean {
+    const allowed = new Set([
+      'Shikha Gupta',
+      'Deepak Gupta',
+      'Rakesh Rathi',
+      'Bhanupriya Sharma',
+      'Avinash Bhandiya',
+      'Sammah Rasheed',
+      'Monica Sharma',
+      'Mangi Lal',
+      'Satya Narayan Tazi'
+    ]);
+    const name = `${teacher.firstName ?? ''} ${teacher.lastName ?? ''}`.trim().replace(/\s+/g, ' ');
+    return allowed.has(name) && teacher.status !== 'INACTIVE';
+  }
+
   loadTeachers(): void {
 
     console.log(
@@ -152,7 +168,7 @@ export class ClassList implements OnInit {
           data
         );
 
-        this.teachers = data ?? [];
+        this.teachers = (data ?? []).filter(teacher => this.isCurrentTimetableTeacher(teacher));
 
         this.loadingTeachers = false;
 

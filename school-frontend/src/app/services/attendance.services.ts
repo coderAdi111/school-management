@@ -9,7 +9,7 @@ import { Attendance } from '../models/models';
 })
 export class AttendanceService {
 
- private baseUrl = 'https://school-management-vy1j.onrender.com/api/attendance';
+ private baseUrl = 'http://localhost:8080/api/attendance';
 
   constructor(private http: HttpClient) {}
 

@@ -10,7 +10,7 @@ import { Teacher } from '../models/models';
 export class TeacherService {
 
   private baseUrl =
-  'https://school-management-vy1j.onrender.com/api/teachers';
+  'http://localhost:8080/api/teachers';
 
   constructor(
     private http: HttpClient

@@ -89,7 +89,7 @@ export class DashboardComponent implements OnInit {
   // API
   // =========================
 
-  private api = 'https://school-management-vy1j.onrender.com/api';
+  private api = 'http://localhost:8080/api';
 
 
   // =========================
@@ -167,24 +167,49 @@ export class DashboardComponent implements OnInit {
         // STORE DATA
         // =========================
 
+        // Current college data only: 5th Semester IT, sections I1/I2.
         this.students =
-          data.students ?? [];
-
+          (data.students ?? []).filter(student =>
+            student.classRoom?.grade === '5th Semester' &&
+            (student.classRoom?.section === 'I1' ||
+             student.classRoom?.section === 'I2')
+          );
 
         this.classes =
-          data.classes ?? [];
+          (data.classes ?? []).filter(classRoom =>
+            classRoom.grade === '5th Semester' &&
+            (classRoom.section === 'I1' ||
+             classRoom.section === 'I2')
+          );
 
+        const currentStudentIds = new Set(
+          this.students
+            .map(student => student.id)
+            .filter((id): id is number => id !== undefined)
+        );
+
+        const currentClassIds = new Set(
+          this.classes
+            .map(classRoom => classRoom.id)
+            .filter((id): id is number => id !== undefined)
+        );
 
         this.attendance =
-          data.attendance ?? [];
-
+          (data.attendance ?? []).filter(record =>
+            (record.student?.id !== undefined && currentStudentIds.has(record.student.id)) ||
+            (record.classRoom?.id !== undefined && currentClassIds.has(record.classRoom.id))
+          );
 
         this.fees =
-          data.fees ?? [];
-
+          (data.fees ?? []).filter(record =>
+            record.student?.id !== undefined && currentStudentIds.has(record.student.id)
+          );
 
         this.marks =
-          data.marks ?? [];
+          (data.marks ?? []).filter(record =>
+            (record.student?.id !== undefined && currentStudentIds.has(record.student.id)) ||
+            (record.classRoom?.id !== undefined && currentClassIds.has(record.classRoom.id))
+          );
 
 
         // =========================

@@ -21,9 +21,16 @@ public class FeeDaoImpl implements FeeDao {
     public List<Fee> findAll() {
 
         return em.createQuery(
-                "SELECT f FROM Fee f",
+                "SELECT f FROM Fee f " +
+                "JOIN FETCH f.student s " +
+                "JOIN FETCH s.classRoom c " +
+                "WHERE c.grade = :grade " +
+                "AND c.section IN :sections",
                 Fee.class
-        ).getResultList();
+        )
+        .setParameter("grade", "5th Semester")
+        .setParameter("sections", List.of("I1", "I2"))
+        .getResultList();
     }
 
     @Override

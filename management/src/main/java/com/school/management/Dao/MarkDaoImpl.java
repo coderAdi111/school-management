@@ -21,9 +21,20 @@ public class MarkDaoImpl implements MarkDao {
     public List<Mark> findAll() {
 
         return em.createQuery(
-                "SELECT m FROM Mark m",
+                "SELECT DISTINCT m FROM Mark m " +
+                "JOIN FETCH m.student s " +
+                "JOIN FETCH s.classRoom sc " +
+                "JOIN FETCH m.classRoom c " +
+                "WHERE (" +
+                "(sc.grade = :grade AND sc.section IN :sections) " +
+                "OR " +
+                "(c.grade = :grade AND c.section IN :sections)" +
+                ")",
                 Mark.class
-        ).getResultList();
+        )
+        .setParameter("grade", "5th Semester")
+        .setParameter("sections", List.of("I1", "I2"))
+        .getResultList();
     }
 
     @Override
