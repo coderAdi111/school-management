@@ -8,9 +8,10 @@ import { Attendance } from '../models/models';
   providedIn: 'root'
 })
 export class AttendanceService {
-
- private baseUrl = 'http://localhost:8080/api/attendance';
-
+private baseUrl =
+    typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:8080/api/attendance'
+      : 'https://school-management-vy1j.onrender.com/api/attendance';
   constructor(private http: HttpClient) {}
 
 

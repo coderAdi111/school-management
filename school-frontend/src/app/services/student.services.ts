@@ -11,11 +11,10 @@ import { Student } from '../models/models';
   providedIn: 'root'
 })
 export class StudentService {
-
-  private baseUrl =
-    'http://localhost:8080/api/students';
-
-
+private baseUrl =
+    typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:8080/api/students'
+      : 'https://school-management-vy1j.onrender.com/api/students';
   constructor(
     private http: HttpClient
   ) {}

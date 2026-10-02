@@ -8,10 +8,10 @@ import { Teacher } from '../models/models';
   providedIn: 'root'
 })
 export class TeacherService {
-
-  private baseUrl =
-  'http://localhost:8080/api/teachers';
-
+private baseUrl =
+    typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:8080/api/teachers'
+      : 'https://school-management-vy1j.onrender.com/api/teachers';
   constructor(
     private http: HttpClient
   ) {}

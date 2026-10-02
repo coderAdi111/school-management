@@ -8,10 +8,10 @@ import { Fee } from '../models/models';
   providedIn: 'root'
 })
 export class FeeService {
-
- private baseUrl =
-  'http://localhost:8080/api/fees';
-
+private baseUrl =
+    typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:8080/api/fees'
+      : 'https://school-management-vy1j.onrender.com/api/fees';
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<Fee[]> {

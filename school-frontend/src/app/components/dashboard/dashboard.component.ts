@@ -88,10 +88,10 @@ export class DashboardComponent implements OnInit {
   // =========================
   // API
   // =========================
-
-  private api = 'http://localhost:8080/api';
-
-
+private api =
+    typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:8080/api'
+      : 'https://school-management-vy1j.onrender.com/api';
   // =========================
   // CONSTRUCTOR
   // =========================

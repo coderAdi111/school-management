@@ -8,10 +8,10 @@ import { Mark } from '../models/models';
   providedIn: 'root'
 })
 export class MarkService {
-
-  private baseUrl =
-  'http://localhost:8080/api/marks';
-
+private baseUrl =
+    typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:8080/api/marks'
+      : 'https://school-management-vy1j.onrender.com/api/marks';
   constructor(
     private http: HttpClient
   ) {}

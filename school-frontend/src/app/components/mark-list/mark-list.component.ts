@@ -48,11 +48,10 @@ export class MarkListComponent implements OnInit {
   selectedMarkId: number | null = null;
 
   formMark: Mark = this.emptyMark();
-
-  private classUrl =
-    'http://localhost:8080/api/classes';
-
-
+private classUrl =
+    typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:8080/api/classes'
+      : 'https://school-management-vy1j.onrender.com/api/classes';
   constructor(
     private markService: MarkService,
     private studentService: StudentService,
