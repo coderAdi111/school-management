@@ -24,6 +24,7 @@ import { TimetableComponent } from '../components/timetable/timetable.component'
 
 import { AdminLoginComponent } from '../components/admin-login/admin-login.component';
 import { authGuard } from '../auth/auth.guard';
+import { SecuritySettingsComponent } from '../components/security-settings/security-settings.component';
 
 
 export const routes: Routes = [
@@ -59,6 +60,12 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
 
+
+  {
+    path: 'security-settings',
+    component: SecuritySettingsComponent,
+    canActivate: [authGuard]
+  },
 
   // =========================
   // STUDENTS

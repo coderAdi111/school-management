@@ -1,0 +1,35 @@
+<main class="security-page">
+  <section class="security-card">
+    <button class="back" type="button" (click)="back()">← Back to dashboard</button>
+    <div class="icon">🔐</div>
+    <p class="eyebrow">ACCOUNT PROTECTION</p>
+    <h1>Security Settings</h1>
+    <p class="intro">Update your admin username and password. You will need to sign in again after saving.</p>
+
+    <form (ngSubmit)="submit()">
+      <label for="currentPassword">Current password</label>
+      <input id="currentPassword" name="currentPassword" type="password"
+             [(ngModel)]="currentPassword" autocomplete="current-password" required>
+
+      <label for="newUsername">New admin username</label>
+      <input id="newUsername" name="newUsername" type="text"
+             [(ngModel)]="newUsername" autocomplete="username" required>
+
+      <label for="newPassword">New password</label>
+      <input id="newPassword" name="newPassword" type="password"
+             [(ngModel)]="newPassword" autocomplete="new-password" minlength="8" required>
+      <small>Use at least 8 characters.</small>
+
+      <label for="confirmPassword">Confirm new password</label>
+      <input id="confirmPassword" name="confirmPassword" type="password"
+             [(ngModel)]="confirmPassword" autocomplete="new-password" required>
+
+      <div class="message error" *ngIf="errorMessage">{{ errorMessage }}</div>
+      <div class="message success" *ngIf="successMessage">{{ successMessage }}</div>
+
+      <button class="save" type="submit" [disabled]="loading">
+        {{ loading ? 'Updating...' : 'Update credentials' }}
+      </button>
+    </form>
+  </section>
+</main>

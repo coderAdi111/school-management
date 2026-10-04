@@ -33,6 +33,17 @@ export class AuthService {
       );
   }
 
+  changeCredentials(currentPassword: string, newUsername: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.api}/auth/change-credentials`, {
+      currentPassword, newUsername, newPassword
+    });
+  }
+
+  clearSession(): void {
+    localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem(this.userKey);
+  }
+
   logout(): void {
     const token = this.getToken();
 
@@ -42,8 +53,7 @@ export class AuthService {
       });
     }
 
-    localStorage.removeItem(this.tokenKey);
-    localStorage.removeItem(this.userKey);
+    this.clearSession();
     this.router.navigateByUrl('/login');
   }
 

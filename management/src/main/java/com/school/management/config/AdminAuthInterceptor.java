@@ -30,12 +30,15 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
         }
 
         String authorization = request.getHeader("Authorization");
-        if (authorization != null && authorization.startsWith("Bearer ")) {
-            String token = authorization.substring(7).trim();
-            if (authService.isValidToken(token)) {
-                return true;
-            }
-        }
+
+if (authorization != null && authorization.startsWith("Bearer ")) {
+
+    String token = authorization.substring(7).trim();
+
+    if (authService.isValidToken(token)) {
+        return true;
+    }
+}
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
