@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,7 +12,7 @@ import { AuthService } from '../../auth/auth.service';
   templateUrl: './admin-login.component.html',
   styleUrl: './admin-login.component.css'
 })
-export class AdminLoginComponent {
+export class AdminLoginComponent implements OnInit {
   private auth = inject(AuthService);
   private router = inject(Router);
 
@@ -21,6 +21,11 @@ export class AdminLoginComponent {
   showPassword = false;
   loading = false;
   errorMessage = '';
+
+  ngOnInit(): void {
+    // Wake the backend while the login screen is already visible.
+    this.auth.warmUpBackend().subscribe();
+  }
 
   submit(): void {
     this.errorMessage = '';
