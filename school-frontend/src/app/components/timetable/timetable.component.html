@@ -461,136 +461,123 @@
 
     <!-- ===================================== -->
     <!-- WEEKLY SCHEDULE -->
+    <!-- Official timetable-style matrix: one row per day, one column per time slot. -->
     <!-- ===================================== -->
 
     <section class="schedule">
 
-
-      <!-- SCHEDULE HEADER -->
       <div class="schedule-title">
-
         <div>
-
-          <h2>
-            Section {{ section }} weekly schedule
-          </h2>
-
-          <p class="muted">
-            Manage classes for the selected section.
-          </p>
-
+          <h2>Section {{ section }} weekly schedule</h2>
+          <p class="muted">Weekly timetable in the same day × time-slot format as the official college timetable.</p>
         </div>
 
-
         <div class="schedule-actions">
-          <button
-            class="delete-all"
-            type="button"
-            (click)="deleteAllTimetable()"
-            [disabled]="deletingAll || loading || importing || saving"
-          >
+          <div class="schedule-view-switch" role="tablist" aria-label="Timetable view">
+            <button type="button" [class.active]="viewMode === 'weekly'" (click)="setView('weekly')">Weekly Schedule</button>
+            <button type="button" [class.active]="viewMode === 'teacher'" (click)="setView('teacher')">Teacher Schedule</button>
+          </div>
+
+          <button class="delete-all" type="button" (click)="deleteAllTimetable()" [disabled]="deletingAll || loading || importing || saving">
             {{ deletingAll ? 'Deleting…' : '🗑 Delete All Timetable' }}
           </button>
 
-          <button
-            class="secondary"
-            type="button"
-            (click)="load()"
-            [disabled]="loading || deletingAll"
-          >
-            {{ loading ? 'Loading…' : '↻ Refresh' }}
+          <button class="secondary" type="button" (click)="viewMode === 'teacher' ? loadTeacherSchedule() : load()" [disabled]="loading || teacherLoading || deletingAll">
+            {{ (loading || teacherLoading) ? 'Loading…' : '↻ Refresh' }}
           </button>
         </div>
-
       </div>
 
+      <div *ngIf="viewMode === 'teacher'" class="teacher-schedule">
+        <div class="teacher-filter">
+          <label>
+            Select Teacher
+            <select name="scheduleTeacher" [(ngModel)]="selectedTeacherName" (ngModelChange)="onTeacherChange()">
+              <option value="">Choose a teacher</option>
+              <option *ngFor="let teacher of teachers" [value]="teacherName(teacher)">{{ teacherName(teacher) }}</option>
+            </select>
+          </label>
+          <p class="muted" *ngIf="selectedTeacherName">Showing classes for <strong>{{ selectedTeacherName }}</strong> across I1 and I2.</p>
+        </div>
 
-      <!-- LOADING -->
-      <div
-        *ngIf="loading"
-        class="empty"
-      >
-        Loading timetable…
+        <p class="error" *ngIf="teacherError">{{ teacherError }}</p>
+        <div *ngIf="teacherLoading" class="empty">Loading teacher schedule…</div>
+
+        <div class="official-table-wrap" *ngIf="!teacherLoading && selectedTeacherName">
+          <table class="official-timetable teacher-table">
+            <thead>
+              <tr>
+                <th class="day-head">DAY / TIME</th>
+                <th *ngFor="let slot of timeSlots" [innerText]="slot.label"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let day of days">
+                <th class="day-cell">{{ day.substring(0,3).toUpperCase() }}</th>
+                <ng-container *ngFor="let slot of timeSlots; let slotIndex = index">
+                  <ng-container *ngIf="!isTeacherSlotCoveredByEarlierEntry(day, slotIndex)">
+                    <ng-container *ngIf="teacherFirstEntryStartingInSlot(day, slot) as item; else emptyTeacherSlot">
+                      <td [attr.colspan]="slotSpan(item)" class="official-entry-cell">
+                        <div class="official-class">
+                          <strong>{{ item.section }} - {{ item.subject }}</strong>
+                          <span>{{ item.faculty || selectedTeacherName }}</span>
+                          <span *ngIf="item.room">{{ item.room }}</span>
+                          <small>{{ duration(item) }} · {{ item.startTime }}–{{ item.endTime }}</small>
+                          <span class="lab" *ngIf="item.practical">LAB</span>
+                        </div>
+                      </td>
+                    </ng-container>
+                    <ng-template #emptyTeacherSlot>
+                      <td></td>
+                    </ng-template>
+                  </ng-container>
+                </ng-container>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!selectedTeacherName && !teacherLoading" class="empty">Select a teacher to view their weekly schedule.</div>
       </div>
 
+      <div *ngIf="viewMode === 'weekly' && loading" class="empty">Loading timetable…</div>
 
-      <!-- DAY GRID -->
-      <div
-        *ngIf="!loading"
-        class="day-grid"
-      >
-
-        <article
-          class="day-card"
-          *ngFor="let day of days"
-        >
-
-          <h3>{{ day }}</h3>
-
-
-          <!-- CLASS ITEMS -->
-          <div
-            class="class-item"
-            *ngFor="let item of forDay(day)"
-          >
-
-            <div class="time">
-              {{ item.startTime }} – {{ item.endTime }}
-            </div>
-
-            <strong>
-              {{ item.subject }}
-            </strong>
-
-            <span *ngIf="item.faculty">
-              {{ item.faculty }}
-            </span>
-
-            <span *ngIf="item.room">
-              Room: {{ item.room }}
-            </span>
-
-            <span
-              class="lab"
-              *ngIf="item.practical"
-            >
-              PRACTICAL
-            </span>
-
-
-            <!-- EDIT / DELETE -->
-            <div class="item-actions">
-
-              <button
-                type="button"
-                (click)="edit(item)"
-              >
-                Edit
-              </button>
-
-              <button
-                class="delete"
-                type="button"
-                (click)="remove(item)"
-              >
-                Delete
-              </button>
-
-            </div>
-
-          </div>
-
-
-          <!-- EMPTY DAY -->
-          <p
-            class="no-class"
-            *ngIf="forDay(day).length === 0"
-          >
-            No classes added
-          </p>
-
-        </article>
-
+      <div *ngIf="viewMode === 'weekly' && !loading" class="official-table-wrap">
+        <table class="official-timetable">
+          <thead>
+            <tr>
+              <th class="day-head">DAY / TIME</th>
+              <th *ngFor="let slot of timeSlots" [innerText]="slot.label"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let day of days">
+              <th class="day-cell">{{ day.substring(0,3).toUpperCase() }}</th>
+              <ng-container *ngFor="let slot of timeSlots; let slotIndex = index">
+                <ng-container *ngIf="!isSlotCoveredByEarlierEntry(day, slotIndex)">
+                  <ng-container *ngIf="firstEntryStartingInSlot(day, slot) as item; else emptyWeeklySlot">
+                    <td [attr.colspan]="slotSpan(item)" class="official-entry-cell">
+                      <div class="official-class">
+                        <strong>{{ item.section }}<span *ngIf="item.section">-</span>{{ item.subject }}</strong>
+                        <span *ngIf="item.faculty">({{ item.faculty }})</span>
+                        <span *ngIf="item.room">{{ item.room }}</span>
+                        <small>{{ duration(item) }} · {{ item.startTime }}–{{ item.endTime }}</small>
+                        <span class="lab" *ngIf="item.practical">LAB</span>
+                        <div class="official-actions">
+                          <button type="button" (click)="edit(item)">Edit</button>
+                          <button type="button" class="delete" (click)="remove(item)">Delete</button>
+                        </div>
+                      </div>
+                    </td>
+                  </ng-container>
+                  <ng-template #emptyWeeklySlot>
+                    <td></td>
+                  </ng-template>
+                </ng-container>
+              </ng-container>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
     </section>

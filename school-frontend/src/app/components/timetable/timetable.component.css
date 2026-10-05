@@ -1666,3 +1666,362 @@
   }
 
 }
+/* =========================================================
+   ADDITIONAL TIMETABLE VIEWS
+   Kept intentionally consistent with the existing timetable UI.
+   ========================================================= */
+
+.schedule-view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.schedule-view-switch button {
+  border: 0;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: transparent;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.schedule-view-switch button.active {
+  background: #fff;
+  color: #1d2939;
+  box-shadow: 0 1px 4px rgba(16, 24, 40, .08);
+}
+
+.teacher-schedule,
+.weekly-table-wrap {
+  margin-top: 18px;
+}
+
+.teacher-filter {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.teacher-filter label {
+  display: grid;
+  gap: 7px;
+  max-width: 420px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.teacher-filter select {
+  width: 100%;
+}
+
+.schedule-table {
+  max-height: 520px;
+  overflow: auto;
+}
+
+.schedule-table table {
+  min-width: 900px;
+}
+
+.schedule-table th,
+.schedule-table td {
+  white-space: nowrap;
+}
+
+.schedule-table td:nth-child(5) {
+  white-space: normal;
+  min-width: 150px;
+}
+
+.table-empty {
+  text-align: center;
+  padding: 28px !important;
+  color: #667085;
+}
+
+@media (max-width: 760px) {
+  .schedule-view-switch {
+    width: 100%;
+  }
+
+  .schedule-view-switch button {
+    flex: 1;
+  }
+
+  .schedule-table {
+    margin-left: -2px;
+    margin-right: -2px;
+  }
+}
+
+
+/* =========================================================
+   WEEKLY DAY-COLUMN TABLE
+   ========================================================= */
+
+.weekly-day-table {
+  width: 100%;
+  max-height: 620px;
+  overflow: auto;
+}
+
+.weekly-day-table table {
+  width: 100%;
+  min-width: 1050px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.weekly-day-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: center;
+}
+
+.weekly-day-table td.day-column {
+  vertical-align: top;
+  padding: 10px;
+  min-width: 170px;
+  white-space: normal;
+}
+
+.day-class {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 11px;
+  border-left: 3px solid #5871e5;
+  border-radius: 0 11px 11px 0;
+  background: linear-gradient(135deg, #f2f5ff, #f8faff);
+  font-size: 11px;
+}
+
+.day-class:last-child {
+  margin-bottom: 0;
+}
+
+.day-class strong {
+  color: #1f2b40;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.day-class span:not(.lab) {
+  color: #788396;
+  font-size: 10.5px;
+}
+
+.day-class .item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.day-class .item-actions button {
+  padding: 5px 8px;
+  font-size: 10px;
+}
+
+.weekly-day-table .no-class {
+  margin: 8px 0;
+  text-align: center;
+  color: #98a2b3;
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .weekly-day-table table {
+    min-width: 900px;
+  }
+}
+
+
+/* =========================================================
+   OFFICIAL COLLEGE TIMETABLE MATRIX
+   ========================================================= */
+.official-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #d9dee7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15,23,42,.055);
+}
+
+.official-timetable {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #fff;
+  color: #172033;
+}
+
+.official-timetable th,
+.official-timetable td {
+  border: 1px solid #aeb6c3;
+  vertical-align: middle;
+}
+
+.official-timetable thead th {
+  min-height: 64px;
+  padding: 10px 7px;
+  background: #f7f8fa;
+  color: #111827;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.35;
+  text-align: center;
+  white-space: pre-line;
+}
+
+.official-timetable .day-head {
+  width: 96px;
+  background: #f1f3f6;
+}
+
+.official-timetable .day-cell {
+  width: 96px;
+  padding: 12px 7px;
+  background: #fafafa;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 850;
+  text-align: center;
+  letter-spacing: .3px;
+}
+
+.official-timetable td {
+  min-height: 88px;
+  padding: 5px;
+  text-align: center;
+  background: #fff;
+}
+
+.official-timetable td.covered-slot {
+  background: #fbfbfc;
+}
+
+.official-class {
+  min-height: 70px;
+  padding: 8px 6px;
+  margin: 1px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #f8faff, #f3f6fc);
+  color: #172033;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  line-height: 1.2;
+}
+
+.official-class + .official-class {
+  margin-top: 4px;
+  border-top: 1px dashed #c8cfda;
+}
+
+.official-class strong {
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.official-class span {
+  font-size: 10px;
+  font-weight: 650;
+  color: #536074;
+}
+
+.official-class small {
+  font-size: 9px;
+  color: #7a8596;
+  font-weight: 700;
+}
+
+.official-class .lab {
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4056b5;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .4px;
+}
+
+.official-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.official-actions button {
+  border: 0;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: #e9edf3;
+  color: #4b5563;
+  font-size: 8px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.official-actions button:hover {
+  background: #111827;
+  color: #fff;
+}
+
+.official-actions button.delete:hover {
+  background: #b91c1c;
+}
+
+.teacher-table .official-class {
+  min-height: 64px;
+}
+
+@media (max-width: 900px) {
+  .official-table-wrap {
+    border-radius: 12px;
+  }
+
+  .official-timetable {
+    min-width: 900px;
+  }
+}
+
+
+/* 2-hour classes/labs span both adjacent time columns without an internal divider. */
+.official-timetable .official-entry-cell {
+  padding: 5px;
+  vertical-align: middle;
+}
+
+.official-timetable .official-entry-cell .official-class {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Any entry longer than one hour owns all of its occupied time columns. */
+.official-timetable .official-entry-cell {
+  position: relative;
+}
+
+.official-timetable .official-entry-cell[colspan="2"],
+.official-timetable .official-entry-cell[colspan="3"],
+.official-timetable .official-entry-cell[colspan="4"],
+.official-timetable .official-entry-cell[colspan="5"],
+.official-timetable .official-entry-cell[colspan="6"],
+.official-timetable .official-entry-cell[colspan="7"] {
+  border-right: 1px solid #aeb6c3;
+}

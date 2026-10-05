@@ -3,6 +3,8 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimetableEntry, TimetableService } from '../../services/timetable.service';
+import { TeacherService } from '../../services/teacher.services';
+import { Teacher } from '../../models/models';
 import { firstValueFrom, timeout, finalize } from 'rxjs';
 
 @Component({
@@ -26,6 +28,14 @@ export class TimetableComponent implements OnInit {
   section: string = 'I1';
 
   entries: TimetableEntry[] = [];
+
+  // Timetable views
+  viewMode: 'weekly' | 'teacher' = 'weekly';
+  teachers: Teacher[] = [];
+  selectedTeacherName = '';
+  teacherEntries: TimetableEntry[] = [];
+  teacherLoading = false;
+  teacherError = '';
 
   loading = false;
   saving = false;
@@ -57,11 +67,13 @@ export class TimetableComponent implements OnInit {
 
  constructor(
   private service: TimetableService,
+  private teacherService: TeacherService,
   private cdr: ChangeDetectorRef
 ) {}
 
   ngOnInit(): void {
     this.load();
+    this.loadTeachers();
   }
 
   blank(): TimetableEntry {
@@ -130,6 +142,106 @@ export class TimetableComponent implements OnInit {
   });
 
 }
+
+  // LOAD TEACHERS FOR THE TEACHER SCHEDULE VIEW
+  loadTeachers(): void {
+    this.teacherService.getAll().subscribe({
+      next: teachers => {
+        this.teachers = (Array.isArray(teachers) ? teachers : [])
+          .filter(t => (t.status ?? 'ACTIVE') !== 'INACTIVE')
+          .sort((a, b) => this.teacherName(a).localeCompare(this.teacherName(b)));
+      },
+      error: err => {
+        console.error('Teacher list loading error:', err);
+        this.teachers = [];
+      }
+    });
+  }
+
+  teacherName(teacher: Teacher): string {
+    return `${teacher.firstName ?? ''} ${teacher.lastName ?? ''}`.trim();
+  }
+
+  setView(mode: 'weekly' | 'teacher'): void {
+    this.viewMode = mode;
+    this.teacherError = '';
+
+    if (mode === 'teacher' && !this.teachers.length) {
+      this.loadTeachers();
+    }
+  }
+
+  onTeacherChange(): void {
+    if (!this.selectedTeacherName) {
+      this.teacherEntries = [];
+      return;
+    }
+
+    this.loadTeacherSchedule();
+  }
+
+  async loadTeacherSchedule(): Promise<void> {
+    if (!this.selectedTeacherName) return;
+
+    this.teacherLoading = true;
+    this.teacherError = '';
+
+    try {
+      const [i1, i2] = await Promise.all([
+        firstValueFrom(this.service.get('I1').pipe(timeout({ first: 20000 }))),
+        firstValueFrom(this.service.get('I2').pipe(timeout({ first: 20000 })))
+      ]);
+
+      const all = [
+        ...(Array.isArray(i1) ? i1 : []),
+        ...(Array.isArray(i2) ? i2 : [])
+      ];
+
+      const wanted = this.normalizeTeacherName(this.selectedTeacherName);
+      this.teacherEntries = all
+        .filter(entry => this.teacherMatches(entry.faculty, wanted))
+        .sort((a, b) => {
+          const dayDiff = this.days.indexOf(a.dayOfWeek) - this.days.indexOf(b.dayOfWeek);
+          return dayDiff || a.startTime.localeCompare(b.startTime);
+        });
+    } catch (err: any) {
+      console.error('Teacher timetable loading error:', err);
+      this.teacherEntries = [];
+      this.teacherError = err?.name === 'TimeoutError'
+        ? 'Server se response nahi aaya. Please Refresh karein.'
+        : 'Teacher schedule load nahi ho paaya. Backend/API check karein.';
+    } finally {
+      this.teacherLoading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  private normalizeTeacherName(value: string): string {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  private teacherMatches(faculty: string | undefined, wanted: string): boolean {
+    if (!faculty || !wanted) return false;
+    const actual = this.normalizeTeacherName(faculty);
+    if (actual === wanted) return true;
+
+    const wantedParts = wanted.split(' ').filter(Boolean);
+    const actualParts = actual.split(' ').filter(Boolean);
+    return wantedParts.length > 1 && wantedParts.every(part => actualParts.includes(part));
+  }
+
+  duration(entry: TimetableEntry): string {
+    const start = this.timeToMinutes(entry.startTime);
+    const end = this.timeToMinutes(entry.endTime);
+    if (start < 0 || end <= start) return '—';
+
+    const minutes = end - start;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours && mins) return `${hours}h ${mins}m`;
+    if (hours) return `${hours}h`;
+    return `${mins}m`;
+  }
 
   // CHANGE SECTION
   changeSection(): void {
@@ -1957,6 +2069,86 @@ const createWorker = tesseract.createWorker;
     this.importPreview = [];
     this.importMessage = '';
     this.importFileName = '';
+  }
+
+  // Fixed weekly timetable columns matching the official timetable format.
+  readonly timeSlots = [
+    { label: '9:00 AM\n10:00 AM', start: '09:00', end: '10:00' },
+    { label: '10:00 AM\n11:00 AM', start: '10:00', end: '11:00' },
+    { label: '11:00 AM\n12:00 PM', start: '11:00', end: '12:00' },
+    { label: '12:00 PM\n1:00 PM', start: '12:00', end: '13:00' },
+    { label: '1:00 PM\n2:00 PM', start: '13:00', end: '14:00' },
+    { label: '2:00 PM\n3:00 PM', start: '14:00', end: '15:00' },
+    { label: '3:00 PM\n4:00 PM', start: '15:00', end: '16:00' }
+  ];
+
+  entriesForSlot(day: string, slot: { start: string; end: string }): TimetableEntry[] {
+    const slotStart = this.timeToMinutes(slot.start);
+    const slotEnd = this.timeToMinutes(slot.end);
+    return this.entries
+      .filter(e => e.dayOfWeek === day)
+      .filter(e => {
+        const start = this.timeToMinutes(e.startTime);
+        const end = this.timeToMinutes(e.endTime);
+        return start < slotEnd && end > slotStart;
+      })
+      .sort((a, b) => this.timeToMinutes(a.startTime) - this.timeToMinutes(b.startTime));
+  }
+
+  startsInSlot(entry: TimetableEntry, slot: { start: string; end: string }): boolean {
+    return this.timeToMinutes(entry.startTime) === this.timeToMinutes(slot.start);
+  }
+
+  // Number of hourly columns occupied by an entry.
+  // This applies to BOTH theory classes and labs.
+  // Example: 10:00–12:00 => colspan="2".
+  slotSpan(entry: TimetableEntry): number {
+    const start = this.timeToMinutes(entry.startTime);
+    const end = this.timeToMinutes(entry.endTime);
+    if (start < 0 || end <= start) return 1;
+
+    const minutes = end - start;
+    const span = Math.ceil(minutes / 60);
+    return Math.max(1, Math.min(this.timeSlots.length, span));
+  }
+
+  firstEntryStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry | null {
+    return this.entriesForSlot(day, slot).find(e => this.startsInSlot(e, slot)) ?? null;
+  }
+
+  hasEntryStartingInSlot(day: string, slot: { start: string; end: string }): boolean {
+    return this.firstEntryStartingInSlot(day, slot) !== null;
+  }
+
+  isSlotCoveredByEarlierEntry(day: string, slotIndex: number): boolean {
+    const currentStart = this.timeToMinutes(this.timeSlots[slotIndex].start);
+    return this.entries.some(e => {
+      if (e.dayOfWeek !== day) return false;
+      const start = this.timeToMinutes(e.startTime);
+      const end = this.timeToMinutes(e.endTime);
+      return start < currentStart && end > currentStart;
+    });
+  }
+
+  // GET TEACHER CLASSES FOR A DAY
+  teacherEntriesForDay(day: string): TimetableEntry[] {
+    return this.teacherEntries
+      .filter(e => e.dayOfWeek === day)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }
+
+  teacherFirstEntryStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry | null {
+    return this.teacherEntriesForDay(day).find(e => this.startsInSlot(e, slot)) ?? null;
+  }
+
+  isTeacherSlotCoveredByEarlierEntry(day: string, slotIndex: number): boolean {
+    const currentStart = this.timeToMinutes(this.timeSlots[slotIndex].start);
+    return this.teacherEntries.some(e => {
+      if (e.dayOfWeek !== day) return false;
+      const start = this.timeToMinutes(e.startTime);
+      const end = this.timeToMinutes(e.endTime);
+      return start < currentStart && end > currentStart;
+    });
   }
 
   // GET CLASSES FOR A DAY
