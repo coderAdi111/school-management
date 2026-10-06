@@ -36,6 +36,10 @@ public class Teacher {
     @Column(length = 100)
     private String subject;
 
+    /** Faculty code used by the official timetable, e.g. AB, BPS, RR. */
+    @Column(name = "faculty_code", length = 30)
+    private String facultyCode;
+
     @Column(length = 100)
     private String qualification;
 

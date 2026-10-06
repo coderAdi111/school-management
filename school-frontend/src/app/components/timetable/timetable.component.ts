@@ -6,6 +6,8 @@ import { TimetableEntry, TimetableService } from '../../services/timetable.servi
 import { TeacherService } from '../../services/teacher.services';
 import { Teacher } from '../../models/models';
 import { firstValueFrom, timeout, finalize } from 'rxjs';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 @Component({
   selector: 'app-timetable',
@@ -33,6 +35,7 @@ export class TimetableComponent implements OnInit {
   viewMode: 'weekly' | 'teacher' = 'weekly';
   teachers: Teacher[] = [];
   selectedTeacherName = '';
+  selectedTeacherCode = '';
   teacherEntries: TimetableEntry[] = [];
   teacherLoading = false;
   teacherError = '';
@@ -171,8 +174,424 @@ export class TimetableComponent implements OnInit {
     }
   }
 
-  onTeacherChange(): void {
+  // DOWNLOAD BOTH I1 + I2 AS ONE BEAUTIFUL PDF TABLE
+  async downloadWeeklyTimetablePdf(): Promise<void> {
+    if (this.loading) {
+      alert('Timetable load ho rahi hai. Thoda wait karein.');
+      return;
+    }
+
+    try {
+      const [i1Data, i2Data] = await Promise.all([
+        firstValueFrom(this.service.get('I1').pipe(timeout({ first: 20000 }))),
+        firstValueFrom(this.service.get('I2').pipe(timeout({ first: 20000 })))
+      ]);
+
+      const all = [
+        ...(Array.isArray(i1Data) ? i1Data : []),
+        ...(Array.isArray(i2Data) ? i2Data : [])
+      ].filter(e => e?.dayOfWeek);
+
+      if (!all.length) {
+        alert('I1 aur I2 dono ka timetable empty hai.');
+        return;
+      }
+
+      // Official college sheet uses fixed 1-hour columns from 9 AM to 4 PM.
+      const slots = [
+        { start: 9 * 60, end: 10 * 60, label: '9:00 AM\n10:00 AM' },
+        { start: 10 * 60, end: 11 * 60, label: '10:00 AM\n11:00 AM' },
+        { start: 11 * 60, end: 12 * 60, label: '11:00 AM\n12:00 PM' },
+        { start: 12 * 60, end: 13 * 60, label: '12:00 PM\n1:00 PM' },
+        { start: 13 * 60, end: 14 * 60, label: '1:00 PM\n2:00 PM' },
+        { start: 14 * 60, end: 15 * 60, label: '2:00 PM\n3:00 PM' },
+        { start: 15 * 60, end: 16 * 60, label: '3:00 PM\n4:00 PM' }
+      ];
+
+      const body: any[][] = this.days.map(day => {
+        const dayEntries = all
+          .filter(e => e.dayOfWeek === day)
+          .sort((a, b) => {
+            const diff = this.timeToMinutes(a.startTime) - this.timeToMinutes(b.startTime);
+            return diff || a.section.localeCompare(b.section);
+          });
+
+        const row: any[] = [
+          {
+            content: day.substring(0, 3).toUpperCase(),
+            styles: { fontStyle: 'bold', halign: 'center', valign: 'middle' }
+          }
+        ];
+
+        const occupied = new Set<number>();
+
+        for (let slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+          if (occupied.has(slotIndex)) continue;
+
+          const slot = slots[slotIndex];
+
+          // IMPORTANT: only entries STARTING in this column are rendered.
+          // This prevents a 2-hour lab from being duplicated in the next hour.
+          const starting = dayEntries.filter(entry =>
+            this.timeToMinutes(entry.startTime) === slot.start
+          );
+
+          if (!starting.length) {
+            row.push('');
+            continue;
+          }
+
+          const maxEnd = Math.max(
+            ...starting.map(entry => this.timeToMinutes(entry.endTime))
+          );
+
+          let span = Math.ceil((maxEnd - slot.start) / 60);
+          span = Math.max(1, Math.min(span, slots.length - slotIndex));
+
+          const content = starting
+            .sort((a, b) => a.section.localeCompare(b.section))
+            .map(entry => {
+              const section = entry.section || '—';
+              const subject = entry.subject || '—';
+              const faculty = entry.faculty ? ` (${entry.faculty})` : '';
+              const room = entry.room ? `\n${entry.room}` : '';
+              const type = entry.practical ? '\nLAB' : '';
+              return `${section} - ${subject}${faculty}${room}${type}`;
+            })
+            .join('\n');
+
+          row.push({
+            content,
+            colSpan: span,
+            styles: {
+              halign: 'center',
+              valign: 'middle',
+              fontStyle: 'bold'
+            }
+          });
+
+          for (let i = slotIndex; i < slotIndex + span; i++) {
+            occupied.add(i);
+          }
+        }
+
+        return row;
+      });
+
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // ================= OFFICIAL COLLEGE HEADER =================
+      doc.setFillColor(30, 64, 110);
+      doc.roundedRect(8, 5, pageWidth - 16, 23, 2.5, 2.5, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+
+      doc.setFontSize(14);
+      doc.text('ENGINEERING COLLEGE AJMER', pageWidth / 2, 11, {
+        align: 'center'
+      });
+
+      doc.setFontSize(10);
+      doc.text(
+        'DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING',
+        pageWidth / 2,
+        16,
+        { align: 'center' }
+      );
+
+      doc.setFontSize(10);
+      doc.text(
+        'Time Table 5th Sem Information Technology',
+        10,
+        24
+      );
+
+      doc.text('SESSION: 2026-27', pageWidth - 10, 24, {
+        align: 'right'
+      });
+
+      // ================= OFFICIAL TABLE =================
+      autoTable(doc, {
+        startY: 30,
+        head: [[
+          'DAY/\nTIME',
+          ...slots.map(slot => slot.label)
+        ]],
+        body,
+        theme: 'grid',
+        styles: {
+          font: 'helvetica',
+          fontSize: 7.2,
+          cellPadding: 2.1,
+          valign: 'middle',
+          halign: 'center',
+          lineWidth: 0.35,
+          lineColor: [145, 155, 175],
+          textColor: [25, 35, 55],
+          overflow: 'linebreak'
+        },
+        headStyles: {
+          fillColor: [30, 64, 110],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 7.2,
+          halign: 'center',
+          valign: 'middle',
+          lineWidth: 0.35,
+          lineColor: [30, 64, 110],
+          cellPadding: 2.5
+        },
+        bodyStyles: {
+          minCellHeight: 15
+        },
+        columnStyles: {
+          0: {
+            cellWidth: 18,
+            fontStyle: 'bold',
+            halign: 'center',
+            valign: 'middle'
+          }
+        },
+        margin: {
+          left: 8,
+          right: 8,
+          bottom: 25
+        },
+        didParseCell: data => {
+          if (data.section !== 'body') return;
+
+          if (data.column.index === 0) {
+            data.cell.styles.fillColor = [231, 238, 250];
+            data.cell.styles.textColor = [22, 52, 92];
+            data.cell.styles.fontStyle = 'bold';
+            return;
+          }
+
+          const raw = String(
+            (data.cell.raw as any)?.content ??
+            data.cell.text?.join(' ') ??
+            ''
+          );
+
+          if (!raw.trim()) {
+            data.cell.styles.fillColor = [255, 255, 255];
+          } else if (/LAB/i.test(raw)) {
+            data.cell.styles.fillColor = [255, 244, 218];
+            data.cell.styles.textColor = [115, 76, 12];
+          } else if (/I1/i.test(raw) && /I2/i.test(raw)) {
+            data.cell.styles.fillColor = [235, 245, 255];
+            data.cell.styles.textColor = [25, 55, 100];
+          } else if (/I1/i.test(raw)) {
+            data.cell.styles.fillColor = [240, 248, 255];
+            data.cell.styles.textColor = [25, 65, 115];
+          } else if (/I2/i.test(raw)) {
+            data.cell.styles.fillColor = [239, 250, 245];
+            data.cell.styles.textColor = [25, 88, 62];
+          } else {
+            data.cell.styles.fillColor = [248, 250, 253];
+          }
+        }
+      });
+
+      const finalY = (doc as any).lastAutoTable?.finalY ?? 125;
+
+      // Compact footer like the official sheet.
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(70, 70, 70);
+      doc.text(
+        'I1 + I2 combined. Theory classes follow the official timetable layout; LAB / practical classes retain their actual duration.',
+        10,
+        Math.min(finalY + 7, pageHeight - 8)
+      );
+
+      const pages = doc.getNumberOfPages();
+      for (let page = 1; page <= pages; page++) {
+        doc.setPage(page);
+        doc.setFontSize(6.5);
+        doc.setTextColor(100, 100, 100);
+        doc.text(
+          `Page ${page} of ${pages}`,
+          pageWidth - 10,
+          pageHeight - 5,
+          { align: 'right' }
+        );
+      }
+
+      doc.save('ECA_IT_Sem5_Official_Timetable_I1_I2.pdf');
+
+    } catch (err) {
+      console.error('Weekly timetable PDF download error:', err);
+      alert('PDF download nahi ho paaya. Backend check karein.');
+    }
+  }
+
+  // DOWNLOAD SELECTED TEACHER'S I1 + I2 SCHEDULE
+  // Faculty PDF uses a separate official-sheet-inspired template.
+  async downloadTeacherTimetablePdf(): Promise<void> {
     if (!this.selectedTeacherName) {
+      alert('Pehle teacher select karein.');
+      return;
+    }
+
+    if (this.teacherLoading) {
+      alert('Teacher timetable load ho rahi hai. Thoda wait karein.');
+      return;
+    }
+
+    try {
+      await this.loadTeacherSchedule();
+
+      if (!this.teacherEntries.length) {
+        alert(`"${this.selectedTeacherName}" ke liye I1 ya I2 me koi class nahi mili.`);
+        return;
+      }
+
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      doc.setTextColor(20, 20, 20);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('ENGINEERING COLLEGE AJMER', pageWidth / 2, 10, { align: 'center' });
+
+      doc.setFontSize(10);
+      doc.text(
+        'DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING',
+        pageWidth / 2,
+        16,
+        { align: 'center' }
+      );
+
+      doc.setFontSize(10);
+      doc.text(
+        'Faculty Time Table — 5th Sem Information Technology',
+        10,
+        24
+      );
+
+      doc.text(
+        `Teacher: ${this.selectedTeacherName}`,
+        pageWidth - 10,
+        24,
+        { align: 'right' }
+      );
+
+      const rows = this.teacherEntries
+        .slice()
+        .sort((a, b) => {
+          const dayDiff =
+            this.days.indexOf(a.dayOfWeek) - this.days.indexOf(b.dayOfWeek);
+          const timeDiff =
+            this.timeToMinutes(a.startTime) - this.timeToMinutes(b.startTime);
+          return dayDiff || timeDiff || a.section.localeCompare(b.section);
+        })
+        .map(entry => [
+          entry.dayOfWeek.substring(0, 3).toUpperCase(),
+          `${this.formatPdfTime(this.timeToMinutes(entry.startTime))}\n${this.formatPdfTime(this.timeToMinutes(entry.endTime))}`,
+          entry.section || '—',
+          entry.subject || '—',
+          entry.practical ? 'LAB / PRACTICAL' : 'THEORY'
+        ]);
+
+      autoTable(doc, {
+        startY: 31,
+        head: [['DAY', 'TIME', 'SECTION', 'SUBJECT', 'TYPE']],
+        body: rows,
+        theme: 'grid',
+        styles: {
+          font: 'helvetica',
+          fontSize: 8,
+          cellPadding: 2.2,
+          valign: 'middle',
+          halign: 'center',
+          lineWidth: 0.35,
+          lineColor: [60, 60, 60],
+          textColor: [20, 20, 20]
+        },
+        headStyles: {
+          fillColor: [255, 255, 255],
+          textColor: [20, 20, 20],
+          fontStyle: 'bold',
+          lineWidth: 0.35,
+          lineColor: [50, 50, 50]
+        },
+        columnStyles: {
+          0: { cellWidth: 20, fontStyle: 'bold' },
+          1: { cellWidth: 32 },
+          2: { cellWidth: 24, fontStyle: 'bold' },
+          3: { cellWidth: 95 },
+          4: { cellWidth: 48 }
+        },
+        margin: { left: 8, right: 8, bottom: 20 }
+      });
+
+      const finalY = (doc as any).lastAutoTable?.finalY ?? 100;
+      const i1Count = this.teacherEntries.filter(e => e.section === 'I1').length;
+      const i2Count = this.teacherEntries.filter(e => e.section === 'I2').length;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(70, 70, 70);
+      doc.text(
+        `Total Classes: ${rows.length}    |    I1: ${i1Count}    |    I2: ${i2Count}`,
+        10,
+        Math.min(finalY + 8, pageHeight - 8)
+      );
+
+      const pages = doc.getNumberOfPages();
+      for (let page = 1; page <= pages; page++) {
+        doc.setPage(page);
+        doc.setFontSize(6.5);
+        doc.setTextColor(100, 100, 100);
+        doc.text(
+          `Page ${page} of ${pages}`,
+          pageWidth - 10,
+          pageHeight - 5,
+          { align: 'right' }
+        );
+      }
+
+      const safeName = this.selectedTeacherName
+        .trim()
+        .replace(/[^a-z0-9]+/gi, '_')
+        .replace(/^_+|_+$/g, '') || 'Teacher';
+
+      doc.save(`ECA_IT_Sem5_Faculty_${safeName}_I1_I2.pdf`);
+    } catch (err) {
+      console.error('Teacher timetable PDF download error:', err);
+      alert('Teacher timetable PDF download nahi ho paaya. Backend/API check karein.');
+    }
+  }
+
+  private formatPdfTime(minutes: number): string {
+    const hour24 = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    const suffix = hour24 >= 12 ? 'PM' : 'AM';
+    const hour12 = hour24 % 12 || 12;
+    return `${hour12}:${String(minute).padStart(2, '0')} ${suffix}`;
+  }
+
+  onTeacherChange(): void {
+    const selected = this.teachers.find(t => this.teacherName(t) === this.selectedTeacherName);
+    this.selectedTeacherCode = (selected?.facultyCode ?? '').trim().toUpperCase();
+
+    if (!this.selectedTeacherName) {
+      this.selectedTeacherCode = '';
       this.teacherEntries = [];
       return;
     }
@@ -197,9 +616,12 @@ export class TimetableComponent implements OnInit {
         ...(Array.isArray(i2) ? i2 : [])
       ];
 
-      const wanted = this.normalizeTeacherName(this.selectedTeacherName);
+      const selected = this.teachers.find(t => this.teacherName(t) === this.selectedTeacherName);
+      const wantedName = this.normalizeTeacherName(this.selectedTeacherName);
+      const wantedCode = (selected?.facultyCode ?? this.selectedTeacherCode ?? '').trim().toLowerCase();
+
       this.teacherEntries = all
-        .filter(entry => this.teacherMatches(entry.faculty, wanted))
+        .filter(entry => this.teacherMatches(entry.faculty, wantedName, wantedCode))
         .sort((a, b) => {
           const dayDiff = this.days.indexOf(a.dayOfWeek) - this.days.indexOf(b.dayOfWeek);
           return dayDiff || a.startTime.localeCompare(b.startTime);
@@ -220,14 +642,44 @@ export class TimetableComponent implements OnInit {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   }
 
-  private teacherMatches(faculty: string | undefined, wanted: string): boolean {
-    if (!faculty || !wanted) return false;
-    const actual = this.normalizeTeacherName(faculty);
-    if (actual === wanted) return true;
+  private teacherMatches(faculty: string | undefined, wantedName: string, wantedCode: string): boolean {
+    if (!faculty) return false;
 
-    const wantedParts = wanted.split(' ').filter(Boolean);
-    const actualParts = actual.split(' ').filter(Boolean);
-    return wantedParts.length > 1 && wantedParts.every(part => actualParts.includes(part));
+    const raw = faculty.trim();
+    if (!raw) return false;
+
+    const actualName = this.normalizeTeacherName(raw);
+    const actualCompact = actualName.replace(/[^a-z0-9]/g, '');
+    const wantedCompact = wantedCode.replace(/[^a-z0-9]/g, '');
+
+    // 1) Exact faculty-code match.
+    if (wantedCompact && actualCompact === wantedCompact) return true;
+
+    // 2) Some old timetable rows store "A.B.", "A B", or "AB".
+    //    Match the selected teacher's initials as well.
+    if (wantedName) {
+      const wantedParts = wantedName.split(' ').filter(Boolean);
+      const initials = wantedParts.map(part => part.charAt(0)).join('');
+      if (initials && actualCompact === initials) return true;
+    }
+
+    // 3) Timetable may contain the complete teacher name.
+    if (wantedName && actualName === wantedName) return true;
+
+    // 4) Backward-compatible partial full-name match.
+    if (wantedName) {
+      const wantedParts = wantedName.split(' ').filter(Boolean);
+      const actualParts = actualName.split(' ').filter(Boolean);
+      if (wantedParts.length > 1 && wantedParts.every(part => actualParts.includes(part))) {
+        return true;
+      }
+    }
+
+    // 5) Rows such as "AB - Ashok Kumar" / "Ashok Kumar (AB)".
+    if (wantedCompact && actualCompact.includes(wantedCompact)) return true;
+    if (wantedName && actualName.includes(wantedName)) return true;
+
+    return false;
   }
 
   duration(entry: TimetableEntry): string {
@@ -2137,8 +2589,14 @@ const createWorker = tesseract.createWorker;
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
+  teacherEntriesStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry[] {
+    return this.teacherEntriesForDay(day)
+      .filter(e => this.startsInSlot(e, slot))
+      .sort((a, b) => a.section.localeCompare(b.section));
+  }
+
   teacherFirstEntryStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry | null {
-    return this.teacherEntriesForDay(day).find(e => this.startsInSlot(e, slot)) ?? null;
+    return this.teacherEntriesStartingInSlot(day, slot)[0] ?? null;
   }
 
   isTeacherSlotCoveredByEarlierEntry(day: string, slotIndex: number): boolean {

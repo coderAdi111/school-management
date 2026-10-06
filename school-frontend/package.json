@@ -23,6 +23,8 @@
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "express": "^5.1.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "ngx-bootstrap": "^21.2.0",
     "pdfjs-dist": "^5.7.284",
     "rxjs": "~7.8.0",

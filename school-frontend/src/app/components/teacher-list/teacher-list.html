@@ -133,6 +133,8 @@
 
             <th>Subject</th>
 
+            <th>Faculty Code</th>
+
             <th>Qualification</th>
 
             <th>Status</th>
@@ -205,6 +207,14 @@
               >
                 —
               </span>
+            </td>
+
+
+            <td>
+              <span class="subject-badge" *ngIf="teacher.facultyCode">
+                {{ teacher.facultyCode }}
+              </span>
+              <span *ngIf="!teacher.facultyCode">—</span>
             </td>
 
 
@@ -397,6 +407,29 @@
               [(ngModel)]="formTeacher.subject"
               placeholder="e.g. Mathematics"
             />
+
+          </div>
+
+
+          <!-- FACULTY CODE -->
+          <div class="form-group">
+
+            <label>
+              Faculty Code
+            </label>
+
+            <input
+              type="text"
+              name="facultyCode"
+              [(ngModel)]="formTeacher.facultyCode"
+              maxlength="30"
+              placeholder="e.g. AB, BPS, RR, PM"
+              style="text-transform: uppercase;"
+            />
+
+            <small style="display:block; margin-top:6px; color:#7b8794;">
+              Use the same code as the Weekly Timetable faculty code.
+            </small>
 
           </div>
 

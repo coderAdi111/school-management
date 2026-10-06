@@ -67,6 +67,7 @@ export interface Teacher {
   email?: string;
   phone?: string;
   subject?: string;
+  facultyCode?: string;
   qualification?: string;
   status?: 'ACTIVE' | 'INACTIVE';
   createdAt?: string;

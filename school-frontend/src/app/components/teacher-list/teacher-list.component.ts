@@ -59,6 +59,7 @@ export class TeacherListComponent implements OnInit {
       phone: '',
       subject: '',
       qualification: '',
+      facultyCode: '',
       status: 'ACTIVE'
     };
   }
@@ -67,28 +68,10 @@ export class TeacherListComponent implements OnInit {
   // LOAD TEACHERS
   // =========================
 
-  // Only faculty used by the current 5th-semester IT timetable is shown.
-  private isCurrentTimetableTeacher(teacher: Teacher): boolean {
-    const allowed = new Set([
-      'Shikha Gupta',
-      'Deepak Gupta',
-      'Rakesh Rathi',
-      'Bhanupriya Sharma',
-      'Avinash Bhandiya',
-      'Sammah Rasheed',
-      'Monica Sharma',
-      'Mangi Lal',
-      'Satya Narayan Tazi'
-    ]);
-
-    const name = `${teacher.firstName ?? ''} ${teacher.lastName ?? ''}`.trim().replace(/\s+/g, ' ');
-    return allowed.has(name);
-  }
-
   private filterCurrentTeachers(data: Teacher[]): Teacher[] {
-    return (data ?? []).filter(teacher =>
-      teacher.status !== 'INACTIVE' && this.isCurrentTimetableTeacher(teacher)
-    );
+    // Show every active teacher. Faculty-code linking is optional, so newly
+    // added teachers remain visible even before they are assigned to a timetable.
+    return (data ?? []).filter(teacher => (teacher.status ?? 'ACTIVE') !== 'INACTIVE');
   }
 
   loadTeachers(): void {
@@ -272,6 +255,9 @@ export class TeacherListComponent implements OnInit {
 
       subject:
         this.formTeacher.subject?.trim() || '',
+
+      facultyCode:
+        this.formTeacher.facultyCode?.trim().toUpperCase() || '',
 
       qualification:
         this.formTeacher.qualification?.trim() || '',

@@ -20,48 +20,69 @@ public class TimetableTeacherSeeder implements CommandLineRunner {
     @PersistenceContext
     private EntityManager em;
 
-    private record Faculty(String firstName, String lastName, String subject) {}
+    private record Faculty(String firstName, String lastName, String subject, String facultyCode) {}
 
     private static final List<Faculty> TIMETABLE_FACULTY = List.of(
-            new Faculty("Shikha", "Gupta", "MAD LAB / OS"),
-            new Faculty("Deepak", "Gupta", "COA"),
-            new Faculty("Rakesh", "Rathi", "CN / CN LAB"),
-            new Faculty("Bhanupriya", "Sharma", "CCDT"),
-            new Faculty("Avinash", "Bhandiya", "IDS / ML LAB"),
-            new Faculty("Sammah", "Rasheed", "IB"),
-            new Faculty("Monica", "Sharma", "ML"),
-            new Faculty("Mangi", "Lal", "Timetable Faculty"),
-            new Faculty("Satya Narayan", "Tazi", "IT LAB")
+            new Faculty("Shikha", "Gupta", "MAD LAB / OS", "SG"),
+            new Faculty("Deepak", "Gupta", "COA", "DG"),
+            new Faculty("Rakesh", "Rathi", "CN / CN LAB", "RR"),
+            new Faculty("Bhanupriya", "Sharma", "CCDT", "BPS"),
+            new Faculty("Avinash", "Bhandiya", "IDS / ML LAB", "AB"),
+            new Faculty("Sammah", "Rasheed", "IB", "SR"),
+            new Faculty("Monica", "Sharma", "ML", "ML"),
+            new Faculty("Satya Narayan", "Tazi", "IT LAB", "SNT")
     );
 
     @Override
     @Transactional
     public void run(String... args) {
         for (Faculty faculty : TIMETABLE_FACULTY) {
-            boolean exists = !em.createQuery(
-                    "SELECT t.id FROM Teacher t " +
-                    "WHERE LOWER(t.firstName) = LOWER(:firstName) " +
-                    "AND LOWER(t.lastName) = LOWER(:lastName)",
-                    Long.class
+            List<Teacher> byCode = em.createQuery(
+                    "SELECT t FROM Teacher t WHERE UPPER(TRIM(t.facultyCode)) = :code",
+                    Teacher.class
             )
-            .setParameter("firstName", faculty.firstName())
-            .setParameter("lastName", faculty.lastName())
+            .setParameter("code", faculty.facultyCode().toUpperCase())
             .setMaxResults(1)
-            .getResultList()
-            .isEmpty();
+            .getResultList();
 
-            if (exists) {
-                continue;
+            Teacher teacher;
+            if (!byCode.isEmpty()) {
+                teacher = byCode.get(0);
+            } else {
+                List<Teacher> byName = em.createQuery(
+                        "SELECT t FROM Teacher t " +
+                        "WHERE LOWER(t.firstName) = LOWER(:firstName) " +
+                        "AND LOWER(t.lastName) = LOWER(:lastName)",
+                        Teacher.class
+                )
+                .setParameter("firstName", faculty.firstName())
+                .setParameter("lastName", faculty.lastName())
+                .setMaxResults(1)
+                .getResultList();
+
+                if (byName.isEmpty()) {
+                    teacher = new Teacher();
+                    teacher.setFirstName(faculty.firstName());
+                    teacher.setLastName(faculty.lastName());
+                    teacher.setQualification(null);
+                    teacher.setStatus(Teacher.Status.ACTIVE);
+                    em.persist(teacher);
+                } else {
+                    teacher = byName.get(0);
+                }
             }
 
-            Teacher teacher = new Teacher();
-            teacher.setFirstName(faculty.firstName());
-            teacher.setLastName(faculty.lastName());
-            teacher.setSubject(faculty.subject());
-            teacher.setQualification(null);
-            teacher.setStatus(Teacher.Status.ACTIVE);
-
-            em.persist(teacher);
+            // Fill/repair only the timetable code and subject; do not overwrite
+            // user-managed email, phone, qualification or name changes.
+            if (!faculty.facultyCode().equalsIgnoreCase(teacher.getFacultyCode() == null ? "" : teacher.getFacultyCode().trim())) {
+                teacher.setFacultyCode(faculty.facultyCode());
+            }
+            if (teacher.getSubject() == null || teacher.getSubject().isBlank()) {
+                teacher.setSubject(faculty.subject());
+            }
+            if (teacher.getStatus() == null) {
+                teacher.setStatus(Teacher.Status.ACTIVE);
+            }
         }
     }
 }
