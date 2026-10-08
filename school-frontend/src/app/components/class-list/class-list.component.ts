@@ -1,10 +1,17 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AcademicService } from '../../services/academic.service';
 import { StudentService } from '../../services/student.services';
 import { ClassroomService } from '../../services/classroom.services';
-import { AcademicDepartment, AcademicBranch, AcademicSemester, AcademicSection, Student, ClassRoom } from '../../models/models';
+import {
+  AcademicDepartment,
+  AcademicBranch,
+  AcademicSemester,
+  AcademicSection,
+  Student,
+  ClassRoom
+} from '../../models/models';
 
 interface SectionOverview {
   department: string;
@@ -32,12 +39,15 @@ export class ClassList implements OnInit {
   departments: AcademicDepartment[] = [];
   rows: SectionOverview[] = [];
   filteredRows: SectionOverview[] = [];
+
   loading = true;
   errorMessage = '';
 
+  // Live cascading filters.
   selectedDepartment = '';
   selectedBranch = '';
   selectedSemester = '';
+  selectedSection = '';
   search = '';
 
   totalStudents = 0;
@@ -50,24 +60,34 @@ export class ClassList implements OnInit {
   constructor(
     private academic: AcademicService,
     private studentService: StudentService,
-    private classroomService: ClassroomService
+    private classroomService: ClassroomService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
+    // Load everything immediately when the page opens.
     this.loadOverview();
   }
 
   loadOverview(): void {
     this.loading = true;
     this.errorMessage = '';
+    this.rows = [];
+    this.filteredRows = [];
+    this.students = [];
+    this.classrooms = [];
+    this.cdr.detectChanges();
+
     this.academic.departments().subscribe({
       next: departments => {
-        this.departments = departments ?? [];
+        this.departments = (departments ?? []).filter(d => d.active !== false);
+        this.cdr.detectChanges();
         this.loadDepartments(0);
       },
       error: () => {
         this.errorMessage = 'Unable to load academic structure.';
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
 
@@ -75,6 +95,7 @@ export class ClassList implements OnInit {
       next: students => {
         this.students = students ?? [];
         this.recalculate();
+        this.cdr.detectChanges();
       },
       error: () => this.recalculate()
     });
@@ -83,6 +104,7 @@ export class ClassList implements OnInit {
       next: classes => {
         this.classrooms = classes ?? [];
         this.recalculate();
+        this.cdr.detectChanges();
       },
       error: () => this.recalculate()
     });
@@ -101,7 +123,7 @@ export class ClassList implements OnInit {
     }
 
     this.academic.branches(department.id).subscribe({
-      next: branches => this.loadBranches(department, branches ?? [], 0, index),
+      next: branches => this.loadBranches(department, (branches ?? []).filter(b => b.active !== false), 0, index),
       error: () => this.loadDepartments(index + 1)
     });
   }
@@ -124,7 +146,15 @@ export class ClassList implements OnInit {
     }
 
     this.academic.semesters(branch.id).subscribe({
-      next: semesters => this.loadSemesters(department, branch, semesters ?? [], 0, branches, index, departmentIndex),
+      next: semesters => this.loadSemesters(
+        department,
+        branch,
+        (semesters ?? []).filter(s => s.active !== false),
+        0,
+        branches,
+        index,
+        departmentIndex
+      ),
       error: () => this.loadBranches(department, branches, index + 1, departmentIndex)
     });
   }
@@ -151,7 +181,7 @@ export class ClassList implements OnInit {
 
     this.academic.sections(semester.id).subscribe({
       next: sections => {
-        for (const section of sections ?? []) {
+        for (const section of (sections ?? []).filter(s => s.active !== false)) {
           this.rows.push({
             department: department.name,
             branch: branch.name,
@@ -166,6 +196,10 @@ export class ClassList implements OnInit {
             classTeacherSubject: ''
           });
         }
+
+        // The app can receive HTTP callbacks outside Angular's normal
+        // change-detection cycle. Render the newly loaded rows immediately.
+        this.cdr.detectChanges();
         this.loadSemesters(department, branch, semesters, index + 1, branches, branchIndex, departmentIndex);
       },
       error: () => this.loadSemesters(department, branch, semesters, index + 1, branches, branchIndex, departmentIndex)
@@ -175,21 +209,20 @@ export class ClassList implements OnInit {
   private finishLoad(): void {
     this.recalculate();
     this.loading = false;
+    this.applyFilters();
+    this.cdr.detectChanges();
   }
 
   private recalculate(): void {
-    if (!this.rows.length) return;
+    if (!this.rows.length) {
+      this.applyFilters();
+      return;
+    }
 
     for (const row of this.rows) {
-      // A class may store the branch code (e.g. CS/IT) while the
-      // academic overview displays the branch name (e.g. Computer Science).
-      // Match both so imported students are counted in the correct section.
       const matchingClasses = this.classrooms.filter(c =>
         this.same(c.department, row.department) &&
-        this.same(c.branch, row.branch) ||
-        (this.same(c.department, row.department) &&
-          this.same(c.branch, row.branchCode))
-      ).filter(c =>
+        (this.same(c.branch, row.branch) || this.same(c.branch, row.branchCode)) &&
         Number(c.semester) === Number(row.semesterNumber) &&
         this.same(c.section, row.section)
       );
@@ -198,7 +231,7 @@ export class ClassList implements OnInit {
       row.classId = classRoom?.id;
       row.capacity = classRoom?.capacity ?? 0;
       row.classTeacher = classRoom?.teacher
-        ? `${classRoom.teacher.firstName} ${classRoom.teacher.lastName}`.trim()
+        ? `${classRoom.teacher.firstName ?? ''} ${classRoom.teacher.lastName ?? ''}`.trim() || 'Not Assigned'
         : 'Not Assigned';
       row.classTeacherSubject = classRoom?.teacher?.subject ?? '';
 
@@ -206,13 +239,10 @@ export class ClassList implements OnInit {
         const c = s.classRoom;
         if (!c) return false;
 
-        // Prefer the actual class ID. This is the most reliable mapping
-        // because students are assigned to a concrete ClassRoom during import.
         if (row.classId != null && c.id != null) {
           return Number(c.id) === Number(row.classId);
         }
 
-        // Fallback for older records that may not have matching class IDs.
         return this.same(c.department, row.department) &&
           (this.same(c.branch, row.branch) || this.same(c.branch, row.branchCode)) &&
           Number(c.semester) === Number(row.semesterNumber) &&
@@ -223,9 +253,6 @@ export class ClassList implements OnInit {
       row.activeStudents = matchingStudents.filter(s => (s.status ?? 'ACTIVE') === 'ACTIVE').length;
     }
 
-    this.totalStudents = this.rows.reduce((sum, r) => sum + r.students, 0);
-    this.totalActive = this.rows.reduce((sum, r) => sum + r.activeStudents, 0);
-    this.totalCapacity = this.rows.reduce((sum, r) => sum + r.capacity, 0);
     this.applyFilters();
   }
 
@@ -233,41 +260,82 @@ export class ClassList implements OnInit {
     return (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
   }
 
+  // Runs immediately for every select/input change.
   applyFilters(): void {
     const q = this.search.trim().toLowerCase();
+
     this.filteredRows = this.rows.filter(r =>
       (!this.selectedDepartment || r.department === this.selectedDepartment) &&
       (!this.selectedBranch || r.branch === this.selectedBranch) &&
       (!this.selectedSemester || String(r.semesterNumber) === this.selectedSemester) &&
-      (!q || `${r.department} ${r.branch} ${r.semester} ${r.section}`.toLowerCase().includes(q))
+      (!this.selectedSection || r.section === this.selectedSection) &&
+      (!q || `${r.department} ${r.branch} ${r.semester} ${r.section} ${r.classTeacher}`.toLowerCase().includes(q))
     );
+
+    // Stats always represent the currently visible/live scope.
+    this.totalStudents = this.filteredRows.reduce((sum, r) => sum + r.students, 0);
+    this.totalActive = this.filteredRows.reduce((sum, r) => sum + r.activeStudents, 0);
+    this.totalCapacity = this.filteredRows.reduce((sum, r) => sum + r.capacity, 0);
+  }
+
+  get visibleDepartments(): number {
+    return new Set(this.filteredRows.map(r => r.department)).size;
   }
 
   get branchesForFilter(): string[] {
-    return [...new Set(this.rows
-      .filter(r => !this.selectedDepartment || r.department === this.selectedDepartment)
-      .map(r => r.branch))].sort();
+    return [...new Set(
+      this.rows
+        .filter(r => !this.selectedDepartment || r.department === this.selectedDepartment)
+        .map(r => r.branch)
+    )].sort();
   }
 
   get semestersForFilter(): { number: number; name: string }[] {
     const map = new Map<number, string>();
+
     this.rows
       .filter(r =>
         (!this.selectedDepartment || r.department === this.selectedDepartment) &&
         (!this.selectedBranch || r.branch === this.selectedBranch)
       )
       .forEach(r => map.set(r.semesterNumber, r.semester));
-    return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([number, name]) => ({ number, name }));
+
+    return [...map.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([number, name]) => ({ number, name }));
+  }
+
+  get sectionsForFilter(): string[] {
+    return [...new Set(
+      this.rows
+        .filter(r =>
+          (!this.selectedDepartment || r.department === this.selectedDepartment) &&
+          (!this.selectedBranch || r.branch === this.selectedBranch) &&
+          (!this.selectedSemester || String(r.semesterNumber) === this.selectedSemester)
+        )
+        .map(r => r.section)
+    )].sort();
   }
 
   onDepartmentChange(): void {
     this.selectedBranch = '';
     this.selectedSemester = '';
+    this.selectedSection = '';
     this.applyFilters();
   }
 
   onBranchChange(): void {
     this.selectedSemester = '';
+    this.selectedSection = '';
+    this.applyFilters();
+  }
+
+  onSemesterChange(): void {
+    this.selectedSection = '';
+    this.applyFilters();
+  }
+
+  onSectionChange(): void {
     this.applyFilters();
   }
 
@@ -275,12 +343,13 @@ export class ClassList implements OnInit {
     this.selectedDepartment = '';
     this.selectedBranch = '';
     this.selectedSemester = '';
+    this.selectedSection = '';
     this.search = '';
     this.applyFilters();
   }
 
   refresh(): void {
-    this.rows = [];
+    this.clearFilters();
     this.loadOverview();
   }
 

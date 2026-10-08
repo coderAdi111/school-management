@@ -3,14 +3,16 @@
     <div>
       <div class="eyebrow">ACADEMIC OVERVIEW</div>
       <h1>Classes</h1>
-      <p>View every branch, semester and section with its student strength.</p>
+      <p>Live academic overview — changes appear instantly when you change a filter.</p>
     </div>
-    <button class="refresh-btn" type="button" (click)="refresh()">↻ Refresh</button>
+    <button class="refresh-btn" type="button" (click)="refresh()" [disabled]="loading">
+      {{ loading ? 'Loading…' : '↻ Refresh' }}
+    </button>
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card"><span>🏛️</span><div><small>Departments</small><strong>{{ departments.length }}</strong></div></div>
-    <div class="stat-card"><span>🏫</span><div><small>Sections</small><strong>{{ rows.length }}</strong></div></div>
+    <div class="stat-card"><span>🏛️</span><div><small>Departments</small><strong>{{ visibleDepartments }}</strong></div></div>
+    <div class="stat-card"><span>🏫</span><div><small>Sections</small><strong>{{ filteredRows.length }}</strong></div></div>
     <div class="stat-card"><span>👥</span><div><small>Students</small><strong>{{ totalStudents }}</strong></div></div>
     <div class="stat-card"><span>✅</span><div><small>Active Students</small><strong>{{ totalActive }}</strong></div></div>
   </div>
@@ -18,8 +20,13 @@
   <div class="filter-card">
     <div class="field search-field">
       <label>Search</label>
-      <input [(ngModel)]="search" (ngModelChange)="applyFilters()" placeholder="Search branch, semester or section..." />
+      <input
+        [(ngModel)]="search"
+        (ngModelChange)="applyFilters()"
+        placeholder="Search department, branch, semester, section..."
+      />
     </div>
+
     <div class="field">
       <label>Department</label>
       <select [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentChange()">
@@ -27,6 +34,7 @@
         <option *ngFor="let d of departments" [value]="d.name">{{ d.name }}</option>
       </select>
     </div>
+
     <div class="field">
       <label>Branch</label>
       <select [(ngModel)]="selectedBranch" (ngModelChange)="onBranchChange()">
@@ -34,14 +42,33 @@
         <option *ngFor="let b of branchesForFilter" [value]="b">{{ b }}</option>
       </select>
     </div>
+
     <div class="field">
       <label>Semester</label>
-      <select [(ngModel)]="selectedSemester" (ngModelChange)="applyFilters()">
+      <select [(ngModel)]="selectedSemester" (ngModelChange)="onSemesterChange()">
         <option value="">All Semesters</option>
         <option *ngFor="let s of semestersForFilter" [value]="s.number">{{ s.name }}</option>
       </select>
     </div>
+
+    <div class="field">
+      <label>Section</label>
+      <select [(ngModel)]="selectedSection" (ngModelChange)="onSectionChange()">
+        <option value="">All Sections</option>
+        <option *ngFor="let s of sectionsForFilter" [value]="s">{{ s }}</option>
+      </select>
+    </div>
+
     <button class="clear-btn" type="button" (click)="clearFilters()">Reset</button>
+  </div>
+
+  <div class="filter-live-state" *ngIf="!loading">
+    <span class="live-dot"></span>
+    Showing <strong>{{ filteredRows.length }}</strong> of {{ rows.length }} sections
+    <span *ngIf="selectedDepartment"> · {{ selectedDepartment }}</span>
+    <span *ngIf="selectedBranch"> · {{ selectedBranch }}</span>
+    <span *ngIf="selectedSemester"> · {{ selectedSemester }}</span>
+    <span *ngIf="selectedSection"> · {{ selectedSection }}</span>
   </div>
 
   <div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
@@ -51,7 +78,7 @@
     <div class="table-head">
       <div>
         <h2>Section Overview</h2>
-        <p>{{ filteredRows.length }} section(s) found</p>
+        <p>{{ filteredRows.length }} section(s) found in current filter</p>
       </div>
       <div class="capacity">Capacity: {{ totalCapacity }}</div>
     </div>
