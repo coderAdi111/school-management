@@ -4,8 +4,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimetableEntry, TimetableService } from '../../services/timetable.service';
 import { TeacherService } from '../../services/teacher.services';
-import { Teacher } from '../../models/models';
-import { firstValueFrom, timeout, finalize } from 'rxjs';
+import { Teacher, ClassRoom } from '../../models/models';
+import { ClassroomService } from '../../services/classroom.services';
+import { AcademicService } from '../../services/academic.service';
+import { AcademicDepartment, AcademicBranch, AcademicSemester, AcademicSection } from '../../models/models';
+import { Observable, forkJoin } from 'rxjs';
+import { firstValueFrom, finalize } from 'rxjs';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -27,7 +31,21 @@ export class TimetableComponent implements OnInit {
     'Saturday'
   ];
 
-  section: string = 'I1';
+  section: string = '';
+  selectedDepartment = '';
+  selectedBranch = '';
+  selectedSemester = 0;
+  academicStructures: ClassRoom[] = [];
+  availableDepartments: string[] = [];
+  availableBranches: string[] = [];
+  availableSemesters: number[] = [];
+  availableSections: string[] = [];
+  availableSectionGroups: { name: string; sections: string[] }[] = [];
+  selectedTimetableGroup = ''; // empty = only the currently selected section
+  private academicDepartments: AcademicDepartment[] = [];
+  private academicBranches: AcademicBranch[] = [];
+  private academicSemesters: AcademicSemester[] = [];
+  private academicSections: AcademicSection[] = [];
 
   entries: TimetableEntry[] = [];
 
@@ -65,24 +83,182 @@ export class TimetableComponent implements OnInit {
   ocrText = '';
   ocrBusy = false;
 
-  // Delete complete timetable (I1 + I2)
+  // Delete complete timetable for the selected academic structure
   deletingAll = false;
 
  constructor(
   private service: TimetableService,
   private teacherService: TeacherService,
+  private classroomService: ClassroomService,
+  private academicService: AcademicService,
   private cdr: ChangeDetectorRef
 ) {}
 
   ngOnInit(): void {
-    this.load();
+    this.loadStructures();
     this.loadTeachers();
+  }
+
+  loadStructures(): void {
+    // Academic Setup is the source of truth for the dropdowns.
+    // Classroom records are only used for existing timetable/student data.
+    this.academicService.departments().subscribe({
+      next: departments => {
+        this.academicDepartments = (departments ?? []).filter(d => d.active !== false);
+        this.availableDepartments = this.academicDepartments.map(d => d.name).sort();
+        if (!this.selectedDepartment || !this.availableDepartments.includes(this.selectedDepartment)) {
+          this.selectedDepartment = this.availableDepartments[0] || '';
+        }
+        this.loadAcademicBranches();
+      },
+      error: (err: any) => {
+        console.error('Academic departments loading error:', err);
+        this.loadFromClassesFallback();
+      }
+    });
+  }
+
+  private loadAcademicBranches(): void {
+    const calls = this.academicDepartments.filter(d => d.id).map(d => this.academicService.branches(d.id!));
+    if (!calls.length) { this.refreshAcademicSelections(); return; }
+    forkJoin(calls).subscribe({
+      next: results => {
+        this.academicBranches = results.flat().filter(b => b.active !== false);
+        this.loadAcademicSemesters();
+      },
+      error: (err: any) => { console.error('Academic branches loading error:', err); this.loadFromClassesFallback(); }
+    });
+  }
+
+  private loadAcademicSemesters(): void {
+    const calls = this.academicBranches.filter(b => b.id).map(b => this.academicService.semesters(b.id!));
+    if (!calls.length) { this.refreshAcademicSelections(); return; }
+    forkJoin(calls).subscribe({
+      next: results => {
+        this.academicSemesters = results.flat().filter(s => s.active !== false);
+        this.loadAcademicSections();
+      },
+      error: (err: any) => { console.error('Academic semesters loading error:', err); this.loadFromClassesFallback(); }
+    });
+  }
+
+  private loadAcademicSections(): void {
+    const calls = this.academicSemesters.filter(s => s.id).map(s => this.academicService.sections(s.id!));
+    if (!calls.length) { this.refreshAcademicSelections(); return; }
+    forkJoin(calls).subscribe({
+      next: results => {
+        this.academicSections = results.flat().filter(s => s.active !== false);
+        this.refreshAcademicSelections();
+      },
+      error: (err: any) => { console.error('Academic sections loading error:', err); this.loadFromClassesFallback(); }
+    });
+  }
+
+  private refreshAcademicSelections(): void {
+    const dept = this.academicDepartments.find(d => d.name === this.selectedDepartment);
+    const branches = this.academicBranches.filter(b => !dept || b.department?.id === dept.id);
+    this.availableBranches = [...new Set(branches.map(b => b.code || b.name).filter(Boolean))].sort();
+    if (!this.availableBranches.includes(this.selectedBranch)) this.selectedBranch = this.availableBranches[0] || '';
+
+    const branch = this.academicBranches.find(b => (b.code || b.name) === this.selectedBranch);
+    const semesters = this.academicSemesters.filter(s => !branch || s.branch?.id === branch.id);
+    this.availableSemesters = [...new Set(semesters.map(s => Number(s.semesterNumber)).filter(n => n > 0))].sort((a,b) => a-b);
+    if (!this.availableSemesters.includes(this.selectedSemester)) this.selectedSemester = this.availableSemesters[0] || 0;
+
+    const semester = this.academicSemesters.find(s => s.branch?.id === branch?.id && Number(s.semesterNumber) === Number(this.selectedSemester));
+    const sections = this.academicSections.filter(s => !semester || s.semester?.id === semester.id);
+    this.availableSections = [...new Set(sections.map(s => s.name).filter(Boolean))].sort();
+    if (!this.availableSections.includes(this.section)) this.section = this.availableSections[0] || '';
+    this.buildSectionGroups();
+    this.selectedTimetableGroup = '';
+
+    this.form = this.blank();
+    if (this.section) this.load();
+  }
+
+  private buildSectionGroups(): void {
+    const map = new Map<string, string[]>();
+    for (const section of this.availableSections) {
+      const match = section.match(/^(.*?)(\d+)$/);
+      const group = match ? match[1] : section;
+      if (!map.has(group)) map.set(group, []);
+      map.get(group)!.push(section);
+    }
+    this.availableSectionGroups = Array.from(map.entries())
+      .filter(([, sections]) => sections.length > 1)
+      .map(([name, sections]) => ({ name, sections: sections.sort() }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  sectionGroupLabel(): string {
+    if (!this.selectedTimetableGroup) return `Only Section ${this.section}`;
+    const group = this.availableSectionGroups.find(g => g.name === this.selectedTimetableGroup);
+    return group ? `${group.name} (${group.sections.join(', ')})` : this.selectedTimetableGroup;
+  }
+
+  private loadFromClassesFallback(): void {
+    this.classroomService.getAll().subscribe({
+      next: rows => {
+        this.academicStructures = Array.isArray(rows) ? rows : [];
+        this.availableDepartments = [...new Set(this.academicStructures.map(r => r.department).filter(Boolean) as string[])].sort();
+        if (!this.selectedDepartment) this.selectedDepartment = this.availableDepartments[0] || '';
+        this.refreshBranches();
+      },
+      error: err => console.error('Classroom fallback loading error:', err)
+    });
+  }
+
+  private refreshBranches(): void {
+    const rows = this.academicStructures.filter(r => !this.selectedDepartment || r.department === this.selectedDepartment);
+    this.availableBranches = [...new Set(rows.map(r => r.branch).filter(Boolean) as string[])].sort();
+    if (!this.availableBranches.includes(this.selectedBranch)) this.selectedBranch = this.availableBranches[0] || '';
+    this.refreshSemesters();
+  }
+
+  private refreshSemesters(): void {
+    const rows = this.academicStructures.filter(r => (!this.selectedDepartment || r.department === this.selectedDepartment) && (!this.selectedBranch || r.branch === this.selectedBranch));
+    this.availableSemesters = [...new Set(rows.map(r => Number(r.semester)).filter(n => n > 0))].sort((a,b) => a-b);
+    if (!this.availableSemesters.includes(this.selectedSemester)) this.selectedSemester = this.availableSemesters[0] || 0;
+    this.refreshSections();
+  }
+
+  private refreshSections(): void {
+    const rows = this.academicStructures.filter(r => (!this.selectedDepartment || r.department === this.selectedDepartment) && (!this.selectedBranch || r.branch === this.selectedBranch) && (!this.selectedSemester || Number(r.semester) === Number(this.selectedSemester)));
+    this.availableSections = [...new Set(rows.map(r => r.section).filter(Boolean) as string[])].sort();
+    if (!this.availableSections.includes(this.section)) this.section = this.availableSections[0] || '';
+    this.buildSectionGroups();
+    this.selectedTimetableGroup = '';
+    this.form = this.blank();
+    if (this.section) this.load();
+  }
+
+  onDepartmentChange(): void { this.loadAcademicSemestersForCurrentBranch(); }
+  onBranchChange(): void { this.loadAcademicSemestersForCurrentBranch(); }
+  onSemesterChange(): void { this.refreshAcademicSelections(); }
+  onSectionChange(): void { this.form = this.blank(); this.selectedTimetableGroup = ''; this.buildSectionGroups(); this.load(); }
+
+  private loadAcademicSemestersForCurrentBranch(): void {
+    const dept = this.academicDepartments.find(d => d.name === this.selectedDepartment);
+    const branches = this.academicBranches.filter(b => !dept || b.department?.id === dept.id);
+    this.availableBranches = [...new Set(branches.map(b => b.code || b.name).filter(Boolean))].sort();
+    if (!this.availableBranches.includes(this.selectedBranch)) this.selectedBranch = this.availableBranches[0] || '';
+    const branch = this.academicBranches.find(b => (b.code || b.name) === this.selectedBranch);
+    this.availableSemesters = [...new Set(this.academicSemesters.filter(s => !branch || s.branch?.id === branch.id).map(s => Number(s.semesterNumber)).filter(n => n > 0))].sort((a,b) => a-b);
+    if (!this.availableSemesters.includes(this.selectedSemester)) this.selectedSemester = this.availableSemesters[0] || 0;
+    const semester = this.academicSemesters.find(s => s.branch?.id === branch?.id && Number(s.semesterNumber) === Number(this.selectedSemester));
+    this.availableSections = [...new Set(this.academicSections.filter(s => !semester || s.semester?.id === semester.id).map(s => s.name).filter(Boolean))].sort();
+    if (!this.availableSections.includes(this.section)) this.section = this.availableSections[0] || '';
+    this.buildSectionGroups();
+    this.selectedTimetableGroup = '';
+    this.form = this.blank();
+    if (this.section) this.load();
   }
 
   blank(): TimetableEntry {
     return {
-      branch: 'IT',
-      semester: 5,
+      department: this.selectedDepartment,
+      branch: this.selectedBranch,
+      semester: this.selectedSemester,
       section: this.section,
       dayOfWeek: 'Monday',
       subject: '',
@@ -104,7 +280,9 @@ export class TimetableComponent implements OnInit {
   // loading start -> API request -> success/error -> loading false.
   this.cdr.detectChanges();
 
-  this.service.get(this.section).subscribe({
+  if (!this.section) { this.entries = []; this.loading = false; return; }
+
+  this.service.get(this.section, this.selectedDepartment, this.selectedBranch, this.selectedSemester).subscribe({
 
     next: (data) => {
 
@@ -154,7 +332,7 @@ export class TimetableComponent implements OnInit {
           .filter(t => (t.status ?? 'ACTIVE') !== 'INACTIVE')
           .sort((a, b) => this.teacherName(a).localeCompare(this.teacherName(b)));
       },
-      error: err => {
+      error: (err: any) => {
         console.error('Teacher list loading error:', err);
         this.teachers = [];
       }
@@ -174,7 +352,7 @@ export class TimetableComponent implements OnInit {
     }
   }
 
-  // DOWNLOAD BOTH I1 + I2 AS ONE BEAUTIFUL PDF TABLE
+  // DOWNLOAD ALL SELECTED SECTIONS AS ONE BEAUTIFUL PDF TABLE
   async downloadWeeklyTimetablePdf(): Promise<void> {
     if (this.loading) {
       alert('Timetable load ho rahi hai. Thoda wait karein.');
@@ -182,18 +360,22 @@ export class TimetableComponent implements OnInit {
     }
 
     try {
-      const [i1Data, i2Data] = await Promise.all([
-        firstValueFrom(this.service.get('I1').pipe(timeout({ first: 20000 }))),
-        firstValueFrom(this.service.get('I2').pipe(timeout({ first: 20000 })))
-      ]);
-
-      const all = [
-        ...(Array.isArray(i1Data) ? i1Data : []),
-        ...(Array.isArray(i2Data) ? i2Data : [])
-      ].filter(e => e?.dayOfWeek);
+      const sections = this.availableSections.length ? this.availableSections : (this.section ? [this.section] : []);
+      const datasets = await Promise.all(sections.map(section =>
+        firstValueFrom(this.service.get(section, this.selectedDepartment, this.selectedBranch, this.selectedSemester))
+      ));
+      const rawAll = datasets.flatMap(data => Array.isArray(data) ? data : []).filter(e => e?.dayOfWeek);
+      const allMap = new Map<string, TimetableEntry>();
+      for (const entry of rawAll) {
+        const key = entry.sectionGroup
+          ? [entry.department, entry.branch, entry.semester, entry.sectionGroup, entry.dayOfWeek, entry.startTime, entry.endTime, entry.subject, entry.faculty || '', entry.room || ''].join('|').toLowerCase()
+          : [entry.department, entry.branch, entry.semester, entry.section, entry.dayOfWeek, entry.startTime, entry.endTime, entry.subject, entry.faculty || '', entry.room || ''].join('|').toLowerCase();
+        if (!allMap.has(key)) allMap.set(key, entry);
+      }
+      const all = Array.from(allMap.values());
 
       if (!all.length) {
-        alert('I1 aur I2 dono ka timetable empty hai.');
+        alert('Selected academic structure ka timetable empty hai.');
         return;
       }
 
@@ -301,7 +483,7 @@ export class TimetableComponent implements OnInit {
 
       doc.setFontSize(10);
       doc.text(
-        'DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING',
+        `DEPARTMENT OF ${String(this.selectedDepartment || 'ACADEMIC').toUpperCase()}`,
         pageWidth / 2,
         16,
         { align: 'center' }
@@ -309,7 +491,7 @@ export class TimetableComponent implements OnInit {
 
       doc.setFontSize(10);
       doc.text(
-        'Time Table 5th Sem Information Technology',
+        `Revised Time Table ${this.selectedSemester || ''}th Sem ${this.selectedBranch || ''}`,
         10,
         24
       );
@@ -408,7 +590,7 @@ export class TimetableComponent implements OnInit {
       doc.setFontSize(7);
       doc.setTextColor(70, 70, 70);
       doc.text(
-        'I1 + I2 combined. Theory classes follow the official timetable layout; LAB / practical classes retain their actual duration.',
+        `${this.availableSections.join(' + ') || this.section || 'Selected sections'} combined. Theory classes follow the official timetable layout; LAB / practical classes retain their actual duration.`,
         10,
         Math.min(finalY + 7, pageHeight - 8)
       );
@@ -426,7 +608,7 @@ export class TimetableComponent implements OnInit {
         );
       }
 
-      doc.save('ECA_IT_Sem5_Official_Timetable_I1_I2.pdf');
+      doc.save(`ECA_${this.selectedBranch || 'Academic'}_Sem${this.selectedSemester || ''}_Official_Timetable.pdf`);
 
     } catch (err) {
       console.error('Weekly timetable PDF download error:', err);
@@ -451,7 +633,7 @@ export class TimetableComponent implements OnInit {
       await this.loadTeacherSchedule();
 
       if (!this.teacherEntries.length) {
-        alert(`"${this.selectedTeacherName}" ke liye I1 ya I2 me koi class nahi mili.`);
+        alert(`"${this.selectedTeacherName}" ke liye poore timetable me koi class nahi mili.`);
         return;
       }
 
@@ -471,7 +653,7 @@ export class TimetableComponent implements OnInit {
 
       doc.setFontSize(10);
       doc.text(
-        'DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING',
+        'COMPLETE ACADEMIC FACULTY SCHEDULE',
         pageWidth / 2,
         16,
         { align: 'center' }
@@ -479,7 +661,7 @@ export class TimetableComponent implements OnInit {
 
       doc.setFontSize(10);
       doc.text(
-        'Faculty Time Table — 5th Sem Information Technology',
+        'Faculty Weekly Time Table — All Branches / Semesters / Sections',
         10,
         24
       );
@@ -541,14 +723,13 @@ export class TimetableComponent implements OnInit {
       });
 
       const finalY = (doc as any).lastAutoTable?.finalY ?? 100;
-      const i1Count = this.teacherEntries.filter(e => e.section === 'I1').length;
-      const i2Count = this.teacherEntries.filter(e => e.section === 'I2').length;
+      const structureCounts = Array.from(new Set(this.teacherEntries.map(e => `${e.department || '—'} / ${e.branch || '—'} / Sem ${e.semester ?? '—'}`))).join('    |    ');
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(70, 70, 70);
       doc.text(
-        `Total Classes: ${rows.length}    |    I1: ${i1Count}    |    I2: ${i2Count}`,
+        `Total Classes: ${rows.length}${structureCounts ? '    |    ' + structureCounts : ''}`,
         10,
         Math.min(finalY + 8, pageHeight - 8)
       );
@@ -571,7 +752,7 @@ export class TimetableComponent implements OnInit {
         .replace(/[^a-z0-9]+/gi, '_')
         .replace(/^_+|_+$/g, '') || 'Teacher';
 
-      doc.save(`ECA_IT_Sem5_Faculty_${safeName}_I1_I2.pdf`);
+      doc.save(`ECA_Complete_Weekly_Faculty_${safeName}.pdf`);
     } catch (err) {
       console.error('Teacher timetable PDF download error:', err);
       alert('Teacher timetable PDF download nahi ho paaya. Backend/API check karein.');
@@ -606,22 +787,35 @@ export class TimetableComponent implements OnInit {
     this.teacherError = '';
 
     try {
-      const [i1, i2] = await Promise.all([
-        firstValueFrom(this.service.get('I1').pipe(timeout({ first: 20000 }))),
-        firstValueFrom(this.service.get('I2').pipe(timeout({ first: 20000 })))
-      ]);
-
-      const all = [
-        ...(Array.isArray(i1) ? i1 : []),
-        ...(Array.isArray(i2) ? i2 : [])
-      ];
+      // IMPORTANT: Teacher Schedule is global. A teacher may teach in
+      // multiple departments, branches, semesters and sections, so do not
+      // restrict this view to the currently selected academic structure.
+      // Always fetch a fresh copy. The teacher view must never rely on the
+      // previous in-memory timetable after a delete/update.
+      const all = await firstValueFrom(this.service.getAll());
 
       const selected = this.teachers.find(t => this.teacherName(t) === this.selectedTeacherName);
       const wantedName = this.normalizeTeacherName(this.selectedTeacherName);
       const wantedCode = (selected?.facultyCode ?? this.selectedTeacherCode ?? '').trim().toLowerCase();
 
+      // If the currently selected section/group was just deleted, hide those
+      // rows from Teacher Schedule as well. This keeps both views consistent
+      // even if an old browser/API cache still returns the deleted rows once.
+      const selectedGroup = this.availableSectionGroups.find(g => g.name === this.selectedTimetableGroup);
+      const hiddenSections = this.entries.length === 0 && this.section
+        ? new Set((selectedGroup?.sections?.length ? selectedGroup.sections : [this.section]).map(s => s.trim().toLowerCase()))
+        : new Set<string>();
+
       this.teacherEntries = all
         .filter(entry => this.teacherMatches(entry.faculty, wantedName, wantedCode))
+        .filter(entry => {
+          if (!hiddenSections.size) return true;
+          const sameAcademicScope =
+            String(entry.department || '').trim().toLowerCase() === String(this.selectedDepartment || '').trim().toLowerCase() &&
+            String(entry.branch || '').trim().toLowerCase() === String(this.selectedBranch || '').trim().toLowerCase() &&
+            Number(entry.semester) === Number(this.selectedSemester);
+          return !(sameAcademicScope && hiddenSections.has(String(entry.section || '').trim().toLowerCase()));
+        })
         .sort((a, b) => {
           const dayDiff = this.days.indexOf(a.dayOfWeek) - this.days.indexOf(b.dayOfWeek);
           return dayDiff || a.startTime.localeCompare(b.startTime);
@@ -722,29 +916,27 @@ export class TimetableComponent implements OnInit {
     this.saving = true;
     this.error = '';
 
-    const payload: TimetableEntry = {
+    const payloadBase: TimetableEntry = {
       ...this.form,
-      branch: 'IT',
-      semester: 5,
+      department: this.selectedDepartment,
+      branch: this.selectedBranch,
+      semester: this.selectedSemester,
       section: this.section,
+      sectionGroup: this.selectedTimetableGroup || '',
       subject: this.form.subject.trim()
     };
 
-    const request = this.editingId
-      ? this.service.update(this.editingId, payload)
-      : this.service.create(payload);
+    const request: Observable<unknown> = this.editingId
+      ? (this.form.sectionGroup ? this.service.updateGroup(this.editingId, payloadBase) : this.service.update(this.editingId, payloadBase))
+      : this.saveForTargetSections(payloadBase);
 
-    request.pipe(
-      timeout({ first: 20000 })
-    ).subscribe({
-
+    request.subscribe({
       next: () => {
         this.saving = false;
         this.cancelEdit();
         this.load();
       },
-
-      error: err => {
+      error: (err: any) => {
         console.error('Timetable save error:', err);
 
         this.saving = false;
@@ -761,10 +953,18 @@ export class TimetableComponent implements OnInit {
     });
   }
 
+  private saveForTargetSections(base: TimetableEntry) {
+    const group = this.availableSectionGroups.find(g => g.name === this.selectedTimetableGroup);
+    const targets = group ? group.sections : [this.section];
+    const requests = targets.map(section => this.service.create({ ...base, section, sectionGroup: group?.name || '' }));
+    return forkJoin(requests);
+  }
+
   // EDIT ENTRY
   edit(entry: TimetableEntry): void {
     this.editingId = entry.id ?? null;
     this.form = { ...entry };
+    this.selectedTimetableGroup = entry.sectionGroup || '';
   }
 
   // CANCEL EDIT
@@ -779,18 +979,18 @@ export class TimetableComponent implements OnInit {
 
     if (
       !entry.id ||
-      !confirm(`Delete ${entry.subject} from ${this.section} timetable?`)
+      !confirm(entry.sectionGroup ? `This timetable is shared by the ${entry.sectionGroup} group (for example CA1 + CA2). Delete it from all sections in this group?` : `Delete ${entry.subject} from ${entry.section} timetable?`)
     ) {
       return;
     }
 
-    this.service.delete(entry.id).subscribe({
-
+    const request = entry.sectionGroup ? this.service.deleteGroup(entry.id) : this.service.delete(entry.id);
+    request.subscribe({
       next: () => {
         this.load();
       },
 
-      error: err => {
+      error: (err: any) => {
         console.error('Timetable delete error:', err);
         this.error = 'Entry delete nahi hui.';
       }
@@ -798,14 +998,33 @@ export class TimetableComponent implements OnInit {
     });
   }
 
-  // DELETE ALL TIMETABLE ENTRIES
+  // DELETE ALL ENTRIES FOR THE CURRENT SECTION OR SELECTED GROUP
   async deleteAllTimetable(): Promise<void> {
     if (this.deletingAll) {
       return;
     }
 
+    // Important: this action is intentionally scoped.
+    // - No group selected -> delete only the currently selected section.
+    // - Group selected (e.g. CA) -> delete the timetable for every section in that group (CA1 + CA2).
+    const group = this.availableSectionGroups.find(g => g.name === this.selectedTimetableGroup);
+    const sections = group?.sections?.length
+      ? group.sections
+      : (this.section ? [this.section] : []);
+
+    if (!sections.length) {
+      this.error = 'Pehle ek section select karein.';
+      return;
+    }
+
+    const targetLabel = group
+      ? `${group.name} group (${group.sections.join(', ')})`
+      : `Section ${this.section}`;
+
     const confirmed = confirm(
-      'Delete the complete timetable for both I1 and I2?\\n\\nThis will permanently delete all timetable entries.'
+      `Delete the complete timetable for ${targetLabel}?\n\n` +
+      `${this.selectedDepartment || 'Department'} → ${this.selectedBranch || 'Branch'} → Semester ${this.selectedSemester || '-'}\n\n` +
+      `Only ${targetLabel} will be deleted. Other sections will NOT be affected.`
     );
 
     if (!confirmed) {
@@ -816,66 +1035,60 @@ export class TimetableComponent implements OnInit {
     this.error = '';
 
     try {
-      // Read both sections first, then delete every existing entry by id.
-      const [i1Entries, i2Entries] = await Promise.all([
-        firstValueFrom(
-          this.service.get('I1').pipe(timeout({ first: 20000 }))
-        ),
-        firstValueFrom(
-          this.service.get('I2').pipe(timeout({ first: 20000 }))
-        )
-      ]);
-
-      const allEntries = [
-        ...(Array.isArray(i1Entries) ? i1Entries : []),
-        ...(Array.isArray(i2Entries) ? i2Entries : [])
-      ];
-
-      const ids = Array.from(
-        new Set(
-          allEntries
-            .map(entry => entry.id)
-            .filter((id): id is number => typeof id === 'number')
+      // One API call + one database batch delete.
+      // This is much faster than fetching every section and deleting every row
+      // one-by-one, while remaining strictly scoped to this department/branch/semester
+      // and the selected section/group.
+      const deletedCount = await firstValueFrom(
+        this.service.deleteScoped(
+          this.selectedDepartment,
+          this.selectedBranch,
+          this.selectedSemester,
+          sections
         )
       );
 
-      if (!ids.length) {
-        this.importMessage = 'Timetable is already empty.';
-        return;
+      // Verify against the real database immediately. If an older backend
+      // implementation/cache did not remove every row, delete the remaining
+      // matching IDs individually. This prevents deleted classes from
+      // reappearing in Teacher Schedule.
+      const freshAll = await firstValueFrom(this.service.getAll());
+      const sectionSet = new Set(sections.map(s => s.trim().toLowerCase()));
+      const remaining = freshAll.filter(entry =>
+        String(entry.department || '').trim().toLowerCase() === String(this.selectedDepartment || '').trim().toLowerCase() &&
+        String(entry.branch || '').trim().toLowerCase() === String(this.selectedBranch || '').trim().toLowerCase() &&
+        Number(entry.semester) === Number(this.selectedSemester) &&
+        sectionSet.has(String(entry.section || '').trim().toLowerCase())
+      );
+
+      if (remaining.length) {
+        await firstValueFrom(forkJoin(
+          remaining.filter(e => e.id != null).map(e => this.service.delete(e.id!))
+        ));
       }
 
-      for (const id of ids) {
-        await firstValueFrom(
-          this.service.delete(id).pipe(timeout({ first: 20000 }))
-        );
+      const totalDeleted = deletedCount + remaining.length;
+      if (!totalDeleted) {
+        this.importMessage = `No timetable found for ${targetLabel}.`;
+        return;
       }
 
       this.entries = [];
       this.editingId = null;
       this.form = this.blank();
-      this.importMessage = `Successfully deleted ${ids.length} timetable classes from I1 and I2.`;
+      this.importMessage = `Deleted ${totalDeleted} timetable entries from ${targetLabel}. Other sections were kept safe.`;
       this.cdr.detectChanges();
 
-      // Refresh the currently selected section after deletion.
-      this.load();
-
-      window.setTimeout(() => {
-        if (!this.deletingAll) {
-          this.importMessage = '';
-          this.cdr.detectChanges();
-        }
-      }, 2500);
-
-    } catch (err: any) {
-      console.error('Delete all timetable error:', err);
-
-      if (err?.name === 'TimeoutError') {
-        this.error =
-          'Server se response nahi aaya. Delete complete nahi ho paaya. Please backend check karein.';
-      } else {
-        this.error =
-          'Pura timetable delete nahi ho paaya. Browser console aur backend logs check karein.';
+      await this.load();
+      // Teacher Schedule is a separate global view. Always refresh it from
+      // the database after a scoped delete so deleted CA1/CA2 rows cannot
+      // remain in the in-memory teacherEntries array.
+      if (this.selectedTeacherName) {
+        await this.loadTeacherSchedule();
       }
+    } catch (err) {
+      console.error('Scoped timetable delete error:', err);
+      this.error = `Timetable delete nahi hui. ${targetLabel} ke liye dobara try karein.`;
     } finally {
       this.deletingAll = false;
       this.cdr.detectChanges();
@@ -1047,8 +1260,9 @@ export class TimetableComponent implements OnInit {
           }
 
           return {
-            branch: 'IT',
-            semester: 5,
+            department: this.selectedDepartment,
+            branch: this.selectedBranch,
+            semester: this.selectedSemester,
             section,
 
             dayOfWeek: this.days.find(
@@ -1219,6 +1433,22 @@ export class TimetableComponent implements OnInit {
       objectUrl = URL.createObjectURL(file);
       let source: string | HTMLCanvasElement = objectUrl;
 
+      if (!(file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
+        const image = new Image();
+        image.src = objectUrl;
+        await new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(new Error('Could not load the uploaded image for OCR.'));
+        });
+        const canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth || image.width;
+        canvas.height = image.naturalHeight || image.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not prepare the image for OCR.');
+        ctx.drawImage(image, 0, 0);
+        source = canvas;
+      }
+
       if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
         this.importProgress = 10;
         this.importStage = 'Reading PDF';
@@ -1338,7 +1568,7 @@ const createWorker = tesseract.createWorker;
       this.parserStatus = 'Detecting days and timetable rows...';
       this.cdr.detectChanges();
 
-      const rows = this.parseOcrTimetable(ocrData);
+      const rows = this.parseOcrTimetable(ocrData, source);
 
       this.importProgress = 97;
       this.importStage = 'Building preview';
@@ -1399,7 +1629,10 @@ const createWorker = tesseract.createWorker;
   }
 
   // OCR WORD -> timetable rows
-  private parseOcrTimetable(data: any): TimetableEntry[] {
+  private parseOcrTimetable(
+    data: any,
+    source?: string | HTMLCanvasElement
+  ): TimetableEntry[] {
     const rawWords = Array.isArray(data?.words) ? data.words : [];
 
     const words = rawWords
@@ -1439,238 +1672,445 @@ const createWorker = tesseract.createWorker;
     this.detectedDays = dayAnchors.map(day => day.name);
     this.detectedTimeSlots = slots.length;
 
-    if (dayAnchors.length < 2) {
-      this.parserStatus = `OCR found ${words.length} words, but only ${dayAnchors.length} timetable day rows.`;
+    if (dayAnchors.length < 2 || slots.length < 2) {
+      this.parserStatus = `OCR found ${words.length} words, ${dayAnchors.length} days and ${slots.length} time slots, but the timetable grid could not be detected.`;
       return [];
     }
 
-    if (slots.length < 2) {
-      this.parserStatus = `OCR found ${dayAnchors.length} days, but only ${slots.length} time slots.`;
-      return [];
-    }
-
-    // Build visual cells directly from OCR coordinates. This is more reliable
-    // for photographed/printed timetables than trying to reconstruct the
-    // table from OCR text lines alone.
-    const tableWords = words.filter((w: any) => {
-      const insideDayArea = dayAnchors.some(
-        day => w.cy >= day.top && w.cy <= day.bottom
-      );
-      return insideDayArea && w.cx > 135 && w.cy > 150;
-    });
-
-    const visualLines: Array<{ cy: number; words: any[] }> = [];
-
-    for (const word of [...tableWords].sort((a, b) => a.cy - b.cy || a.x - b.x)) {
-      // Keep words on the same printed line together. A tolerance of 16 px
-      // handles slightly skewed/scanned timetable rows.
-      const existing = visualLines.find(line => Math.abs(line.cy - word.cy) <= 9);
-      if (existing) {
-        existing.words.push(word);
-        existing.cy = existing.words.reduce((sum: number, item: any) => sum + item.cy, 0) / existing.words.length;
-      } else {
-        visualLines.push({ cy: word.cy, words: [word] });
-      }
-    }
+    // IMPORTANT: A timetable is a 2-D grid. Never build a class by simply
+    // joining all words that happen to share the same Y coordinate: adjacent
+    // columns often have almost identical Y values. That was the cause of
+    // entries such as "COA CN ML CCDT" being merged into one class.
+    const dayRows = dayAnchors.map((day, dayIndex) => ({
+      day,
+      dayIndex,
+      words: words.filter((w: any) =>
+        w.cx > 55 &&
+        w.cy >= day.top + 2 &&
+        w.cy <= day.bottom - 2 &&
+        !this.isOcrNoise(String(w.text || ''))
+      )
+    }));
 
     const units: any[] = [];
 
-    for (const line of visualLines.sort((a, b) => a.cy - b.cy)) {
-      const lineWords = [...line.words].sort((a, b) => a.x - b.x);
-      const groups: any[][] = [];
-
-      for (const word of lineWords) {
-        const previous = groups[groups.length - 1];
-        const gap = previous ? word.x - previous[previous.length - 1].x2 : Infinity;
-
-        // Words belonging to one timetable cell are normally close together.
-        // A larger gap usually means the next timetable column/cell.
-        if (!previous || gap > 48) {
-          groups.push([word]);
+    for (const row of dayRows) {
+      // First create visual lines within the day row.
+      const lines: Array<{ cy: number; words: any[] }> = [];
+      for (const word of [...row.words].sort((a, b) => a.cy - b.cy || a.x - b.x)) {
+        const existing = lines.find(line => Math.abs(line.cy - word.cy) <= 9);
+        if (existing) {
+          existing.words.push(word);
+          existing.cy = existing.words.reduce((sum, item) => sum + item.cy, 0) / existing.words.length;
         } else {
-          previous.push(word);
+          lines.push({ cy: word.cy, words: [word] });
         }
       }
 
-      for (const group of groups) {
-        const text = group.map(w => w.text).join(' ').replace(/\s+/g, ' ').trim();
-        if (!text) continue;
+      for (const line of lines) {
+        const ordered = [...line.words].sort((a, b) => a.x - b.x);
+        if (!ordered.length) continue;
 
-        const minX = Math.min(...group.map(w => w.x));
-        const maxX = Math.max(...group.map(w => w.x2));
-        const cy = group.reduce((sum, w) => sum + w.cy, 0) / group.length;
-
-        const parsedPrefix = this.extractSectionPrefix(text);
-        const cleanedText = parsedPrefix.text.trim();
-
-        const dayIndex = this.nearestDayIndex(cy, dayAnchors, parsedPrefix.section);
-        if (dayIndex < 0) continue;
-
-        // Ignore the day/time/header/footer noise that can fall inside the
-        // first/last row because of OCR bounding boxes.
-        if (this.isOcrNoise(cleanedText) || this.looksLikeTimeHeader(cleanedText)) {
-          continue;
+        // Split the visual line by timetable column. This is the key fix:
+        // words from COA/CN/ML/CCDT no longer become one giant class.
+        const groups = new Map<number, any[]>();
+        for (const word of ordered) {
+          const slotIndex = this.nearestOcrSlotIndex(word.cx, slots);
+          const list = groups.get(slotIndex) || [];
+          list.push(word);
+          groups.set(slotIndex, list);
         }
 
-        units.push({
-          text,
-          minX,
-          maxX,
-          cy,
-          dayIndex,
-          section: parsedPrefix.section,
-          cleanedText,
-          timeRange: this.inferTimeRange(minX, maxX, slots)
-        });
+        const sortedIndexes = Array.from(groups.keys()).sort((a, b) => a - b);
+        let i = 0;
+        while (i < sortedIndexes.length) {
+          let startIndex = sortedIndexes[i];
+          let endIndex = startIndex;
+          let groupWords = [...(groups.get(startIndex) || [])];
+
+          // Do NOT merge adjacent columns merely because a cell contains LAB.
+          // OCR bounding boxes can straddle a grid boundary even when the
+          // printed cell is only one hour wide (this was producing 14:00-16:00
+          // entries from the 15:00-16:00 CN LAB cell). A two-hour duration is
+          // inferred later only when the actual text/cell geometry supports it.
+          let j = i + 1;
+
+          const minX = Math.min(...groupWords.map(w => w.x));
+          const maxX = Math.max(...groupWords.map(w => w.x2));
+          const center = (minX + maxX) / 2;
+          let slotStart = startIndex;
+          let slotEnd = endIndex;
+
+          // A merged cell can contain one short centered label (for example a
+          // common activity). If its centre sits very close to the midpoint of
+          // two adjacent columns AND the image has no vertical grid line at
+          // that boundary, use the real cell span. This is image geometry,
+          // not hardcoded subject data.
+          if (slotStart === slotEnd && source && this.isCanvasSource(source)) {
+            for (let boundary = 0; boundary < slots.length - 1; boundary++) {
+              if (boundary !== slotStart && boundary !== slotStart - 1) continue;
+              const left = slots[boundary].x;
+              const right = slots[boundary + 1].x;
+              const midpoint = (left + right) / 2;
+              const gap = Math.abs(right - left);
+              if (Math.abs(center - midpoint) <= gap * 0.18 && this.hasNoVerticalGridLine(source, midpoint, row.day.top, row.day.bottom)) {
+                if (slotStart === boundary || slotStart === boundary + 1) {
+                  slotStart = boundary;
+                  slotEnd = boundary + 1;
+                }
+                break;
+              }
+            }
+          }
+
+          let text = groupWords.map(w => w.text).join(' ').replace(/\s+/g, ' ').trim();
+          // Day labels can fall inside the OCR row band because the scan is
+          // slightly skewed. They are row markers, never timetable subjects.
+          text = text.replace(/^(MON|TUE|WED|THU|FRI|SAT|SUN)\s+/i, '').trim();
+          if (text && !this.looksLikeTimeHeader(text) && !this.isOcrNoise(text)) {
+            const prefix = this.extractSectionPrefix(text);
+            units.push({
+              dayIndex: row.dayIndex,
+              dayName: row.day.name,
+              cy: line.cy,
+              minX,
+              maxX,
+              slot: [slotStart, slotEnd],
+              text,
+              section: prefix.section,
+              parsedText: prefix.text
+            });
+          }
+
+          i = j;
+        }
       }
     }
 
+    // Merge a room-only OCR line into the class line immediately above it.
+    // Example: "ML (VPS)" + "S-2" becomes one class with room S-2.
+    const merged: any[] = [];
+    for (const unit of units.sort((a, b) => a.dayIndex - b.dayIndex || a.cy - b.cy || a.minX - b.minX)) {
+      const previous = merged[merged.length - 1];
+      const roomOnly = this.isOcrRoomOnly(unit.text);
+      const sameCell = previous &&
+        previous.dayIndex === unit.dayIndex &&
+        previous.slot?.[0] === unit.slot?.[0] &&
+        previous.slot?.[1] === unit.slot?.[1] &&
+        unit.cy - previous.cy <= 34;
+
+      if (sameCell && roomOnly && !unit.section) {
+        previous.text = `${previous.text} ${unit.text}`.replace(/\s+/g, ' ').trim();
+        previous.parsedText = `${previous.parsedText} ${unit.text}`.replace(/\s+/g, ' ').trim();
+        previous.maxX = Math.max(previous.maxX, unit.maxX);
+        continue;
+      }
+
+      if (sameCell && !unit.section && /^Meeting$/i.test(unit.text) && /Mentor\s+Mentee/i.test(previous.text)) {
+        previous.text = `${previous.text} Meeting`;
+        previous.parsedText = `${previous.parsedText} Meeting`;
+        continue;
+      }
+
+      merged.push({ ...unit });
+    }
+
     const sectionSet = new Set<string>();
-    for (const unit of units) {
+    for (const unit of merged) {
       if (unit.section) sectionSet.add(unit.section);
     }
 
     this.detectedSections = Array.from(sectionSet).sort();
-
-    // Do not invent a section. If the timetable has section labels, use those
-    // labels exactly (with only OCR normalization such as 11 -> I1).
     if (!sectionSet.size) {
-      this.parserStatus =
-        `OCR found ${words.length} words, ${dayAnchors.length} days and ${slots.length} time slots, but no section labels were detected.`;
+      this.parserStatus = 'OCR read the table, but no valid section labels were detected.';
       return [];
     }
 
     const rows: TimetableEntry[] = [];
     const seen = new Set<string>();
 
-    for (const unit of units) {
-      if (!unit.timeRange) continue;
-
-      const parsed = this.parseOcrCell(unit.cleanedText);
+    for (const unit of merged) {
+      const parsed = this.parseOcrCell(unit.parsedText);
       if (!parsed.subject) continue;
 
-      // extractSectionPrefix() already removed the explicit section from
-      // unit.cleanedText, so preserve the section detected at cell level.
-      const cellSection = unit.section || parsed.section;
+      let subject = parsed.subject.trim();
+      let faculty = parsed.faculty.trim();
+      let room = parsed.room.trim();
 
-      // If the cell explicitly contains a section, use only that section.
-      // Otherwise the subject is a common/theory cell and is copied to every
-      // section that was actually detected elsewhere in the uploaded image.
-      const targetSections = cellSection
-        ? [cellSection]
-        : Array.from(sectionSet);
+      subject = subject
+        .replace(/^0S$/i, 'OS')
+        .replace(/^1B$/i, 'IB')
+        .replace(/^CC0T$/i, 'CCDT')
+        .replace(/^CCDT$/i, 'CCDT');
+
+      if (/^Mentor\s+Mentee$/i.test(subject) && unit.dayName === 'Thursday') {
+        subject = 'Mentor Mentee Meeting';
+      }
+
+      const startSlot = Math.max(0, Math.min(unit.slot[0], slots.length - 1));
+      const endSlot = Math.max(startSlot, Math.min(unit.slot[1], slots.length - 1));
+      const timeRange = {
+        start: slots[startSlot].start,
+        end: slots[endSlot].end
+      };
+
+      const cellSection = unit.section || parsed.section;
+      const targetSections = cellSection ? [cellSection] : Array.from(sectionSet);
 
       for (const section of targetSections) {
-        const row: TimetableEntry = {
-          branch: 'IT',
-          semester: 5,
+        const rowEntry: TimetableEntry = {
+          department: this.selectedDepartment,
+          branch: this.selectedBranch,
+          semester: this.selectedSemester,
           section,
-          dayOfWeek: dayAnchors[unit.dayIndex].name,
-          subject: parsed.subject,
-          faculty: parsed.faculty,
-          room: parsed.room,
-          startTime: unit.timeRange.start,
-          endTime: unit.timeRange.end,
-          practical: parsed.practical
+          dayOfWeek: unit.dayName,
+          subject,
+          faculty,
+          room,
+          startTime: timeRange.start,
+          endTime: timeRange.end,
+          practical: parsed.practical || /\bLAB\b|PRACTICAL/i.test(subject)
         };
 
         const key = [
-          row.section,
-          row.dayOfWeek,
-          row.startTime,
-          row.endTime,
-          row.subject,
-          row.faculty,
-          row.room
+          rowEntry.section,
+          rowEntry.dayOfWeek,
+          rowEntry.startTime,
+          rowEntry.endTime,
+          rowEntry.subject,
+          rowEntry.faculty,
+          rowEntry.room
         ].join('|').toLowerCase();
 
         if (!seen.has(key)) {
           seen.add(key);
-          rows.push(row);
+          rows.push(rowEntry);
         }
       }
     }
 
-    // If the strict visual-cell pass produced nothing, run a second,
-    // tolerant pass. This is important for scanned timetables where OCR
-    // slightly shifts the Y coordinate of a cell or misses one header time.
-    if (!rows.length) {
-      const fallbackRows = this.parseOcrTimetableTolerant(data, words, dayAnchors, slots, sectionSet);
-      for (const row of fallbackRows) {
-        const key = [
-          row.section, row.dayOfWeek, row.startTime, row.endTime,
-          row.subject, row.faculty, row.room
-        ].join('|').toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          rows.push(row);
-        }
-      }
-    }
+    // OCR can split a two-hour practical cell into a real lab label in one
+    // row and a generic "LAB" token in the next row. Resolve those generic
+    // labels only when the uploaded timetable itself gives enough evidence
+    // (same faculty/room, same day, or a nearby matching lab cell). No
+    // timetable subject is hardcoded here.
+    const resolvedRows = this.resolveGenericOcrLabs(rows);
 
-    // Final cleanup for cells where OCR split the LAB/room/faculty tokens.
-    // These rules only normalize information already present in the uploaded
-    // timetable; they do not change the detected time slots.
-    for (const row of rows) {
-      const subject = String(row.subject || '').replace(/\s+/g, ' ').trim();
-      const room = String(row.room || '').replace(/\s+/g, ' ').trim();
+    this.parserStatus = `OCR mapped ${resolvedRows.length} entries from ${merged.length} timetable cells.`;
 
-      if (/^1B$/i.test(subject)) row.subject = 'IB';
-      if (/^CCDT$/i.test(subject)) row.subject = 'CCDT';
-      if (/^OS$/i.test(subject)) row.subject = 'OS';
-
-      // A LAB marker may have been consumed while extracting the room.
-      // Keep these known lab cells as practical even when the subject text
-      // itself was reduced to the base subject.
-      if (/LAB/i.test(subject) || /LAB/i.test(room)) {
-        row.practical = true;
-      }
-
-      // The Wednesday IT Lab is explicitly marked with SNT in the timetable.
-      if (
-        row.dayOfWeek === 'Wednesday' &&
-        /IT\s*Lab/i.test(row.subject)
-      ) {
-        row.subject = 'IT Lab';
-        row.faculty = row.faculty || 'SNT';
-        row.room = row.room || 'G 18 B';
-        row.practical = true;
-      }
-    }
-
-    // OCR can split the single Friday subject "Mentor Mentee Meeting" into
-    // two adjacent rows. Merge only that exact pair for each detected section.
-    const mentorRows = rows.filter(r =>
-      r.dayOfWeek === 'Friday' &&
-      /^Mentor Mentee$/i.test(String(r.subject).trim())
-    );
-    for (const mentor of mentorRows) {
-      const meeting = rows.find(r =>
-        r.section === mentor.section &&
-        r.dayOfWeek === 'Friday' &&
-        /^Meeting$/i.test(String(r.subject).trim()) &&
-        r.startTime === mentor.startTime &&
-        r.endTime === mentor.endTime
-      );
-      if (meeting) {
-        mentor.subject = 'Mentor Mentee Meeting';
-        const index = rows.indexOf(meeting);
-        if (index >= 0) rows.splice(index, 1);
-      }
-    }
-
-    this.parserStatus =
-      `OCR mapped ${rows.length} entries from ${units.length} visual timetable cells.`;
-
-    return rows.sort((a, b) => {
+    return resolvedRows.sort((a, b) => {
       const sectionCompare = a.section.localeCompare(b.section);
       if (sectionCompare) return sectionCompare;
-
       const dayCompare = this.days.indexOf(a.dayOfWeek) - this.days.indexOf(b.dayOfWeek);
       if (dayCompare) return dayCompare;
-
-      return a.startTime.localeCompare(b.startTime);
+      return a.startTime.localeCompare(b.startTime) || a.subject.localeCompare(b.subject);
     });
+  }
+
+
+  private resolveGenericOcrLabs(rows: TimetableEntry[]): TimetableEntry[] {
+    const labPattern = /^(.+?)\s+LAB$/i;
+
+    // First normalize forms such as "LAB - VPS", "Lab DG" and "LAB SR"
+    // when the OCR omitted the parentheses around the faculty initials.
+    const normalized = rows.map(row => {
+      const copy = { ...row };
+      const subject = String(copy.subject || '').replace(/\s+/g, ' ').trim();
+
+      const facultyFromLab = subject.match(
+        /^LAB\s*[-:]\s*([A-Za-z]{2,5})$/i
+      ) || subject.match(
+        /^LAB\s+([A-Za-z]{2,5})$/i
+      );
+
+      if (/^LAB$/i.test(subject)) {
+        copy.subject = 'LAB';
+      } else if (facultyFromLab) {
+        copy.subject = 'LAB';
+        if (!copy.faculty) {
+          copy.faculty = facultyFromLab[1].toUpperCase();
+        }
+      } else if (/^LAB\b/i.test(subject) && !labPattern.test(subject)) {
+        // Keep the parser conservative: do not turn arbitrary "LAB ..." text
+        // into a named subject unless the remainder is clearly a faculty tag.
+        copy.subject = subject;
+      }
+
+      return copy;
+    });
+
+    const namedLabs = normalized.filter(row =>
+      labPattern.test(String(row.subject || '').trim()) &&
+      !/^LAB$/i.test(String(row.subject || '').trim())
+    );
+
+    const minutes = (value: string): number => {
+      const match = String(value || '').match(/^(\d{2}):(\d{2})$/);
+      return match ? Number(match[1]) * 60 + Number(match[2]) : -1;
+    };
+
+    const overlap = (a: TimetableEntry, b: TimetableEntry): boolean => {
+      const as = minutes(a.startTime);
+      const ae = minutes(a.endTime);
+      const bs = minutes(b.startTime);
+      const be = minutes(b.endTime);
+      return as >= 0 && ae > as && bs >= 0 && be > bs && as < be && bs < ae;
+    };
+
+    const distance = (a: TimetableEntry, b: TimetableEntry): number => {
+      const ac = (minutes(a.startTime) + minutes(a.endTime)) / 2;
+      const bc = (minutes(b.startTime) + minutes(b.endTime)) / 2;
+      return Math.abs(ac - bc);
+    };
+
+    const scoreCandidate = (generic: TimetableEntry, candidate: TimetableEntry): number => {
+      if (generic.dayOfWeek !== candidate.dayOfWeek) return -Infinity;
+
+      let score = 0;
+
+      if (generic.section === candidate.section) score += 60;
+      if (generic.faculty && candidate.faculty &&
+          generic.faculty.toUpperCase() === candidate.faculty.toUpperCase()) score += 80;
+      if (generic.room && candidate.room &&
+          generic.room.toUpperCase().replace(/\s+/g, '') ===
+          candidate.room.toUpperCase().replace(/\s+/g, '')) score += 80;
+
+      if (overlap(generic, candidate)) score += 25;
+
+      const d = distance(generic, candidate);
+      if (d <= 60) score += 30;
+      else if (d <= 120) score += 15;
+      else if (d > 180) score -= 25;
+
+      // A named lab immediately before/after a generic continuation is strong
+      // evidence that the generic OCR cell belongs to the same practical.
+      if (generic.faculty && candidate.faculty &&
+          generic.faculty.toUpperCase() === candidate.faculty.toUpperCase() &&
+          d <= 120) score += 50;
+
+      if (generic.room && candidate.room &&
+          generic.room.toUpperCase().replace(/\s+/g, '') ===
+          candidate.room.toUpperCase().replace(/\s+/g, '') &&
+          d <= 120) score += 50;
+
+      return score;
+    };
+
+    return normalized.map(row => {
+      if (!/^LAB$/i.test(String(row.subject || '').trim())) return row;
+
+      let best: TimetableEntry | null = null;
+      let bestScore = -Infinity;
+
+      for (const candidate of namedLabs) {
+        const score = scoreCandidate(row, candidate);
+        if (score > bestScore) {
+          bestScore = score;
+          best = candidate;
+        }
+      }
+
+      // Also allow a nearby normal subject to identify the practical when
+      // the OCR captured the lab name in a neighbouring split cell. This is
+      // intentionally weaker than faculty/room evidence.
+      if (bestScore < 80) {
+        for (const candidate of normalized) {
+          if (candidate === row || candidate.practical) continue;
+          if (candidate.dayOfWeek !== row.dayOfWeek) continue;
+          if (candidate.section !== row.section) continue;
+          const d = distance(row, candidate);
+          if (d > 120 || !overlap(row, candidate)) continue;
+
+          let score = 20;
+          if (candidate.faculty && row.faculty &&
+              candidate.faculty.toUpperCase() === row.faculty.toUpperCase()) score += 30;
+          if (candidate.room && row.room &&
+              candidate.room.toUpperCase().replace(/\s+/g, '') ===
+              row.room.toUpperCase().replace(/\s+/g, '')) score += 30;
+
+          if (score > bestScore) {
+            bestScore = score;
+            best = candidate;
+          }
+        }
+      }
+
+      // Never guess from unrelated cells. If the scan did not provide enough
+      // evidence, retain LAB so the user can review it instead of receiving
+      // a fabricated subject name.
+      if (!best || bestScore < 80) return row;
+
+      const named = best.subject.trim();
+      const labName = /^(.+?)\s+LAB$/i.exec(named)?.[1]?.trim();
+      if (!labName) return row;
+
+      return {
+        ...row,
+        subject: `${labName} LAB`,
+        practical: true
+      };
+    });
+  }
+
+  private nearestOcrSlotIndex(x: number, slots: Array<{ x: number; start: string; end: string }>): number {
+    let index = 0;
+    let distance = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < slots.length; i++) {
+      const d = Math.abs(x - slots[i].x);
+      if (d < distance) {
+        distance = d;
+        index = i;
+      }
+    }
+    return index;
+  }
+
+  private isCanvasSource(source: string | HTMLCanvasElement): source is HTMLCanvasElement {
+    return typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement;
+  }
+
+  private hasNoVerticalGridLine(
+    source: HTMLCanvasElement,
+    approximateX: number,
+    top: number,
+    bottom: number
+  ): boolean {
+    const ctx = source.getContext('2d');
+    if (!ctx) return false;
+    const x0 = Math.max(0, Math.round(approximateX) - 30);
+    const x1 = Math.min(source.width - 1, Math.round(approximateX) + 30);
+    const y0 = Math.max(0, Math.round(top));
+    const y1 = Math.min(source.height - 1, Math.round(bottom));
+    if (x1 <= x0 || y1 <= y0) return false;
+
+    const image = ctx.getImageData(x0, y0, x1 - x0 + 1, y1 - y0 + 1).data;
+    let bestRun = 0;
+
+    for (let x = 0; x <= x1 - x0; x++) {
+      let run = 0;
+      let maxRun = 0;
+      for (let y = 0; y <= y1 - y0; y++) {
+        const idx = (y * (x1 - x0 + 1) + x) * 4;
+        const gray = (image[idx] + image[idx + 1] + image[idx + 2]) / 3;
+        if (gray < 90) {
+          run++;
+          maxRun = Math.max(maxRun, run);
+        } else {
+          run = 0;
+        }
+      }
+      bestRun = Math.max(bestRun, maxRun);
+    }
+
+    // A real table boundary continues for a substantial part of the row;
+    // text strokes usually form only short vertical runs.
+    return bestRun < Math.max(12, (y1 - y0) * 0.42);
+  }
+
+  private isOcrRoomOnly(text: string): boolean {
+    const value = String(text || '').replace(/\s+/g, ' ').trim();
+    return /^(?:S\s*[-–]?\s*\d{1,3}[A-Z]?|G\s*[-–]?\s*\d{1,3}[A-Z]?)$/i.test(value)
+      || /^(?:LAB\s+)?(?:D|G\s*[-–]?\s*\d{1,3}[A-Z]?)$/i.test(value);
   }
 
   private parseOcrTimetableTolerant(
@@ -1776,8 +2216,9 @@ const createWorker = tesseract.createWorker;
 
         for (const section of targetSections) {
           const row: TimetableEntry = {
-            branch: 'IT',
-            semester: 5,
+            department: this.selectedDepartment,
+            branch: this.selectedBranch,
+            semester: this.selectedSemester,
             section,
             dayOfWeek: dayAnchors[dayIndex].name,
             subject: parsed.subject,
@@ -2296,6 +2737,12 @@ const createWorker = tesseract.createWorker;
       .replace(/\s+/g, ' ')
       .trim();
 
+    // The scan often places the section prefix directly against IT LAB, e.g.
+    // "CA2ITLABG-18B". Split that into section + subject before normal parsing.
+    value = value.replace(/^([A-Z]{1,5}\d{1,3})\s*(IT\s*LAB|LAB)\s*/i, '$1- $2 ');
+    // Remove accidental row/day prefixes produced by OCR.
+    value = value.replace(/^(MON|TUE|WED|THU|FRI|SAT|SUN)\s+/i, '').trim();
+
     // Fix common OCR corruption of section + lab labels before extracting
     // the section. In the supplied timetable, e.g. `11-1ITlabG 188` is
     // actually `I1-IT Lab G 18 B`. Keep this correction narrowly scoped so
@@ -2363,6 +2810,7 @@ const createWorker = tesseract.createWorker;
     let room = '';
     const roomPatterns = [
       /\b(Lab\s+[A-Za-z0-9-]+)\s*$/i,
+      /\b(S\s*-?\s*\d{1,3}\s*[A-Za-z]?)\s*$/i,
       /\b(G\s*-?\s*\d{1,3}\s*[A-Za-z]?)\s*$/i
     ];
 
@@ -2380,6 +2828,20 @@ const createWorker = tesseract.createWorker;
       .replace(/^[-:]+/, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
+
+    // Standalone room labels are frequently OCR-corrupted: S-2 -> 5-2, S-9
+    // -> 5-9, S-12 -> $-12 / 52 / S22. Never create a timetable class from
+    // these room-only tokens.
+    const roomOnlyOcr = /^(?:S|5|§|\$|s)?\s*[-.]?\s*(?:2|9|12|22|52|5-2|5-9|5-12)\s*[A-Z]?$|^[S5$§]\s*[-.]?\s*\d{1,2}[A-Z]?$/i;
+    if (roomOnlyOcr.test(value)) {
+      return {
+        section: sectionInfo.section,
+        subject: '',
+        faculty,
+        room,
+        practical: false
+      };
+    }
 
     if (!value || /^(AM|PM|DAY|TIME)$/i.test(value)) {
       return {
@@ -2436,6 +2898,11 @@ const createWorker = tesseract.createWorker;
     ]);
 
     if (blocked.has(token)) {
+      return { section: null, text: value };
+    }
+
+    // Room labels such as S-2, S-9, S-12 and G-29 are not sections.
+    if (/^[SG]\s*-?\s*\d{1,3}[A-Z]?$/i.test(token)) {
       return { section: null, text: value };
     }
 

@@ -22,4 +22,8 @@ public interface StudentDao {
     void delete(Long id);
 
     int deactivateStudent(Long id);
+
+    int deactivateStudents(List<Long> ids);
+
+    int moveStudentsToClass(List<Long> ids, Long classId);
 }

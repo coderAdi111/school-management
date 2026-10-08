@@ -281,3 +281,38 @@ table tbody tr:nth-child(n+6) {
     transition-duration: .01ms !important;
   }
 }
+
+/* Academic hierarchy filters */
+.academic-filter-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc, #fff);
+  box-shadow: 0 8px 24px rgba(15,23,42,.05);
+}
+.academic-filter-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.academic-filter-title span {
+  color: #64748b;
+  font-size: 12px;
+}
+.filter-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 13px;
+}
+@media (max-width: 700px) {
+  .academic-filter-title, .filter-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

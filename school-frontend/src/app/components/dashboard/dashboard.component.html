@@ -2,9 +2,9 @@
 
   <header class="dash-top">
     <div>
-      <div class="eyebrow">OVERVIEW · 5TH SEMESTER IT</div>
+      <div class="eyebrow">ACADEMIC OVERVIEW</div>
       <h1>{{ greeting }}, Admin<span class="wave">.</span></h1>
-      <p>{{ todayLabel }} <span class="dot">•</span> Information Technology</p>
+      <p>{{ todayLabel }} <span class="dot">•</span> Dynamic academic overview</p>
     </div>
 
     <button class="refresh" (click)="refreshDashboard()" [disabled]="loading">
@@ -29,7 +29,7 @@
         </span>
       </div>
       <strong>{{ students.length }}</strong>
-      <small>I1 {{ students.filter(s => s.classRoom?.section === 'I1').length }} <i></i> I2 {{ students.filter(s => s.classRoom?.section === 'I2').length }}</small>
+      <small><ng-container *ngFor="let item of sectionCounts; let last = last">{{ item.section }} {{ item.count }}<i *ngIf="!last"></i></ng-container></small>
     </article>
 
     <article class="metric">
@@ -51,7 +51,7 @@
         </span>
       </div>
       <strong>{{ classes.length }}</strong>
-      <small>I1 <i></i> I2</small>
+      <small>{{ classes.length }} academic class(es)</small>
     </article>
 
     <article class="metric">
@@ -98,8 +98,7 @@
       <div class="attendance-footer">
         <span>{{ todayMarked ? 'Today’s attendance is live' : 'No attendance marked today' }}</span>
         <div>
-          <label>I1 <b>{{ i1Attendance }}%</b></label>
-          <label>I2 <b>{{ i2Attendance }}%</b></label>
+          <label *ngFor="let item of sectionCounts">{{ item.section }} <b>{{ item.attendance }}%</b></label>
         </div>
       </div>
     </article>

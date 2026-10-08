@@ -9,8 +9,9 @@ import { FormsModule } from '@angular/forms';
 
 import { FeeService } from '../../services/fee.services';
 import { StudentService } from '../../services/student.services';
+import { AcademicService } from '../../services/academic.service';
 
-import { Fee, Student } from '../../models/models';
+import { Fee, Student, ClassRoom, AcademicDepartment, AcademicBranch, AcademicSemester, AcademicSection } from '../../models/models';
 
 
 @Component({
@@ -32,6 +33,19 @@ export class FeeList implements OnInit {
   fees: Fee[] = [];
 
   students: Student[] = [];
+
+  // Academic hierarchy filters
+  departments: AcademicDepartment[] = [];
+  branches: AcademicBranch[] = [];
+  semesters: AcademicSemester[] = [];
+  sections: AcademicSection[] = [];
+
+  selectedDepartmentId: number | null = null;
+  selectedBranchId: number | null = null;
+  selectedSemesterId: number | null = null;
+  selectedSectionId: number | null = null;
+
+  filteredStudents: Student[] = [];
 
 
   // =========================
@@ -65,6 +79,7 @@ export class FeeList implements OnInit {
   constructor(
     private feeService: FeeService,
     private studentService: StudentService,
+    private academicService: AcademicService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -74,6 +89,8 @@ export class FeeList implements OnInit {
   // =========================
 
   ngOnInit(): void {
+
+    this.loadAcademicFilters();
 
     this.loadFees();
 
@@ -106,10 +123,8 @@ export class FeeList implements OnInit {
         );
 
 
-        this.fees = (data ?? []).filter(fee =>
-          fee.student?.classRoom?.grade === '5th Semester' &&
-          (fee.student?.classRoom?.section === 'I1' || fee.student?.classRoom?.section === 'I2')
-        );
+        this.fees = data ?? [];
+        this.applyAcademicFilters();
 
 
         this.loading = false;
@@ -174,10 +189,8 @@ export class FeeList implements OnInit {
         );
 
 
-        this.students = (data ?? []).filter(student =>
-          student.classRoom?.grade === '5th Semester' &&
-          (student.classRoom?.section === 'I1' || student.classRoom?.section === 'I2')
-        );
+        this.students = data ?? [];
+        this.applyAcademicFilters();
 
 
         this.cdr.detectChanges();
@@ -198,6 +211,122 @@ export class FeeList implements OnInit {
 
   }
 
+
+
+  // =========================
+  // ACADEMIC FILTERS
+  // =========================
+
+  loadAcademicFilters(): void {
+    this.academicService.departments().subscribe({
+      next: d => this.departments = (d ?? []).filter(x => x.active !== false)
+    });
+  }
+
+  onDepartmentFilterChange(): void {
+    this.selectedBranchId = null;
+    this.selectedSemesterId = null;
+    this.selectedSectionId = null;
+    this.branches = [];
+    this.semesters = [];
+    this.sections = [];
+    if (this.selectedDepartmentId != null) {
+      this.academicService.branches(this.selectedDepartmentId).subscribe({
+        next: b => this.branches = (b ?? []).filter(x => x.active !== false)
+      });
+    }
+    this.applyAcademicFilters();
+  }
+
+  onBranchFilterChange(): void {
+    this.selectedSemesterId = null;
+    this.selectedSectionId = null;
+    this.semesters = [];
+    this.sections = [];
+    if (this.selectedBranchId != null) {
+      this.academicService.semesters(this.selectedBranchId).subscribe({
+        next: s => this.semesters = (s ?? []).filter(x => x.active !== false)
+      });
+    }
+    this.applyAcademicFilters();
+  }
+
+  onSemesterFilterChange(): void {
+    this.selectedSectionId = null;
+    this.sections = [];
+    if (this.selectedSemesterId != null) {
+      this.academicService.sections(this.selectedSemesterId).subscribe({
+        next: s => this.sections = (s ?? []).filter(x => x.active !== false)
+      });
+    }
+    this.applyAcademicFilters();
+  }
+
+  onSectionFilterChange(): void {
+    this.applyAcademicFilters();
+  }
+
+  resetAcademicFilters(): void {
+    this.selectedDepartmentId = null;
+    this.selectedBranchId = null;
+    this.selectedSemesterId = null;
+    this.selectedSectionId = null;
+    this.branches = [];
+    this.semesters = [];
+    this.sections = [];
+    this.applyAcademicFilters();
+  }
+
+  private classMatchesAcademic(cls?: ClassRoom): boolean {
+    if (!cls) return false;
+
+    const deptValue = String(cls.department ?? '').trim().toLowerCase();
+    const branchValue = String(cls.branch ?? '').trim().toLowerCase();
+    const semesterValue = Number(cls.semester ?? 0);
+
+    const department = this.departments.find(d => d.id === this.selectedDepartmentId);
+    const branch = this.branches.find(b => b.id === this.selectedBranchId);
+    const semester = this.semesters.find(s => s.id === this.selectedSemesterId);
+    const section = this.sections.find(s => s.id === this.selectedSectionId);
+
+    const deptMatch = !department ||
+      deptValue === String(department.name ?? '').trim().toLowerCase() ||
+      deptValue === String((department as any).code ?? '').trim().toLowerCase();
+
+    const branchMatch = !branch ||
+      branchValue === String(branch.name ?? '').trim().toLowerCase() ||
+      branchValue === String((branch as any).code ?? '').trim().toLowerCase();
+
+    const semesterMatch = !semester ||
+      semesterValue === Number((semester as any).semesterNumber ?? (semester as any).number ?? 0) ||
+      String(cls.grade ?? '').trim().toLowerCase() === String(semester.name ?? '').trim().toLowerCase();
+
+    const sectionMatch = !section ||
+      String(cls.section ?? '').trim().toLowerCase() === String(section.name ?? '').trim().toLowerCase() ||
+      String(cls.section ?? '').trim().toLowerCase() === String((section as any).code ?? '').trim().toLowerCase();
+
+    return deptMatch && branchMatch && semesterMatch && sectionMatch;
+  }
+
+  applyAcademicFilters(): void {
+    this.filteredStudents = (this.students ?? []).filter(s =>
+      this.classMatchesAcademic(s.classRoom)
+    );
+
+    // Keep the add/edit dropdown scoped to the selected academic hierarchy.
+    if (this.formFee && this.formFee.student?.id) {
+      const selected = this.students.find(s => s.id === this.formFee.student?.id);
+      if (selected && !this.classMatchesAcademic(selected.classRoom)) {
+        this.formFee.student = undefined;
+      }
+    }
+  }
+
+  get filteredFees(): Fee[] {
+    return (this.fees ?? []).filter(f =>
+      this.classMatchesAcademic(f.student?.classRoom)
+    );
+  }
 
   // =========================
   // EMPTY FEE

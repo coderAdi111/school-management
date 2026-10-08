@@ -1,556 +1,290 @@
-import {
-  Component,
-  OnInit,
-  ChangeDetectorRef
-} from '@angular/core';
-
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
+import { AcademicService } from '../../services/academic.service';
+import { StudentService } from '../../services/student.services';
 import { ClassroomService } from '../../services/classroom.services';
-import { TeacherService } from '../../services/teacher.services';
+import { AcademicDepartment, AcademicBranch, AcademicSemester, AcademicSection, Student, ClassRoom } from '../../models/models';
 
-import {
-  ClassRoom,
-  Teacher
-} from '../../models/models';
+interface SectionOverview {
+  department: string;
+  branch: string;
+  branchCode?: string;
+  semester: string;
+  semesterNumber: number;
+  section: string;
+  students: number;
+  activeStudents: number;
+  capacity: number;
+  classTeacher: string;
+  classTeacherSubject: string;
+  classId?: number;
+}
 
 @Component({
   selector: 'app-class-list',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './class-list.html',
-  styleUrl: './class-list.css'
+  styleUrls: ['./class-list.css']
 })
 export class ClassList implements OnInit {
-
-  classes: ClassRoom[] = [];
-
-  teachers: Teacher[] = [];
-
-  loading = false;
-  loadingTeachers = false;
-  saving = false;
-
+  departments: AcademicDepartment[] = [];
+  rows: SectionOverview[] = [];
+  filteredRows: SectionOverview[] = [];
+  loading = true;
   errorMessage = '';
 
-  showForm = false;
-  editing = false;
+  selectedDepartment = '';
+  selectedBranch = '';
+  selectedSemester = '';
+  search = '';
 
-  selectedClassId: number | null = null;
+  totalStudents = 0;
+  totalActive = 0;
+  totalCapacity = 0;
 
-  formClass: ClassRoom = this.emptyClass();
+  private students: Student[] = [];
+  private classrooms: ClassRoom[] = [];
 
   constructor(
-    private classroomService: ClassroomService,
-    private teacherService: TeacherService,
-    private cdr: ChangeDetectorRef
+    private academic: AcademicService,
+    private studentService: StudentService,
+    private classroomService: ClassroomService
   ) {}
 
-  // =========================
-  // COMPONENT INIT
-  // =========================
-
   ngOnInit(): void {
-
-  console.log(
-    'CLASS LIST COMPONENT ngOnInit RUNNING'
-  );
-
-  this.loadClasses();
-  this.loadTeachers();
-}
-
-  // =========================
-  // EMPTY CLASS
-  // =========================
-
-  emptyClass(): ClassRoom {
-    return {
-      name: '',
-      grade: '',
-      section: '',
-      teacher: undefined,
-      capacity: 30
-    };
+    this.loadOverview();
   }
 
-  // =========================
-  // LOAD CLASSES
-  // =========================
-
-  loadClasses(): void {
-
-    console.log(
-      'loadClasses() started'
-    );
-
+  loadOverview(): void {
     this.loading = true;
     this.errorMessage = '';
+    this.academic.departments().subscribe({
+      next: departments => {
+        this.departments = departments ?? [];
+        this.loadDepartments(0);
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load academic structure.';
+        this.loading = false;
+      }
+    });
 
-    this.cdr.detectChanges();
+    this.studentService.getAll().subscribe({
+      next: students => {
+        this.students = students ?? [];
+        this.recalculate();
+      },
+      error: () => this.recalculate()
+    });
 
     this.classroomService.getAll().subscribe({
-
-      next: (data: ClassRoom[]) => {
-
-        console.log(
-          'Classes loaded:',
-          data
-        );
-
-        this.classes = (data ?? []).filter(c => c.grade === '5th Semester' && (c.section === 'I1' || c.section === 'I2'));
-
-        this.loading = false;
-
-        this.cdr.detectChanges();
-
-        console.log(
-          'Classes loading finished.'
-        );
+      next: classes => {
+        this.classrooms = classes ?? [];
+        this.recalculate();
       },
-
-      error: (error: any) => {
-
-        console.error(
-          'Class loading error:',
-          error
-        );
-
-        this.loading = false;
-
-        this.errorMessage =
-          'Unable to load classes. Is Spring Boot running?';
-
-        this.cdr.detectChanges();
-      }
-
+      error: () => this.recalculate()
     });
   }
 
-  // =========================
-  // LOAD TEACHERS
-  // =========================
+  private loadDepartments(index: number): void {
+    if (index >= this.departments.length) {
+      this.finishLoad();
+      return;
+    }
 
-  private isCurrentTimetableTeacher(teacher: Teacher): boolean {
-    const allowed = new Set([
-      'Shikha Gupta',
-      'Deepak Gupta',
-      'Rakesh Rathi',
-      'Bhanupriya Sharma',
-      'Avinash Bhandiya',
-      'Sammah Rasheed',
-      'Monica Sharma',
-      'Mangi Lal',
-      'Satya Narayan Tazi'
-    ]);
-    const name = `${teacher.firstName ?? ''} ${teacher.lastName ?? ''}`.trim().replace(/\s+/g, ' ');
-    return allowed.has(name) && teacher.status !== 'INACTIVE';
-  }
+    const department = this.departments[index];
+    if (!department.id) {
+      this.loadDepartments(index + 1);
+      return;
+    }
 
-  loadTeachers(): void {
-
-    console.log(
-      'loadTeachers() started'
-    );
-
-    this.loadingTeachers = true;
-
-    this.teacherService.getAll().subscribe({
-
-      next: (data: Teacher[]) => {
-
-        console.log(
-          'Teachers for class:',
-          data
-        );
-
-        this.teachers = (data ?? []).filter(teacher => this.isCurrentTimetableTeacher(teacher));
-
-        this.loadingTeachers = false;
-
-        this.cdr.detectChanges();
-
-        console.log(
-          'Teachers loading finished.'
-        );
-      },
-
-      error: (error: any) => {
-
-        console.error(
-          'Teacher loading error:',
-          error
-        );
-
-        this.loadingTeachers = false;
-
-        this.errorMessage =
-          'Unable to load teachers.';
-
-        this.cdr.detectChanges();
-      }
-
+    this.academic.branches(department.id).subscribe({
+      next: branches => this.loadBranches(department, branches ?? [], 0, index),
+      error: () => this.loadDepartments(index + 1)
     });
   }
 
-  // =========================
-  // ADD FORM
-  // =========================
-
-  openAddForm(): void {
-
-    this.editing = false;
-
-    this.selectedClassId = null;
-
-    this.formClass =
-      this.emptyClass();
-
-    this.showForm = true;
-
-    this.cdr.detectChanges();
-  }
-
-  // =========================
-  // EDIT FORM
-  // =========================
-
-  openEditForm(
-    classRoom: ClassRoom
+  private loadBranches(
+    department: AcademicDepartment,
+    branches: AcademicBranch[],
+    index: number,
+    departmentIndex: number
   ): void {
+    if (index >= branches.length) {
+      this.loadDepartments(departmentIndex + 1);
+      return;
+    }
 
-    this.editing = true;
+    const branch = branches[index];
+    if (!branch.id) {
+      this.loadBranches(department, branches, index + 1, departmentIndex);
+      return;
+    }
 
-    this.selectedClassId =
-      classRoom.id ?? null;
-
-    this.formClass = {
-      name: classRoom.name,
-      grade: classRoom.grade,
-      section: classRoom.section ?? '',
-      teacher: classRoom.teacher
-        ? { ...classRoom.teacher }
-        : undefined,
-      capacity: classRoom.capacity ?? 30
-    };
-
-    this.showForm = true;
-
-    this.cdr.detectChanges();
+    this.academic.semesters(branch.id).subscribe({
+      next: semesters => this.loadSemesters(department, branch, semesters ?? [], 0, branches, index, departmentIndex),
+      error: () => this.loadBranches(department, branches, index + 1, departmentIndex)
+    });
   }
 
-  // =========================
-  // CLOSE FORM
-  // =========================
-
-  closeForm(): void {
-
-    this.showForm = false;
-
-    this.editing = false;
-
-    this.selectedClassId = null;
-
-    this.formClass =
-      this.emptyClass();
-
-    this.saving = false;
-
-    this.cdr.detectChanges();
-  }
-
-  // =========================
-  // SELECT TEACHER
-  // =========================
-
-  selectTeacher(
-    teacherId: string | number
+  private loadSemesters(
+    department: AcademicDepartment,
+    branch: AcademicBranch,
+    semesters: AcademicSemester[],
+    index: number,
+    branches: AcademicBranch[],
+    branchIndex: number,
+    departmentIndex: number
   ): void {
-
-    const id = Number(teacherId);
-
-    if (!id) {
-
-      this.formClass.teacher =
-        undefined;
-
+    if (index >= semesters.length) {
+      this.loadBranches(department, branches, branchIndex + 1, departmentIndex);
       return;
     }
 
-    const teacher =
-      this.teachers.find(
-        t => t.id === id
-      );
-
-    if (teacher) {
-
-      this.formClass.teacher = {
-        ...teacher
-      };
-
-      console.log(
-        'Selected teacher:',
-        teacher
-      );
-    }
-
-    this.cdr.detectChanges();
-  }
-
-  // =========================
-  // SAVE CLASS
-  // =========================
-
-  saveClass(): void {
-
-    // CLASS NAME
-    if (!this.formClass.name?.trim()) {
-
-      alert(
-        'Please enter class name.'
-      );
-
+    const semester = semesters[index];
+    if (!semester.id) {
+      this.loadSemesters(department, branch, semesters, index + 1, branches, branchIndex, departmentIndex);
       return;
     }
 
-    // GRADE
-    if (!this.formClass.grade?.trim()) {
-
-      alert(
-        'Please enter grade.'
-      );
-
-      return;
-    }
-
-    // CAPACITY
-    if (
-      !this.formClass.capacity ||
-      this.formClass.capacity <= 0
-    ) {
-
-      alert(
-        'Please enter a valid capacity.'
-      );
-
-      return;
-    }
-
-    // TEACHER
-    if (!this.formClass.teacher?.id) {
-
-      alert(
-        'Please select a teacher.'
-      );
-
-      return;
-    }
-
-    this.saving = true;
-
-    const teacherId =
-      this.formClass.teacher.id;
-
-    const classToSave: ClassRoom = {
-
-      name:
-        this.formClass.name.trim(),
-
-      grade:
-        this.formClass.grade.trim(),
-
-      section:
-        this.formClass.section?.trim() || '',
-
-      teacher: {
-        id: teacherId,
-        firstName: '',
-        lastName: ''
+    this.academic.sections(semester.id).subscribe({
+      next: sections => {
+        for (const section of sections ?? []) {
+          this.rows.push({
+            department: department.name,
+            branch: branch.name,
+            branchCode: branch.code,
+            semester: semester.name,
+            semesterNumber: semester.semesterNumber,
+            section: section.name,
+            students: 0,
+            activeStudents: 0,
+            capacity: 0,
+            classTeacher: 'Not Assigned',
+            classTeacherSubject: ''
+          });
+        }
+        this.loadSemesters(department, branch, semesters, index + 1, branches, branchIndex, departmentIndex);
       },
-
-      capacity:
-        Number(this.formClass.capacity)
-    };
-
-    console.log(
-      'Saving class:',
-      classToSave
-    );
-
-    // =========================
-    // UPDATE
-    // =========================
-
-    if (
-      this.editing &&
-      this.selectedClassId !== null
-    ) {
-
-      this.classroomService.update(
-        this.selectedClassId,
-        classToSave
-      ).subscribe({
-
-        next: (updatedClass) => {
-
-          console.log(
-            'Class updated:',
-            updatedClass
-          );
-
-          alert(
-            'Class updated successfully!'
-          );
-
-          this.closeForm();
-
-          this.loadClasses();
-        },
-
-        error: (error: any) => {
-
-          console.error(
-            'Class update error:',
-            error
-          );
-
-          this.saving = false;
-
-          alert(
-            'Failed to update class.'
-          );
-
-          this.cdr.detectChanges();
-        }
-
-      });
-
-      return;
-    }
-
-    // =========================
-    // CREATE
-    // =========================
-
-    this.classroomService
-      .create(classToSave)
-      .subscribe({
-
-        next: (createdClass) => {
-
-          console.log(
-            'Class created:',
-            createdClass
-          );
-
-          alert(
-            'Class added successfully!'
-          );
-
-          this.closeForm();
-
-          this.loadClasses();
-        },
-
-        error: (error: any) => {
-
-          console.error(
-            'Class create error:',
-            error
-          );
-
-          this.saving = false;
-
-          alert(
-            'Failed to add class.'
-          );
-
-          this.cdr.detectChanges();
-        }
-
-      });
+      error: () => this.loadSemesters(department, branch, semesters, index + 1, branches, branchIndex, departmentIndex)
+    });
   }
 
-  // =========================
-  // DELETE CLASS
-  // =========================
+  private finishLoad(): void {
+    this.recalculate();
+    this.loading = false;
+  }
 
-  deleteClass(
-    classRoom: ClassRoom
-  ): void {
+  private recalculate(): void {
+    if (!this.rows.length) return;
 
-    if (!classRoom.id) {
-
-      return;
-    }
-
-    const confirmed =
-      confirm(
-        `Delete "${classRoom.name}"?`
+    for (const row of this.rows) {
+      // A class may store the branch code (e.g. CS/IT) while the
+      // academic overview displays the branch name (e.g. Computer Science).
+      // Match both so imported students are counted in the correct section.
+      const matchingClasses = this.classrooms.filter(c =>
+        this.same(c.department, row.department) &&
+        this.same(c.branch, row.branch) ||
+        (this.same(c.department, row.department) &&
+          this.same(c.branch, row.branchCode))
+      ).filter(c =>
+        Number(c.semester) === Number(row.semesterNumber) &&
+        this.same(c.section, row.section)
       );
 
-    if (!confirmed) {
+      const classRoom = matchingClasses[0];
+      row.classId = classRoom?.id;
+      row.capacity = classRoom?.capacity ?? 0;
+      row.classTeacher = classRoom?.teacher
+        ? `${classRoom.teacher.firstName} ${classRoom.teacher.lastName}`.trim()
+        : 'Not Assigned';
+      row.classTeacherSubject = classRoom?.teacher?.subject ?? '';
 
-      return;
-    }
+      const matchingStudents = this.students.filter(s => {
+        const c = s.classRoom;
+        if (!c) return false;
 
-    this.classroomService
-      .delete(classRoom.id)
-      .subscribe({
-
-        next: () => {
-
-          console.log(
-            'Class deleted:',
-            classRoom.id
-          );
-
-          alert(
-            'Class deleted successfully!'
-          );
-
-          this.classes =
-            this.classes.filter(
-              c => c.id !== classRoom.id
-            );
-
-          this.cdr.detectChanges();
-        },
-
-        error: (error: any) => {
-
-          console.error(
-            'Class delete error:',
-            error
-          );
-
-          alert(
-            'Failed to delete class. ' +
-            'Students may be assigned to this class.'
-          );
+        // Prefer the actual class ID. This is the most reliable mapping
+        // because students are assigned to a concrete ClassRoom during import.
+        if (row.classId != null && c.id != null) {
+          return Number(c.id) === Number(row.classId);
         }
 
+        // Fallback for older records that may not have matching class IDs.
+        return this.same(c.department, row.department) &&
+          (this.same(c.branch, row.branch) || this.same(c.branch, row.branchCode)) &&
+          Number(c.semester) === Number(row.semesterNumber) &&
+          this.same(c.section, row.section);
       });
-  }
 
-  // =========================
-  // TEACHER NAME
-  // =========================
-
-  getTeacherName(
-    teacher?: Teacher
-  ): string {
-
-    if (!teacher) {
-
-      return 'Not Assigned';
+      row.students = matchingStudents.length;
+      row.activeStudents = matchingStudents.filter(s => (s.status ?? 'ACTIVE') === 'ACTIVE').length;
     }
 
-    return `${teacher.firstName} ${teacher.lastName}`;
+    this.totalStudents = this.rows.reduce((sum, r) => sum + r.students, 0);
+    this.totalActive = this.rows.reduce((sum, r) => sum + r.activeStudents, 0);
+    this.totalCapacity = this.rows.reduce((sum, r) => sum + r.capacity, 0);
+    this.applyFilters();
   }
 
+  private same(a?: string, b?: string): boolean {
+    return (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
+  }
+
+  applyFilters(): void {
+    const q = this.search.trim().toLowerCase();
+    this.filteredRows = this.rows.filter(r =>
+      (!this.selectedDepartment || r.department === this.selectedDepartment) &&
+      (!this.selectedBranch || r.branch === this.selectedBranch) &&
+      (!this.selectedSemester || String(r.semesterNumber) === this.selectedSemester) &&
+      (!q || `${r.department} ${r.branch} ${r.semester} ${r.section}`.toLowerCase().includes(q))
+    );
+  }
+
+  get branchesForFilter(): string[] {
+    return [...new Set(this.rows
+      .filter(r => !this.selectedDepartment || r.department === this.selectedDepartment)
+      .map(r => r.branch))].sort();
+  }
+
+  get semestersForFilter(): { number: number; name: string }[] {
+    const map = new Map<number, string>();
+    this.rows
+      .filter(r =>
+        (!this.selectedDepartment || r.department === this.selectedDepartment) &&
+        (!this.selectedBranch || r.branch === this.selectedBranch)
+      )
+      .forEach(r => map.set(r.semesterNumber, r.semester));
+    return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([number, name]) => ({ number, name }));
+  }
+
+  onDepartmentChange(): void {
+    this.selectedBranch = '';
+    this.selectedSemester = '';
+    this.applyFilters();
+  }
+
+  onBranchChange(): void {
+    this.selectedSemester = '';
+    this.applyFilters();
+  }
+
+  clearFilters(): void {
+    this.selectedDepartment = '';
+    this.selectedBranch = '';
+    this.selectedSemester = '';
+    this.search = '';
+    this.applyFilters();
+  }
+
+  refresh(): void {
+    this.rows = [];
+    this.loadOverview();
+  }
+
+  trackByRow(_: number, row: SectionOverview): string {
+    return `${row.department}|${row.branch}|${row.semesterNumber}|${row.section}`;
+  }
 }

@@ -18,14 +18,9 @@ public class ClassRoomDaoImpl implements ClassRoomDao {
     @Override
     public List<ClassRoom> findAll() {
         return em.createQuery(
-                "SELECT c FROM ClassRoom c " +
-                "WHERE c.grade = :grade " +
-                "AND c.section IN :sections",
+                "SELECT c FROM ClassRoom c ORDER BY c.grade ASC, c.section ASC, c.name ASC",
                 ClassRoom.class
-        )
-        .setParameter("grade", "5th Semester")
-        .setParameter("sections", List.of("I1", "I2"))
-        .getResultList();
+        ).getResultList();
     }
 
     @Override

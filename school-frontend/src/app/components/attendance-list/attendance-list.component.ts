@@ -36,6 +36,12 @@ export class AttendanceListComponent implements OnInit {
 
   classes: ClassRoom[] = [];
 
+  // Dynamic academic hierarchy selectors
+  selectedDepartment = '';
+  selectedBranch = '';
+  selectedSemester: number | '' = '';
+  selectedSection = '';
+
   students: Student[] = [];
 
 
@@ -172,15 +178,17 @@ export class AttendanceListComponent implements OnInit {
         );
 
 
-        this.classes =
-          (data ?? []).filter(
-            c =>
-              c.grade === '5th Semester' &&
-              (
-                c.section === 'I1' ||
-                c.section === 'I2'
-              )
-          );
+        // Keep every active/available class. The UI now exposes the
+        // academic hierarchy instead of showing the internal Class name.
+        this.classes = (data ?? []).filter(c => c.id != null);
+
+        // Start with the first available hierarchy only when nothing is
+        // selected. This keeps the selectors usable for any department,
+        // branch, semester and section present in the database.
+        if (!this.selectedDepartment && this.classes.length) {
+          this.selectedDepartment = this.classes[0].department ?? '';
+        }
+        this.refreshAcademicOptions();
 
 
         this.loading = false;
@@ -227,6 +235,93 @@ export class AttendanceListComponent implements OnInit {
 
   }
 
+
+  // =========================
+  // ACADEMIC HIERARCHY
+  // =========================
+
+  get departmentOptions(): string[] {
+    return Array.from(new Set(
+      this.classes.map(c => c.department).filter((v): v is string => !!v)
+    )).sort();
+  }
+
+  get branchOptions(): string[] {
+    return Array.from(new Set(
+      this.classes
+        .filter(c => !this.selectedDepartment || c.department === this.selectedDepartment)
+        .map(c => c.branch)
+        .filter((v): v is string => !!v)
+    )).sort();
+  }
+
+  get semesterOptions(): number[] {
+    return Array.from(new Set(
+      this.classes
+        .filter(c => !this.selectedDepartment || c.department === this.selectedDepartment)
+        .filter(c => !this.selectedBranch || c.branch === this.selectedBranch)
+        .map(c => c.semester)
+        .filter((v): v is number => v != null)
+    )).sort((a, b) => a - b);
+  }
+
+  get sectionOptions(): string[] {
+    return Array.from(new Set(
+      this.classes
+        .filter(c => !this.selectedDepartment || c.department === this.selectedDepartment)
+        .filter(c => !this.selectedBranch || c.branch === this.selectedBranch)
+        .filter(c => this.selectedSemester === '' || c.semester === Number(this.selectedSemester))
+        .map(c => c.section)
+        .filter((v): v is string => !!v)
+    )).sort();
+  }
+
+  private refreshAcademicOptions(): void {
+    if (this.selectedBranch && !this.branchOptions.includes(this.selectedBranch)) this.selectedBranch = '';
+    if (this.selectedSemester !== '' && !this.semesterOptions.includes(Number(this.selectedSemester))) this.selectedSemester = '';
+    if (this.selectedSection && !this.sectionOptions.includes(this.selectedSection)) this.selectedSection = '';
+    this.resolveSelectedClass();
+  }
+
+  onDepartmentChange(): void {
+    this.selectedBranch = '';
+    this.selectedSemester = '';
+    this.selectedSection = '';
+    this.selectedClassId = null;
+    this.onClassChange();
+    this.cdr.detectChanges();
+  }
+
+  onBranchChange(): void {
+    this.selectedSemester = '';
+    this.selectedSection = '';
+    this.selectedClassId = null;
+    this.onClassChange();
+    this.cdr.detectChanges();
+  }
+
+  onSemesterChange(): void {
+    this.selectedSection = '';
+    this.selectedClassId = null;
+    this.onClassChange();
+    this.cdr.detectChanges();
+  }
+
+  onSectionChange(): void {
+    this.resolveSelectedClass();
+    this.onClassChange();
+    this.cdr.detectChanges();
+  }
+
+  private resolveSelectedClass(): void {
+    const match = this.classes.find(c =>
+      (!this.selectedDepartment || c.department === this.selectedDepartment) &&
+      (!this.selectedBranch || c.branch === this.selectedBranch) &&
+      (this.selectedSemester === '' || c.semester === Number(this.selectedSemester)) &&
+      (!this.selectedSection || c.section === this.selectedSection)
+    );
+    this.selectedClassId = match?.id ?? null;
+  }
 
   // =========================
   // CLASS CHANGE

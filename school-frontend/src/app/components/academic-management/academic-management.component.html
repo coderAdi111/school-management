@@ -1,0 +1,52 @@
+<div class="academic-page">
+  <header class="academic-hero">
+    <div>
+      <span class="eyebrow">ACADEMIC STRUCTURE</span>
+      <h1>Departments & Academic Setup</h1>
+      <p>Department → Branch → Semester → Section. Ab ye data hardcoded nahi rahega.</p>
+    </div>
+  </header>
+
+  <p class="success" *ngIf="message">✓ {{ message }}</p>
+  <p class="error" *ngIf="error">{{ error }}</p>
+
+  <section class="management-grid">
+    <article class="setup-card department-card">
+      <div class="card-title"><div><span class="step">01</span><h2>Departments</h2></div><span class="count">{{ departments.length }}</span></div>
+      <div class="form-row"><input [(ngModel)]="departmentForm.name" placeholder="Department name"><input [(ngModel)]="departmentForm.code" placeholder="Code"></div>
+      <div class="actions"><button class="primary" (click)="saveDepartment()">{{ editingDepartment ? 'Update' : 'Add Department' }}</button><button class="secondary" *ngIf="editingDepartment" (click)="resetDepartment()">Cancel</button></div>
+      <div class="list" *ngIf="departments.length; else noDepartments"><div class="list-item" *ngFor="let d of departments"><div><strong>{{ d.name }}</strong><small>{{ d.code }}</small></div><div class="mini-actions"><button (click)="editDepartment(d)">Edit</button><button (click)="removeDepartment(d)">×</button></div></div></div>
+      <ng-template #noDepartments><div class="empty">No departments yet.</div></ng-template>
+    </article>
+
+    <article class="setup-card" [class.disabled-card]="!selectedDepartmentId">
+      <div class="card-title"><div><span class="step">02</span><h2>Branches</h2></div><span class="count">{{ branches.length }}</span></div>
+      <select [ngModel]="selectedDepartmentId" (ngModelChange)="selectDepartment($event)"><option [ngValue]="undefined">Select department</option><option *ngFor="let d of departments" [ngValue]="d.id">{{ d.name }}</option></select>
+      <div class="form-row"><input [(ngModel)]="branchForm.name" placeholder="Branch name"><input [(ngModel)]="branchForm.code" placeholder="Code"></div>
+      <div class="actions"><button class="primary" [disabled]="!selectedDepartmentId" (click)="saveBranch()">{{ editingBranch ? 'Update' : 'Add Branch' }}</button><button class="secondary" *ngIf="editingBranch" (click)="resetBranch()">Cancel</button></div>
+      <div class="list"><div class="list-item" *ngFor="let b of branches"><div><strong>{{ b.name }}</strong><small>{{ b.code }}</small></div><div class="mini-actions"><button (click)="editBranch(b)">Edit</button><button (click)="removeBranch(b)">×</button></div></div></div>
+    </article>
+
+    <article class="setup-card" [class.disabled-card]="!selectedBranchId">
+      <div class="card-title"><div><span class="step">03</span><h2>Semesters</h2></div><span class="count">{{ semesters.length }}</span></div>
+      <select [ngModel]="selectedBranchId" (ngModelChange)="selectBranch($event)"><option [ngValue]="undefined">Select branch</option><option *ngFor="let b of branches" [ngValue]="b.id">{{ b.name }}</option></select>
+      <div class="form-row"><input type="number" [(ngModel)]="semesterForm.semesterNumber" min="1" max="12"><input [(ngModel)]="semesterForm.name" placeholder="e.g. 5th Semester"></div>
+      <div class="actions"><button class="primary" [disabled]="!selectedBranchId" (click)="saveSemester()">{{ editingSemester ? 'Update' : 'Add Semester' }}</button><button class="secondary" *ngIf="editingSemester" (click)="resetSemester()">Cancel</button></div>
+      <div class="list"><div class="list-item" *ngFor="let s of semesters"><div><strong>{{ s.name }}</strong><small>Semester {{ s.semesterNumber }}</small></div><div class="mini-actions"><button (click)="editSemester(s)">Edit</button><button (click)="removeSemester(s)">×</button></div></div></div>
+    </article>
+
+    <article class="setup-card" [class.disabled-card]="!selectedSemesterId">
+      <div class="card-title"><div><span class="step">04</span><h2>Sections</h2></div><span class="count">{{ sections.length }}</span></div>
+      <select [ngModel]="selectedSemesterId" (ngModelChange)="selectSemester($event)"><option [ngValue]="undefined">Select semester</option><option *ngFor="let s of semesters" [ngValue]="s.id">{{ s.name }}</option></select>
+      <input [(ngModel)]="sectionForm.name" placeholder="Section name e.g. A / I1 / I2">
+      <div class="actions"><button class="primary" [disabled]="!selectedSemesterId" (click)="saveSection()">{{ editingSection ? 'Update' : 'Add Section' }}</button><button class="secondary" *ngIf="editingSection" (click)="resetSection()">Cancel</button></div>
+      <div class="list"><div class="list-item" *ngFor="let s of sections"><div><strong>{{ s.name }}</strong><small>{{ s.semester.name }}</small></div><div class="mini-actions"><button (click)="editSection(s)">Edit</button><button (click)="removeSection(s)">×</button></div></div></div>
+    </article>
+  </section>
+
+  <section class="flow-card">
+    <span>Dynamic hierarchy</span>
+    <div class="flow"><b>Department</b><i>→</i><b>Branch</b><i>→</i><b>Semester</b><i>→</i><b>Section</b><i>→</i><b>Students / Classes / Timetable</b></div>
+    <p>Next step me isi hierarchy ko Students, Teachers, Classes aur Timetable ke forms/dropdowns se connect kiya jayega.</p>
+  </section>
+</div>

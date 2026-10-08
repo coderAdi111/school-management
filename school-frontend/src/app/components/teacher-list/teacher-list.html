@@ -1,517 +1,97 @@
 <div class="teacher-page">
+  <div class="page-header"><div><h1>Teachers</h1><p>Manage teachers and multiple teaching assignments.</p></div><div class="header-actions"><button class="import-btn" type="button" (click)="openImport()">⬆ Import Teachers</button><button class="add-btn" type="button" (click)="openAddForm()">+ Add Teacher</button></div></div>
+  <div class="toolbar teacher-filter-toolbar">
+    <div class="search-box"><span class="search-icon">🔍</span><input type="text" [(ngModel)]="searchTerm" placeholder="Search teacher, faculty code or subject..." (keyup.enter)="search()" /></div>
+    <select [(ngModel)]="filterDepartmentId" (ngModelChange)="onFilterDepartmentChange()"><option [ngValue]="null">All Departments</option><option *ngFor="let d of departments" [ngValue]="d.id">{{ d.name }}</option></select>
+    <select [(ngModel)]="filterBranchId" (ngModelChange)="onFilterBranchChange()" [disabled]="!filterDepartmentId"><option [ngValue]="null">All Branches</option><option *ngFor="let b of filterBranches" [ngValue]="b.id">{{ b.name }} ({{ b.code }})</option></select>
+    <select [(ngModel)]="filterSemesterId" (ngModelChange)="onFilterSemesterChange()" [disabled]="!filterBranchId"><option [ngValue]="null">All Semesters</option><option *ngFor="let sem of filterSemesters" [ngValue]="sem.id">{{ sem.name }}</option></select>
+    <select [(ngModel)]="filterSectionId" [disabled]="!filterSemesterId"><option [ngValue]="null">All Sections</option><option *ngFor="let sec of filterSections" [ngValue]="sec.id">{{ sec.name }}</option></select>
+    <button class="search-btn" type="button" (click)="search()">Search</button>
+    <button class="reset-btn" type="button" (click)="resetTeacherFilters()">Reset</button>
+  </div>
 
-  <!-- HEADER -->
-  <div class="page-header">
-
-    <div>
-      <h1>Teachers</h1>
-
-      <p>
-        Manage school teachers and their information
-      </p>
+  <div class="teacher-bulk-bar" *ngIf="!loading && filteredTeachers.length > 0">
+    <div class="bulk-selection-info">
+      <span class="selection-pill">{{ selectedCount }} selected</span>
+      <span class="visible-count">{{ filteredTeachers.length }} currently visible</span>
+      <span class="bulk-help">Use the checkboxes to select teachers</span>
     </div>
-
-    <button
-      class="add-btn"
-      type="button"
-      (click)="openAddForm()"
-    >
-      + Add Teacher
-    </button>
-
-  </div>
-
-
-  <!-- SEARCH -->
-  <div class="toolbar">
-
-    <div class="search-box">
-
-      <span class="search-icon">🔍</span>
-
-      <input
-        type="text"
-        [(ngModel)]="searchTerm"
-        placeholder="Search teacher by name..."
-        (keyup.enter)="search()"
-      />
-
+    <div class="bulk-actions">
+      <button type="button" class="bulk-select-btn" (click)="toggleSelectAllVisible()">
+        {{ allVisibleSelected ? '☑ Clear All Visible' : '☐ Select All Visible' }}
+      </button>
+      <button type="button" class="bulk-delete-btn outline" (click)="deleteSelectedTeachers()" [disabled]="bulkActionBusy || selectedCount === 0">
+        🗑 Delete Selected
+      </button>
+      <button type="button" class="bulk-delete-btn" (click)="deleteAllFilteredTeachers()" [disabled]="bulkActionBusy || filteredTeachers.length === 0">
+        🗑 Delete All Filtered
+      </button>
+      <button type="button" class="bulk-clear-btn" *ngIf="selectedCount > 0" (click)="clearTeacherSelection()">
+        Clear Selection
+      </button>
     </div>
-
-    <button
-      class="search-btn"
-      type="button"
-      (click)="search()"
-    >
-      Search
-    </button>
-
-    <button
-      class="reset-btn"
-      type="button"
-      (click)="searchTerm=''; loadTeachers()"
-    >
-      Reset
-    </button>
-
+  </div>
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="loading-box" *ngIf="loading">Loading teachers...</div>
+  <div class="table-card" *ngIf="!loading">
+    <div class="table-header"><div><h2>Teacher List</h2><span>{{ filteredTeachers.length }} teacher(s)</span></div></div>
+    <div class="empty-state" *ngIf="filteredTeachers.length === 0"><div class="empty-icon">👨‍🏫</div><h3>No teachers found</h3><p>Add a teacher to get started.</p></div>
+    <div class="table-wrapper" *ngIf="filteredTeachers.length > 0">
+      <table><thead><tr><th class="selection-col"><input type="checkbox" [checked]="allVisibleSelected" (change)="toggleSelectAllVisible()" aria-label="Select all visible teachers" /></th><th>ID</th><th>Teacher</th><th>Email</th><th>Phone</th><th>Teaching Assignments</th><th>Faculty Code</th><th>Qualification</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody><tr *ngFor="let teacher of filteredTeachers; let i=index">
+        <td class="selection-col"><input type="checkbox" [checked]="isTeacherSelected(teacher.id)" (change)="toggleTeacherSelection(teacher.id)" [attr.aria-label]="'Select ' + getDisplayName(teacher)" /></td>
+        <td><span class="id-badge">#{{ i + 1 }}</span></td>
+        <td><div class="teacher-info"><div class="teacher-avatar">{{ teacher.firstName.charAt(0) }}</div><div><strong>{{ getFullName(teacher) }}</strong><small>Teacher</small></div></div></td>
+        <td>{{ teacher.email || '—' }}</td><td>{{ teacher.phone || '—' }}</td>
+        <td><div class="assignment-list" *ngIf="teacher.assignments?.length; else legacySubject"><span class="assignment-badge" *ngFor="let a of teacher.assignments">{{ assignmentLabel(a) }}</span></div><ng-template #legacySubject><span class="subject-badge" *ngIf="teacher.subject">{{ teacher.subject }}</span><span *ngIf="!teacher.subject">—</span></ng-template></td>
+        <td><span class="subject-badge">{{ teacher.facultyCode || '—' }}</span></td><td>{{ teacher.qualification || '—' }}</td>
+        <td><span class="status-badge active" *ngIf="teacher.status === 'ACTIVE'">● Active</span><span class="status-badge inactive" *ngIf="teacher.status === 'INACTIVE'">● Inactive</span></td>
+        <td><div class="action-buttons"><button class="edit-btn" type="button" (click)="openEditForm(teacher)">✏️</button><button class="delete-btn" type="button" (click)="deleteTeacher(teacher)">🗑️</button></div></td>
+      </tr></tbody></table>
+    </div>
   </div>
 
-
-  <!-- ERROR -->
-  <div
-    class="error-message"
-    *ngIf="errorMessage"
-  >
-    {{ errorMessage }}
-  </div>
-
-
-  <!-- LOADING -->
-  <div
-    class="loading-box"
-    *ngIf="loading"
-  >
-    Loading teachers...
-  </div>
-
-
-  <!-- TEACHER TABLE -->
-  <div
-    class="table-card"
-    *ngIf="!loading"
-  >
-
-    <div class="table-header">
-
-      <div>
-        <h2>Teacher List</h2>
-
-        <span>
-          {{ teachers.length }} teacher(s)
-        </span>
+  <div class="modal-backdrop" *ngIf="showForm" (click)="closeForm()"><div class="teacher-modal teacher-assignment-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header"><div><h2>{{ editing ? 'Edit Teacher' : 'Add Teacher' }}</h2><p>{{ editing ? 'Update teacher information and teaching assignments' : 'Add teacher and assign multiple academic sections' }}</p></div><button class="close-btn" type="button" (click)="closeForm()">×</button></div>
+    <form (ngSubmit)="saveTeacher()">
+      <div class="form-grid">
+        <div class="form-group"><label>First Name *</label><input type="text" name="firstName" [(ngModel)]="formTeacher.firstName" placeholder="Enter first name" /></div>
+        <div class="form-group"><label>Last Name *</label><input type="text" name="lastName" [(ngModel)]="formTeacher.lastName" placeholder="Enter last name" /></div>
+        <div class="form-group"><label>Email</label><input type="email" name="email" [(ngModel)]="formTeacher.email" placeholder="teacher@example.com" /></div>
+        <div class="form-group"><label>Phone</label><input type="text" name="phone" [(ngModel)]="formTeacher.phone" placeholder="Enter phone number" /></div>
+        <div class="form-group"><label>Faculty Code</label><input type="text" name="facultyCode" [(ngModel)]="formTeacher.facultyCode" maxlength="30" placeholder="Auto from name (e.g. AB)" style="text-transform:uppercase" /><small>Leave blank to generate from first + last name. Duplicate codes get a number suffix.</small></div>
+        <div class="form-group"><label>Qualification</label><input type="text" name="qualification" [(ngModel)]="formTeacher.qualification" placeholder="e.g. M.Tech" /></div>
+        <div class="form-group full-width"><label>Legacy Subject (optional)</label><input type="text" name="subject" [(ngModel)]="formTeacher.subject" placeholder="Used only for old teachers without assignments" /></div>
       </div>
 
-    </div>
-
-
-    <div
-      class="empty-state"
-      *ngIf="teachers.length === 0"
-    >
-
-      <div class="empty-icon">
-        👨‍🏫
+      <div class="assignment-builder">
+        <div class="assignment-title"><div><h3>Teaching Assignments</h3><p>One teacher can teach different branches, semesters and sections.</p></div></div>
+        <div class="assignment-grid">
+          <div class="form-group"><label>Department</label><select name="assignmentDepartment" [(ngModel)]="assignmentDraft.departmentId" (ngModelChange)="onDepartmentChange()"><option [ngValue]="undefined">Select Department</option><option *ngFor="let d of departments" [ngValue]="d.id">{{ d.name }}</option></select></div>
+          <div class="form-group"><label>Branch</label><select name="assignmentBranch" [(ngModel)]="assignmentDraft.branchId" (ngModelChange)="onBranchChange()" [disabled]="!assignmentDraft.departmentId"><option [ngValue]="undefined">Select Branch</option><option *ngFor="let b of branches" [ngValue]="b.id">{{ b.name }} ({{ b.code }})</option></select></div>
+          <div class="form-group"><label>Semester</label><select name="assignmentSemester" [(ngModel)]="assignmentDraft.semesterId" (ngModelChange)="onSemesterChange()" [disabled]="!assignmentDraft.branchId"><option [ngValue]="undefined">Select Semester</option><option *ngFor="let s of semesters" [ngValue]="s.id">{{ s.name }}</option></select></div>
+          <div class="form-group"><label>Section</label><select name="assignmentSection" [(ngModel)]="assignmentDraft.sectionId" [disabled]="!assignmentDraft.semesterId"><option [ngValue]="undefined">Select Section</option><option *ngFor="let s of sections" [ngValue]="s.id">{{ s.name }}</option></select></div>
+          <div class="form-group subject-input"><label>Subject</label><input type="text" name="assignmentSubject" [(ngModel)]="assignmentDraft.subject" placeholder="e.g. DBMS / ML LAB" /></div>
+          <button class="add-assignment-btn" type="button" (click)="addAssignment()">+ Add Assignment</button>
+        </div>
+        <div class="assignment-chips" *ngIf="formTeacher.assignments?.length"><div class="assignment-chip" *ngFor="let a of formTeacher.assignments; let i=index"><div><strong>{{ a.subject }}</strong><span>{{ a.departmentName }} • {{ a.branchCode || a.branchName }} • {{ a.semesterName }} • {{ a.sectionName }}</span></div><button type="button" (click)="removeAssignment(i)">×</button></div></div>
       </div>
 
-      <h3>No teachers found</h3>
+      <div class="form-group status-row"><label>Status</label><select name="status" [(ngModel)]="formTeacher.status"><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select></div>
+      <div class="form-actions"><button type="button" class="cancel-btn" (click)="closeForm()" [disabled]="saving">Cancel</button><button type="submit" class="save-btn" [disabled]="saving">{{ saving ? 'Saving...' : (editing ? 'Update Teacher' : 'Add Teacher') }}</button></div>
+    </form>
+  </div></div>
 
-      <p>
-        Add a teacher to get started.
-      </p>
-
+  <div class="modal-backdrop" *ngIf="showImport" (click)="closeImport()"><div class="teacher-modal import-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header"><div><h2>Bulk Teacher Import</h2><p>Import multiple teachers using the fixed Excel (.xlsx) format. Multiple rows with the same email are grouped into one teacher.</p></div><button class="close-btn" type="button" (click)="closeImport()" [disabled]="importing">×</button></div>
+    <div class="import-body">
+      <div class="import-tip"><strong>Fixed columns:</strong> First Name, Last Name, Faculty Code, Email, Phone, Qualification, Status, Department, Branch, Semester, Section, Subject.<br><span>Required: First Name, Last Name, Faculty Code, Department, Branch, Semester, Section and Subject.</span><br><span>Same Email + multiple rows = one teacher with multiple teaching assignments.</span></div>
+      <label class="import-drop"><input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onImportFile($event)" /><span class="upload-icon">📊</span><strong>Choose Teacher Excel File</strong><small>Only XLSX (.xlsx)</small><small *ngIf="importFileName">{{ importFileName }}</small><small class="import-format-hint">Use the fixed Teacher Import Template. Review rows before importing.</small></label>
+      <div class="import-error" *ngIf="importError">{{ importError }}</div>
+      <div class="import-summary" *ngIf="importRows.length">{{ importRows.length }} rows detected · {{ buildImportTeachers().length }} teachers will be created</div>
+      <div class="import-preview" *ngIf="importRows.length"><table><thead><tr><th>#</th><th>Teacher</th><th>Email</th><th>Assignment</th><th>Error</th></tr></thead><tbody><tr *ngFor="let row of importRows | slice:0:12"><td>{{ row._index }}</td><td>{{ row.firstName }} {{ row.lastName }}</td><td>{{ row.email || '—' }}</td><td>{{ row.subject || '—' }}<span *ngIf="row.section"> · {{ row.section }}</span></td><td class="bad">{{ row.error || '✓' }}</td></tr></tbody></table><small *ngIf="importRows.length > 12">Showing first 12 rows.</small></div>
+      <div class="import-progress" *ngIf="importing"><div><span>Importing teachers...</span><b>{{ importProgress }}%</b></div><div class="progress-track"><span [style.width.%]="importProgress"></span></div></div>
     </div>
-
-
-    <div
-      class="table-wrapper"
-      *ngIf="teachers.length > 0"
-    >
-
-      <table>
-
-        <thead>
-
-          <tr>
-
-            <th>ID</th>
-
-            <th>Teacher</th>
-
-            <th>Email</th>
-
-            <th>Phone</th>
-
-            <th>Subject</th>
-
-            <th>Faculty Code</th>
-
-            <th>Qualification</th>
-
-            <th>Status</th>
-
-            <th>Actions</th>
-
-          </tr>
-
-        </thead>
-
-
-        <tbody>
-
-          <tr
-  *ngFor="let teacher of teachers; let i = index"
->
-
-            <td>
-  <span class="id-badge">
-    #{{ i + 1 }}
-  </span>
-</td>
-
-
-            <td>
-
-              <div class="teacher-info">
-
-                <div class="teacher-avatar">
-                  {{ teacher.firstName.charAt(0) }}
-                </div>
-
-                <div>
-
-                  <strong>
-                    {{ getFullName(teacher) }}
-                  </strong>
-
-                  <small>
-                    Teacher
-                  </small>
-
-                </div>
-
-              </div>
-
-            </td>
-
-
-            <td>
-              {{ teacher.email || '—' }}
-            </td>
-
-
-            <td>
-              {{ teacher.phone || '—' }}
-            </td>
-
-
-            <td>
-              <span
-                class="subject-badge"
-                *ngIf="teacher.subject"
-              >
-                {{ teacher.subject }}
-              </span>
-
-              <span
-                *ngIf="!teacher.subject"
-              >
-                —
-              </span>
-            </td>
-
-
-            <td>
-              <span class="subject-badge" *ngIf="teacher.facultyCode">
-                {{ teacher.facultyCode }}
-              </span>
-              <span *ngIf="!teacher.facultyCode">—</span>
-            </td>
-
-
-            <td>
-              {{ teacher.qualification || '—' }}
-            </td>
-
-
-            <td>
-
-              <span
-                class="status-badge active"
-                *ngIf="teacher.status === 'ACTIVE'"
-              >
-                ● Active
-              </span>
-
-              <span
-                class="status-badge inactive"
-                *ngIf="teacher.status === 'INACTIVE'"
-              >
-                ● Inactive
-              </span>
-
-            </td>
-
-
-            <td>
-
-              <div class="action-buttons">
-
-                <button
-                  class="edit-btn"
-                  type="button"
-                  (click)="openEditForm(teacher)"
-                >
-                  ✏️
-                </button>
-
-                <button
-                  class="delete-btn"
-                  type="button"
-                  (click)="deleteTeacher(teacher)"
-                >
-                  🗑️
-                </button>
-
-              </div>
-
-            </td>
-
-          </tr>
-
-        </tbody>
-
-      </table>
-
-    </div>
-
-  </div>
-
-
-  <!-- ADD / EDIT FORM -->
-  <div
-    class="modal-backdrop"
-    *ngIf="showForm"
-    (click)="closeForm()"
-  >
-
-    <div
-      class="teacher-modal"
-      (click)="$event.stopPropagation()"
-    >
-
-      <!-- MODAL HEADER -->
-      <div class="modal-header">
-
-        <div>
-
-          <h2>
-            {{ editing ? 'Edit Teacher' : 'Add Teacher' }}
-          </h2>
-
-          <p>
-            {{
-              editing
-                ? 'Update teacher information'
-                : 'Enter teacher information'
-            }}
-          </p>
-
-        </div>
-
-        <button
-          class="close-btn"
-          type="button"
-          (click)="closeForm()"
-        >
-          ×
-        </button>
-
-      </div>
-
-
-      <!-- FORM -->
-      <form
-        (ngSubmit)="saveTeacher()"
-      >
-
-        <div class="form-grid">
-
-          <!-- FIRST NAME -->
-          <div class="form-group">
-
-            <label>
-              First Name *
-            </label>
-
-            <input
-              type="text"
-              name="firstName"
-              [(ngModel)]="formTeacher.firstName"
-              placeholder="Enter first name"
-            />
-
-          </div>
-
-
-          <!-- LAST NAME -->
-          <div class="form-group">
-
-            <label>
-              Last Name *
-            </label>
-
-            <input
-              type="text"
-              name="lastName"
-              [(ngModel)]="formTeacher.lastName"
-              placeholder="Enter last name"
-            />
-
-          </div>
-
-
-          <!-- EMAIL -->
-          <div class="form-group">
-
-            <label>
-              Email
-            </label>
-
-            <input
-              type="email"
-              name="email"
-              [(ngModel)]="formTeacher.email"
-              placeholder="teacher@example.com"
-            />
-
-          </div>
-
-
-          <!-- PHONE -->
-          <div class="form-group">
-
-            <label>
-              Phone
-            </label>
-
-            <input
-              type="text"
-              name="phone"
-              [(ngModel)]="formTeacher.phone"
-              placeholder="Enter phone number"
-            />
-
-          </div>
-
-
-          <!-- SUBJECT -->
-          <div class="form-group">
-
-            <label>
-              Subject
-            </label>
-
-            <input
-              type="text"
-              name="subject"
-              [(ngModel)]="formTeacher.subject"
-              placeholder="e.g. Mathematics"
-            />
-
-          </div>
-
-
-          <!-- FACULTY CODE -->
-          <div class="form-group">
-
-            <label>
-              Faculty Code
-            </label>
-
-            <input
-              type="text"
-              name="facultyCode"
-              [(ngModel)]="formTeacher.facultyCode"
-              maxlength="30"
-              placeholder="e.g. AB, BPS, RR, PM"
-              style="text-transform: uppercase;"
-            />
-
-            <small style="display:block; margin-top:6px; color:#7b8794;">
-              Use the same code as the Weekly Timetable faculty code.
-            </small>
-
-          </div>
-
-
-          <!-- QUALIFICATION -->
-          <div class="form-group">
-
-            <label>
-              Qualification
-            </label>
-
-            <input
-              type="text"
-              name="qualification"
-              [(ngModel)]="formTeacher.qualification"
-              placeholder="e.g. M.Sc Mathematics"
-            />
-
-          </div>
-
-
-          <!-- STATUS -->
-          <div class="form-group full-width">
-
-            <label>
-              Status
-            </label>
-
-            <select
-              name="status"
-              [(ngModel)]="formTeacher.status"
-            >
-
-              <option value="ACTIVE">
-                Active
-              </option>
-
-              <option value="INACTIVE">
-                Inactive
-              </option>
-
-            </select>
-
-          </div>
-
-        </div>
-
-
-        <!-- FORM ACTIONS -->
-        <div class="form-actions">
-
-          <button
-            type="button"
-            class="cancel-btn"
-            (click)="closeForm()"
-            [disabled]="saving"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="submit"
-            class="save-btn"
-            [disabled]="saving"
-          >
-
-            {{
-              saving
-                ? 'Saving...'
-                : editing
-                  ? 'Update Teacher'
-                  : 'Add Teacher'
-            }}
-
-          </button>
-
-        </div>
-
-      </form>
-
-    </div>
-
-  </div>
-
+    <div class="form-actions"><button type="button" class="cancel-btn" (click)="closeImport()" [disabled]="importing">Cancel</button><button type="button" class="save-btn" (click)="importTeachers()" [disabled]="importing || !importRows.length">{{ importing ? 'Importing...' : 'Import Teachers' }}</button></div>
+  </div></div>
 </div>

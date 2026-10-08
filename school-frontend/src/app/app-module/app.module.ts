@@ -9,6 +9,7 @@ import { StudentFormComponent } from '../components/student-form/student-form.co
 import { AttendanceListComponent } from '../components/attendance-list/attendance-list.component';
 import { MarkListComponent } from '../components/mark-list/mark-list.component';
 import { AppModuleModule } from '../app-module-module';
+import { AcademicManagementComponent } from '../components/academic-management/academic-management.component';
 
 @NgModule({
   imports: [
@@ -22,6 +23,7 @@ import { AppModuleModule } from '../app-module-module';
     AttendanceListComponent,
     MarkListComponent,
     AppModuleModule,
+    AcademicManagementComponent,
   ],
   providers: [],
 })

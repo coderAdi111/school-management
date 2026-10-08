@@ -181,4 +181,16 @@ public class StudentService {
             );
         }
     }
+    @Transactional
+    public int deleteStudents(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        return studentDao.deactivateStudents(ids);
+    }
+
+    @Transactional
+    public int moveStudentsToClass(List<Long> ids, Long classId) {
+        if (ids == null || ids.isEmpty() || classId == null) return 0;
+        return studentDao.moveStudentsToClass(ids, classId);
+    }
+
 }

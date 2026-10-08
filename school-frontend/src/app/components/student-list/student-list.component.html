@@ -10,16 +10,126 @@
       Students
     </h2>
 
-    <a
-      class="btn btn-primary"
-      routerLink="/students/new">
+    <div class="d-flex gap-2 flex-wrap justify-content-end">
+      <button class="btn btn-outline-success" type="button" (click)="exportVisibleStudents()" [disabled]="!students.length">
+        <i class="bi bi-download me-1"></i> Export CSV
+      </button>
+      <button class="btn btn-primary" type="button" routerLink="/students/new">
 
       <i class="bi bi-person-plus me-1"></i>
 
-      Add Student
+        Add Student
+      </button>
+    </div>
 
-    </a>
+  </div>
 
+  <!-- =========================
+       BULK STUDENT IMPORT
+  ========================== -->
+  <div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-outline-dark me-2" type="button" (click)="openBulkImport()">
+      <i class="bi bi-upload me-1"></i> Bulk Import Students
+    </button>
+  </div>
+
+  <div class="bulk-overlay" *ngIf="bulkOpen">
+    <div class="bulk-modal">
+      <div class="bulk-head">
+        <div>
+          <h3>Bulk Student Import</h3>
+          <p>Import students from CSV, Excel, photo or PDF. Section can be read from the file (CA1, CA2, CB1, CB2, etc.).</p>
+        </div>
+        <button type="button" class="bulk-close" (click)="closeBulkImport()">×</button>
+      </div>
+
+      <div class="bulk-target">
+        <div class="bulk-field">
+          <label>Department</label>
+          <select [(ngModel)]="bulkDepartment" (ngModelChange)="bulkBranch=''; bulkSemester=''; bulkSection=''">
+            <option value="">Select Department</option>
+            <option *ngFor="let x of academicDepartments" [value]="x.name">{{x.name}}</option>
+          </select>
+        </div>
+        <div class="bulk-field">
+          <label>Branch</label>
+          <select [(ngModel)]="bulkBranch" (ngModelChange)="bulkSemester=''; bulkSection=''">
+            <option value="">Select Branch</option>
+            <option *ngFor="let x of academicBranches" [value]="x.code || x.name"
+              [hidden]="bulkDepartment && x.department?.name !== bulkDepartment">{{x.code || x.name}}</option>
+          </select>
+        </div>
+        <div class="bulk-field">
+          <label>Semester</label>
+          <select [(ngModel)]="bulkSemester" (ngModelChange)="bulkSection=''">
+            <option value="">Select Semester</option>
+            <option *ngFor="let x of academicSemesters"
+              [hidden]="bulkBranch && (x.branch?.code || x.branch?.name) !== bulkBranch"
+              [ngValue]="x.semesterNumber">{{x.name || (x.semesterNumber + ' Semester')}}</option>
+          </select>
+        </div>
+        <div class="bulk-field">
+          <label>Section <span class="text-muted">(optional if file has Section column)</span></label>
+          <select [(ngModel)]="bulkSection">
+            <option value="">Auto-detect from file</option>
+            <option *ngFor="let x of academicSections"
+              [hidden]="bulkSemester && (x.semester?.semesterNumber !== bulkSemester)"
+              [value]="x.name">{{x.name}}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bulk-source">
+        <label class="bulk-upload">
+          <input type="file" accept=".csv,.tsv,.xls,.xlsx,.pdf,image/png,image/jpeg,image/webp,image/bmp"
+                 (change)="onBulkFile($event)">
+          <i class="bi bi-file-earmark-image"></i>
+          <strong>Upload Student List</strong>
+          <span>CSV • XLS/XLSX • JPG • PNG • WEBP • BMP • PDF</span>
+          <small>{{bulkFileName || 'Click to choose a file'}}</small>
+        </label>
+        <div class="bulk-hint">
+          <b>File tip:</b> best format is <em>Roll No, Name, Email, Phone, Section/Batch</em>.
+          Email is optional when Roll No is present; an internal email is generated automatically. CA1, CA2, CB1 and CB2 can be in the same file. If a matching class does not exist, it is created automatically.
+          PDF/photo tables are read from Roll No + Name + Section/Batch.
+        </div>
+      </div>
+
+      <div class="alert alert-danger" *ngIf="bulkError">{{bulkError}}</div>
+      <div class="alert alert-info" *ngIf="bulkMessage">{{bulkMessage}}</div>
+
+      <div class="bulk-preview" *ngIf="bulkRows.length">
+        <div class="bulk-preview-head">
+          <strong>Preview</strong>
+          <span>{{bulkRows.length}} rows</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>#</th><th>Roll No</th><th>First Name</th><th>Last Name</th><th>Email</th><th>Phone</th><th>Section</th><th>Error</th><th></th></tr></thead>
+            <tbody>
+              <tr *ngFor="let row of bulkRows; let i = index" [class.table-danger]="!row.valid">
+                <td>{{i + 1}}</td>
+                <td>{{row.rollNo || '—'}}</td>
+                <td>{{row.firstName}}</td>
+                <td>{{row.lastName}}</td>
+                <td>{{row.email || '—'}}</td>
+                <td>{{row.phone || '—'}}</td>
+                <td><span class="badge bg-secondary">{{row.section || '—'}}</span></td>
+                <td class="text-danger small">{{row.error || ''}}</td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger" (click)="removeBulkRow(i)">×</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="bulk-foot">
+        <button type="button" class="btn btn-light" (click)="closeBulkImport()" [disabled]="bulkBusy">Cancel</button>
+        <button type="button" class="btn btn-dark" (click)="saveBulkStudents()" [disabled]="bulkBusy || !bulkRows.length">
+          {{bulkBusy ? 'Importing…' : 'Import Students'}}
+        </button>
+      </div>
+    </div>
   </div>
 
 
@@ -43,6 +153,13 @@
   <div class="card mb-3">
 
     <div class="card-body">
+
+      <div class="row g-2 mb-3">
+        <div class="col-md-3"><select class="form-select" [(ngModel)]="selectedDepartment" (ngModelChange)="selectedBranch=''; selectedSemester=''; selectedSection=''; applyFilters()"><option value="">All Departments</option><option *ngFor="let x of departments" [value]="x">{{ x }}</option></select></div>
+        <div class="col-md-3"><select class="form-select" [(ngModel)]="selectedBranch" (ngModelChange)="selectedSemester=''; selectedSection=''; applyFilters()"><option value="">All Branches</option><option *ngFor="let x of branches" [value]="x">{{ x }}</option></select></div>
+        <div class="col-md-3"><select class="form-select" [(ngModel)]="selectedSemester" (ngModelChange)="selectedSection=''; applyFilters()"><option value="">All Semesters</option><option *ngFor="let x of semesters" [ngValue]="x">{{ x }} Semester</option></select></div>
+        <div class="col-md-3"><select class="form-select" [(ngModel)]="selectedSection" (ngModelChange)="applyFilters()"><option value="">All Sections</option><option *ngFor="let x of sections" [value]="x">{{ x }}</option></select></div>
+      </div>
 
       <div class="input-group">
 
@@ -90,6 +207,93 @@
 
 
   <!-- =========================
+       BULK ACTION BAR
+  ========================== -->
+  <div class="student-bulk-bar" *ngIf="selectedCount > 0 || students.length > 0">
+    <div class="bulk-selection-info">
+      <span class="selection-pill">{{selectedCount}} selected</span>
+      <span class="text-muted">{{students.length}} currently visible</span>
+      <span class="text-muted" *ngIf="selectedCount === 0">Use the checkboxes to select students.</span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-sm btn-outline-primary" type="button" (click)="toggleSelectAllVisible()" [disabled]="!students.length || bulkActionBusy">
+        <i class="bi" [class.bi-check2-square]="allVisibleSelected" [class.bi-square]="!allVisibleSelected"></i>
+        {{allVisibleSelected ? 'Unselect All' : 'Select All Visible'}}
+      </button>
+      <button class="btn btn-sm btn-outline-warning" type="button" (click)="openBulkMove()" [disabled]="!selectedCount || bulkActionBusy">
+        <i class="bi bi-arrow-left-right me-1"></i> Move Selected
+      </button>
+      <button class="btn btn-sm btn-outline-danger" type="button" (click)="deleteSelectedStudents()" [disabled]="!selectedCount || bulkActionBusy">
+        <i class="bi bi-trash3 me-1"></i> Delete Selected
+      </button>
+      <button class="btn btn-sm btn-danger" type="button" (click)="deleteAllFilteredStudents()" [disabled]="!students.length || bulkActionBusy" title="Delete only the students currently visible after filters/search">
+        <i class="bi bi-trash me-1"></i> Delete All Filtered
+      </button>
+      <button class="btn btn-sm btn-link text-muted" type="button" (click)="clearSelection()" *ngIf="selectedCount">Clear Selection</button>
+    </div>
+  </div>
+
+  <!-- =========================
+       BULK MOVE MODAL
+  ========================== -->
+  <div class="bulk-overlay" *ngIf="bulkMoveOpen">
+    <div class="bulk-modal bulk-move-modal">
+      <div class="bulk-head">
+        <div>
+          <h3>Move Students</h3>
+          <p>Move {{selectedCount}} selected student{{selectedCount === 1 ? '' : 's'}} to another class/section.</p>
+        </div>
+        <button type="button" class="bulk-close" (click)="closeBulkMove()">×</button>
+      </div>
+      <div class="p-4">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Department</label>
+            <select class="form-select" [(ngModel)]="bulkMoveDepartment" (ngModelChange)="onBulkMoveDepartmentChange()">
+              <option value="">Select department</option>
+              <option *ngFor="let d of academicDepartments" [value]="d.name">{{d.name}}</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Branch</label>
+            <select class="form-select" [(ngModel)]="bulkMoveBranch" (ngModelChange)="onBulkMoveBranchChange()" [disabled]="!bulkMoveDepartment">
+              <option value="">Select branch</option>
+              <option *ngFor="let b of bulkMoveBranches" [value]="b">{{b}}</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Semester</label>
+            <select class="form-select" [(ngModel)]="bulkMoveSemester" (ngModelChange)="onBulkMoveSemesterChange()" [disabled]="!bulkMoveBranch">
+              <option value="">Select semester</option>
+              <option *ngFor="let sem of bulkMoveSemesters" [ngValue]="sem">{{sem}} Semester</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Section</label>
+            <select class="form-select" [(ngModel)]="bulkMoveSection" (ngModelChange)="onBulkMoveSectionChange()" [disabled]="!bulkMoveSemester">
+              <option value="">Select section</option>
+              <option *ngFor="let section of bulkMoveSections" [value]="section">{{section}}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="alert alert-warning mt-3 mb-0">
+          Only the selected students will move. Attendance, marks and fees history remains attached to the student.
+        </div>
+      </div>
+      <div class="bulk-foot">
+        <button type="button" class="btn btn-light" (click)="closeBulkMove()" [disabled]="bulkActionBusy">Cancel</button>
+        <button type="button" class="btn btn-warning" (click)="moveSelectedStudents()" [disabled]="bulkActionBusy || !bulkMoveClassId">
+          {{bulkActionBusy ? 'Moving…' : 'Move Students'}}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================
        STUDENT TABLE
   ========================== -->
 
@@ -130,6 +334,10 @@
 
           <tr>
 
+            <th class="selection-col">
+              <input type="checkbox" class="form-check-input" [checked]="allVisibleSelected" (change)="toggleSelectAllVisible()" [disabled]="!students.length || bulkActionBusy" title="Select all visible">
+            </th>
+
             <th>#</th>
 
             <th>Name</th>
@@ -156,11 +364,13 @@
   *ngFor="let s of students; let i = index">
 
 
-            <!-- ID -->
+            <!-- SELECT -->
+            <td class="selection-col">
+              <input type="checkbox" class="form-check-input" [checked]="isStudentSelected(s.id)" (change)="toggleStudentSelection(s.id)" [disabled]="bulkActionBusy">
+            </td>
 
-            <td> 
-  {{ i + 1 }} 
-</td>
+            <!-- ID -->
+            <td>{{ i + 1 }}</td>
 
 
             <!-- NAME -->
@@ -263,7 +473,7 @@
             *ngIf="students.length === 0">
 
             <td
-              colspan="6"
+              colspan="7"
               class="text-center text-muted py-4">
 
               No students found.

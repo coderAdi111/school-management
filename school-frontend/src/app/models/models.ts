@@ -12,12 +12,16 @@ export interface ClassRoom {
   name: string;
   grade: string;
   section?: string;
+  department?: string;
+  branch?: string;
+  semester?: number;
   teacher?: Teacher;
   capacity?: number;
   createdAt?: string;
 }
 export interface Student {
  id?: number;
+ rollNo?: string;
  firstName: string;
  lastName: string;
  email: string;
@@ -60,6 +64,19 @@ export interface Mark {
  remarks?: string;
 }
 
+export interface TeacherAssignment {
+  departmentId?: number;
+  departmentName?: string;
+  branchId?: number;
+  branchName?: string;
+  branchCode?: string;
+  semesterId?: number;
+  semesterName?: string;
+  sectionId?: number;
+  sectionName?: string;
+  subject: string;
+}
+
 export interface Teacher {
   id?: number;
   firstName: string;
@@ -71,4 +88,35 @@ export interface Teacher {
   qualification?: string;
   status?: 'ACTIVE' | 'INACTIVE';
   createdAt?: string;
+  teachingAssignments?: string;
+  assignments?: TeacherAssignment[];
+}
+export interface AcademicDepartment {
+  id?: number;
+  name: string;
+  code: string;
+  active?: boolean;
+}
+
+export interface AcademicBranch {
+  id?: number;
+  name: string;
+  code: string;
+  department: AcademicDepartment;
+  active?: boolean;
+}
+
+export interface AcademicSemester {
+  id?: number;
+  semesterNumber: number;
+  name: string;
+  branch: AcademicBranch;
+  active?: boolean;
+}
+
+export interface AcademicSection {
+  id?: number;
+  name: string;
+  semester: AcademicSemester;
+  active?: boolean;
 }

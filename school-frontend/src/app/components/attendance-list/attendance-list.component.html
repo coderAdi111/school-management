@@ -4,7 +4,7 @@
     <div>
       <h2>Attendance Management</h2>
       <p>
-        Manage subject-wise attendance for 5th Semester IT
+        Manage subject-wise attendance by Department, Branch, Semester and Section
       </p>
     </div>
   </div>
@@ -17,28 +17,35 @@
     <div class="filter-grid">
 
       <div class="filter-field">
-
-        <label>Class</label>
-
-        <select
-          class="form-control"
-          [(ngModel)]="selectedClassId"
-          (change)="onClassChange()"
-        >
-
-          <option [ngValue]="null">
-            -- Select Class --
-          </option>
-
-          <option
-            *ngFor="let c of classes"
-            [ngValue]="c.id"
-          >
-            {{ c.name }}
-          </option>
-
+        <label>Department</label>
+        <select class="form-control" [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentChange()">
+          <option value="">-- Select Department --</option>
+          <option *ngFor="let d of departmentOptions" [value]="d">{{ d }}</option>
         </select>
+      </div>
 
+      <div class="filter-field">
+        <label>Branch</label>
+        <select class="form-control" [(ngModel)]="selectedBranch" (ngModelChange)="onBranchChange()" [disabled]="!selectedDepartment">
+          <option value="">-- Select Branch --</option>
+          <option *ngFor="let b of branchOptions" [value]="b">{{ b }}</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Semester</label>
+        <select class="form-control" [(ngModel)]="selectedSemester" (ngModelChange)="onSemesterChange()" [disabled]="!selectedBranch">
+          <option [ngValue]="''">-- Select Semester --</option>
+          <option *ngFor="let sem of semesterOptions" [ngValue]="sem">{{ sem }}{{ sem === 1 ? 'st' : sem === 2 ? 'nd' : sem === 3 ? 'rd' : 'th' }} Semester</option>
+        </select>
+      </div>
+
+      <div class="filter-field">
+        <label>Section</label>
+        <select class="form-control" [(ngModel)]="selectedSection" (ngModelChange)="onSectionChange()" [disabled]="selectedSemester === ''">
+          <option value="">-- Select Section --</option>
+          <option *ngFor="let sec of sectionOptions" [value]="sec">{{ sec }}</option>
+        </select>
       </div>
 
 

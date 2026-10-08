@@ -1,5 +1,49 @@
 <div class="container-fluid py-4">
 
+  <!-- Academic hierarchy filters -->
+  <div class="academic-filter-card mb-4">
+    <div class="academic-filter-title">
+      <strong>Academic Filters</strong>
+      <span>Department → Branch → Semester → Section</span>
+    </div>
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Department</label>
+        <select class="form-select" [(ngModel)]="selectedDepartmentId" (ngModelChange)="onDepartmentFilterChange()">
+          <option [ngValue]="null">All Departments</option>
+          <option *ngFor="let d of departments" [ngValue]="d.id">{{ d.name }}</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Branch</label>
+        <select class="form-select" [(ngModel)]="selectedBranchId" (ngModelChange)="onBranchFilterChange()">
+          <option [ngValue]="null">All Branches</option>
+          <option *ngFor="let b of branches" [ngValue]="b.id">{{ b.name }}{{ b.code ? ' (' + b.code + ')' : '' }}</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Semester</label>
+        <select class="form-select" [(ngModel)]="selectedSemesterId" (ngModelChange)="onSemesterFilterChange()">
+          <option [ngValue]="null">All Semesters</option>
+          <option *ngFor="let s of semesters" [ngValue]="s.id">{{ s.name }}</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Section</label>
+        <select class="form-select" [(ngModel)]="selectedSectionId" (ngModelChange)="onSectionFilterChange()">
+          <option [ngValue]="null">All Sections</option>
+          <option *ngFor="let s of sections" [ngValue]="s.id">{{ s.name }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="filter-footer">
+      <span>{{ filteredFees.length }} record(s) in current scope</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="resetAcademicFilters()">Reset Filters</button>
+    </div>
+  </div>
+
+
+
   <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
 
@@ -50,7 +94,7 @@
             </option>
 
             <option
-              *ngFor="let student of students"
+              *ngFor="let student of filteredStudents"
               [value]="student.id"
             >
               {{ student.firstName }} {{ student.lastName }}

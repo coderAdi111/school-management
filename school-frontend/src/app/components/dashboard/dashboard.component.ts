@@ -73,6 +73,7 @@ private greetingTimer: ReturnType<typeof setInterval> | undefined;
 
   i1Attendance = 0;
   i2Attendance = 0;
+  sectionCounts: Array<{section: string; count: number; attendance: number}> = [];
 
   subjectStats: SubjectStat[] = [];
 
@@ -345,17 +346,8 @@ ngOnDestroy(): void {
 
         next: data => {
 
-          this.students =
-            (data ?? [])
-              .filter(student =>
-                student.classRoom?.grade ===
-                  '5th Semester' &&
-
-                (
-                  student.classRoom?.section === 'I1' ||
-                  student.classRoom?.section === 'I2'
-                )
-              );
+          this.students = data ?? [];
+          this.updateSectionCounts();
 
           this.calculateDashboard();
 
@@ -385,17 +377,7 @@ ngOnDestroy(): void {
 
         next: data => {
 
-          this.classes =
-            (data ?? [])
-              .filter(classRoom =>
-                classRoom.grade ===
-                  '5th Semester' &&
-
-                (
-                  classRoom.section === 'I1' ||
-                  classRoom.section === 'I2'
-                )
-              );
+          this.classes = data ?? [];
 
           this.calculateDashboard();
 
@@ -710,6 +692,15 @@ ngOnDestroy(): void {
    * ============================================================
    */
 
+  private updateSectionCounts(): void {
+    const map = new Map<string, number>();
+    for (const student of this.students) {
+      const section = student.classRoom?.section?.trim();
+      if (section) map.set(section, (map.get(section) ?? 0) + 1);
+    }
+    this.sectionCounts = Array.from(map.entries()).map(([section, count]) => ({ section, count, attendance: 0 })).sort((a,b) => a.section.localeCompare(b.section));
+  }
+
   private calculateDashboard(): void {
 
     this.calculateTodayAttendance();
@@ -770,17 +761,19 @@ ngOnDestroy(): void {
           )
         : 0;
 
-    this.i1Attendance =
-      this.sectionAttendance(
-        'I1',
-        todayRecords
-      );
-
-    this.i2Attendance =
-      this.sectionAttendance(
-        'I2',
-        todayRecords
-      );
+    const attendanceBySection = new Map<string, Attendance[]>();
+    for (const record of todayRecords) {
+      const section = record.student?.classRoom?.section || record.classRoom?.section;
+      if (section) {
+        const list = attendanceBySection.get(section) ?? [];
+        list.push(record);
+        attendanceBySection.set(section, list);
+      }
+    }
+    this.sectionCounts = this.sectionCounts.map(item => ({
+      ...item,
+      attendance: this.sectionAttendance(item.section, todayRecords)
+    }));
 
     const grouped =
       new Map<string, Attendance[]>();

@@ -4004,55 +4004,25 @@
 
 
 
-/* 2-hour classes/labs span both adjacent time columns without an internal divider. */
+/* Multi-hour classes/labs are rendered as ONE table cell with colspan.
+   Do not add a border at the hour boundary: the single spanning <td>
+   owns the whole duration, so there must be no vertical divider through it. */
 
 .official-timetable .official-entry-cell {
-
   padding: 5px;
-
   vertical-align: middle;
-
+  position: relative;
 }
-
-
 
 .official-timetable .official-entry-cell .official-class {
-
   width: 100%;
-
   box-sizing: border-box;
-
 }
 
-
-
-/* Any entry longer than one hour owns all of its occupied time columns. */
-
-.official-timetable .official-entry-cell {
-
-  position: relative;
-
-}
-
-
-
-.official-timetable .official-entry-cell[colspan="2"],
-
-.official-timetable .official-entry-cell[colspan="3"],
-
-.official-timetable .official-entry-cell[colspan="4"],
-
-.official-timetable .official-entry-cell[colspan="5"],
-
-.official-timetable .official-entry-cell[colspan="6"],
-
-.official-timetable .official-entry-cell[colspan="7"] {
-
+/* Keep the spanning cell visually continuous across all occupied columns. */
+.official-timetable .official-entry-cell[colspan] {
   border-right: 1px solid #aeb6c3;
-
 }
-
-
 
 /* Weekly timetable download action */
 

@@ -27,8 +27,19 @@ public class ClassRoom {
     @Column(nullable = false, length = 20)
     private String grade;
 
-    @Column(length = 10)
+    @Column(length = 50)
     private String section;
+
+    // Dynamic academic hierarchy metadata. These fields intentionally remain
+    // nullable so existing classes continue to work after the schema update.
+    @Column(length = 100)
+    private String department;
+
+    @Column(length = 100)
+    private String branch;
+
+    @Column
+    private Integer semester;
 
     // =========================
     // CLASS TEACHER

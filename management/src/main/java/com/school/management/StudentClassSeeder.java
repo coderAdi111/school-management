@@ -7,6 +7,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.core.annotation.Order;
 
 import java.util.*;
 
@@ -23,6 +24,7 @@ import java.util.*;
  * I2: 24IT33 through 24IT65
  */
 @Component
+@Order(2)
 public class StudentClassSeeder implements CommandLineRunner {
 
     @PersistenceContext
@@ -181,12 +183,14 @@ public class StudentClassSeeder implements CommandLineRunner {
             }
         }
 
-        Set<Long> actualStudentIds =
-                new HashSet<>();
-
         // =========================================================
-        // SYNC OFFICIAL STUDENTS
+        // SYNC OFFICIAL STUDENTS WITHOUT TOUCHING OTHER STUDENTS
         // =========================================================
+        //
+        // This runner is only a bootstrap/sync for the built-in
+        // 24IT01..24IT65 list. Students created/imported by the
+        // administrator are real application data and MUST survive
+        // every backend restart/deploy.
 
         for (StudentData data : STUDENTS) {
 
@@ -195,147 +199,45 @@ public class StudentClassSeeder implements CommandLineRunner {
                             .toLowerCase(Locale.ROOT)
                             + "@student.eca.local";
 
-            Student student =
-                    byEmail.get(email);
-
-            /*
-             * =====================================================
-             * NEW STUDENT
-             * =====================================================
-             */
+            Student student = byEmail.get(email);
 
             if (student == null) {
-
                 student = new Student();
-
                 student.setEmail(email);
 
-                String[] parts =
-                        splitName(data.name());
-
+                String[] parts = splitName(data.name());
                 student.setFirstName(parts[0]);
                 student.setLastName(parts[1]);
-
                 student.setClassRoom(
-                        "I1".equals(data.section())
-                                ? i1
-                                : i2
+                        "I1".equals(data.section()) ? i1 : i2
                 );
-
-                student.setStatus(
-                        Student.Status.ACTIVE
-                );
+                student.setStatus(Student.Status.ACTIVE);
 
                 em.persist(student);
-
-                /*
-                 * New student is part of the official list.
-                 */
                 em.flush();
-
-                if (student.getId() != null) {
-
-                    actualStudentIds.add(
-                            student.getId()
-                    );
-                }
-
             }
 
-            /*
-             * =====================================================
-             * EXISTING ACTIVE STUDENT
-             * =====================================================
-             */
-
-            else if (
-                    student.getStatus()
-                            == Student.Status.ACTIVE
-            ) {
-
-                String[] parts =
-                        splitName(data.name());
-
+            else if (student.getStatus() == Student.Status.ACTIVE) {
+                String[] parts = splitName(data.name());
                 student.setFirstName(parts[0]);
                 student.setLastName(parts[1]);
                 student.setEmail(email);
-
                 student.setClassRoom(
-                        "I1".equals(data.section())
-                                ? i1
-                                : i2
+                        "I1".equals(data.section()) ? i1 : i2
                 );
-
-                /*
-                 * IMPORTANT:
-                 * Status remains ACTIVE.
-                 */
-                student.setStatus(
-                        Student.Status.ACTIVE
-                );
-
-                em.merge(student);
-
-                actualStudentIds.add(
-                        student.getId()
-                );
-            }
-
-            /*
-             * =====================================================
-             * EXISTING INACTIVE STUDENT
-             * =====================================================
-             */
-
-            else {
-
-                /*
-                 * This student was intentionally deleted
-                 * by the admin.
-                 *
-                 * DO NOT:
-                 * - reactivate
-                 * - assign class
-                 * - change status
-                 * - create duplicate
-                 *
-                 * Simply leave it INACTIVE.
-                 */
-
-                continue;
-            }
-        }
-
-        // =========================================================
-        // OLD / DEMO STUDENTS
-        // =========================================================
-
-        /*
-         * Students which are not part of the official current
-         * list are kept safely in database but detached from
-         * current classes and marked INACTIVE.
-         *
-         * This prevents old Attendance / Marks / Fees references
-         * from breaking.
-         */
-        for (Student student : existing) {
-
-            if (
-                    student.getId() != null
-                    && !actualStudentIds.contains(
-                            student.getId()
-                    )
-            ) {
-
-                student.setClassRoom(null);
-
-                student.setStatus(
-                        Student.Status.INACTIVE
-                );
-
+                student.setStatus(Student.Status.ACTIVE);
                 em.merge(student);
             }
+
+            // Existing INACTIVE official students intentionally remain
+            // inactive. The normal admin create flow can reactivate them.
         }
+
+        // IMPORTANT: Do NOT deactivate, delete or detach any other
+        // students here. This includes students added through the UI,
+        // CSV, image and PDF imports. They are persistent application
+        // data, not seed data.
+
     }
 
     // =============================================================
@@ -376,6 +278,11 @@ public class StudentClassSeeder implements CommandLineRunner {
         c.setName(name);
         c.setGrade(grade);
         c.setSection(section);
+        // Academic hierarchy is the source of truth. Do not overwrite an
+        // administrator-selected department here; the migration runner below
+        // resolves existing classes against Academic Setup.
+        c.setBranch("IT");
+        c.setSemester(5);
         c.setCapacity(capacity);
 
         if (c.getId() == null) {

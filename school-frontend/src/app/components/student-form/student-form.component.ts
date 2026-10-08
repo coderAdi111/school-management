@@ -10,10 +10,16 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { StudentService } from '../../services/student.services';
 import { ClassroomService } from '../../services/classroom.services';
+import { AcademicService } from '../../services/academic.service';
+import { forkJoin } from 'rxjs';
 
 import {
   Student,
-  ClassRoom
+  ClassRoom,
+  AcademicDepartment,
+  AcademicBranch,
+  AcademicSemester,
+  AcademicSection
 } from '../../models/models';
 
 @Component({
@@ -39,12 +45,23 @@ export class StudentFormComponent implements OnInit {
 
   classes: ClassRoom[] = [];
 
+  academicDepartments: AcademicDepartment[] = [];
+  academicBranches: AcademicBranch[] = [];
+  academicSemesters: AcademicSemester[] = [];
+  academicSections: AcademicSection[] = [];
+
+  selectedDepartment = '';
+  selectedBranch = '';
+  selectedSemester: number | '' = '';
+  selectedSection = '';
+
   student: Student = this.emptyStudent();
 
 
   constructor(
     private studentService: StudentService,
     private classroomService: ClassroomService,
+    private academicService: AcademicService,
     private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef
@@ -58,6 +75,7 @@ export class StudentFormComponent implements OnInit {
   ngOnInit(): void {
 
     this.loadClasses();
+    this.loadAcademicStructure();
 
     const id =
       this.route.snapshot.paramMap.get('id');
@@ -128,8 +146,7 @@ export class StudentFormComponent implements OnInit {
             data
           );
 
-          this.classes =
-            (data ?? []).filter(c => c.grade === '5th Semester' && (c.section === 'I1' || c.section === 'I2'));
+          this.classes = data ?? [];
 
           this.loadingClasses = false;
 
@@ -155,6 +172,117 @@ export class StudentFormComponent implements OnInit {
       });
   }
 
+
+  // ================================
+  // ACADEMIC STRUCTURE
+  // ================================
+
+  loadAcademicStructure(): void {
+    this.academicService.departments().subscribe({
+      next: departments => {
+        this.academicDepartments = (departments ?? []).filter(d => d.active !== false);
+        const branchCalls = this.academicDepartments.filter(d => d.id).map(d => this.academicService.branches(d.id!));
+        if (!branchCalls.length) return;
+        forkJoin(branchCalls).subscribe({
+          next: branchResults => {
+            this.academicBranches = branchResults.flat().filter(b => b.active !== false);
+            const semesterCalls = this.academicBranches.filter(b => b.id).map(b => this.academicService.semesters(b.id!));
+            if (!semesterCalls.length) return;
+            forkJoin(semesterCalls).subscribe({
+              next: semesterResults => {
+                this.academicSemesters = semesterResults.flat().filter(s => s.active !== false);
+                const sectionCalls = this.academicSemesters.filter(s => s.id).map(s => this.academicService.sections(s.id!));
+                if (!sectionCalls.length) { this.cdr.detectChanges(); return; }
+                forkJoin(sectionCalls).subscribe({
+                  next: sectionResults => {
+                    this.academicSections = sectionResults.flat().filter(s => s.active !== false);
+                    this.cdr.detectChanges();
+                  },
+                  error: e => console.error('Academic sections load error:', e)
+                });
+              },
+              error: e => console.error('Academic semesters load error:', e)
+            });
+          },
+          error: e => console.error('Academic branches load error:', e)
+        });
+      },
+      error: e => console.error('Academic departments load error:', e)
+    });
+  }
+
+  get departments(): string[] {
+    return this.academicDepartments.map(d => d.name).filter(Boolean).sort();
+  }
+
+  get branches(): string[] {
+    const dept = this.academicDepartments.find(d => d.name === this.selectedDepartment);
+    return this.academicBranches
+      .filter(b => !dept || b.department?.id === dept.id)
+      .map(b => b.code || b.name)
+      .filter(Boolean)
+      .sort();
+  }
+
+  get semesters(): number[] {
+    const branch = this.academicBranches.find(b => (b.code || b.name) === this.selectedBranch);
+    return this.academicSemesters
+      .filter(s => !branch || s.branch?.id === branch.id)
+      .map(s => Number(s.semesterNumber))
+      .filter(n => n > 0)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .sort((a, b) => a - b);
+  }
+
+  get sections(): string[] {
+    const branch = this.academicBranches.find(b => (b.code || b.name) === this.selectedBranch);
+    const semester = this.academicSemesters.find(
+      s => s.branch?.id === branch?.id && Number(s.semesterNumber) === Number(this.selectedSemester)
+    );
+    return this.academicSections
+      .filter(s => !semester || s.semester?.id === semester.id)
+      .map(s => s.name)
+      .filter(Boolean)
+      .sort();
+  }
+
+  onDepartmentChange(): void {
+    this.selectedBranch = '';
+    this.selectedSemester = '';
+    this.selectedSection = '';
+    this.student.classRoom = undefined;
+  }
+
+  onBranchChange(): void {
+    this.selectedSemester = '';
+    this.selectedSection = '';
+    this.student.classRoom = undefined;
+  }
+
+  onSemesterChange(): void {
+    this.selectedSection = '';
+    this.student.classRoom = undefined;
+  }
+
+  onSectionChange(): void {
+    const classroom = this.classes.find(c =>
+      c.department === this.selectedDepartment &&
+      c.branch === this.selectedBranch &&
+      Number(c.semester) === Number(this.selectedSemester) &&
+      c.section === this.selectedSection
+    );
+
+    this.student.classRoom = classroom ? { ...classroom } : undefined;
+    this.cdr.detectChanges();
+  }
+
+  private syncSelectorsFromClassroom(classroom?: ClassRoom): void {
+    if (!classroom) return;
+    this.selectedDepartment = classroom.department || '';
+    this.selectedBranch = classroom.branch || '';
+    this.selectedSemester = classroom.semester ? Number(classroom.semester) : '';
+    this.selectedSection = classroom.section || '';
+  }
 
   // ================================
   // LOAD STUDENT FOR EDIT
@@ -188,6 +316,7 @@ export class StudentFormComponent implements OnInit {
           this.student = {
             ...data
           };
+          this.syncSelectorsFromClassroom(this.student.classRoom);
 
           this.loading = false;
 
@@ -357,6 +486,15 @@ export class StudentFormComponent implements OnInit {
 
         section:
           this.student.classRoom.section,
+
+        department:
+          this.student.classRoom.department,
+
+        branch:
+          this.student.classRoom.branch,
+
+        semester:
+          this.student.classRoom.semester,
 
         teacher:
           this.student.classRoom.teacher,

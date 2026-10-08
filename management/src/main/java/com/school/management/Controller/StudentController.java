@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/students")
@@ -62,4 +63,18 @@ public class StudentController {
         studentService.deleteStudent(id);
         return ResponseEntity.noContent().build();
     }
+    @PostMapping("/bulk-delete")
+    public ResponseEntity<Map<String, Object>> bulkDelete(@RequestBody List<Long> ids) {
+        int count = studentService.deleteStudents(ids);
+        return ResponseEntity.ok(Map.of("deleted", count));
+    }
+
+    @PostMapping("/bulk-move/{classId}")
+    public ResponseEntity<Map<String, Object>> bulkMove(
+            @PathVariable Long classId,
+            @RequestBody List<Long> ids) {
+        int count = studentService.moveStudentsToClass(ids, classId);
+        return ResponseEntity.ok(Map.of("moved", count));
+    }
+
 }            

@@ -10,11 +10,12 @@ import { HttpClient } from '@angular/common/http';
 
 import { MarkService } from '../../services/mark.service';
 import { StudentService } from '../../services/student.services';
+import { AcademicService } from '../../services/academic.service';
 
 import {
   Mark,
   Student,
-  ClassRoom
+  ClassRoom, AcademicDepartment, AcademicBranch, AcademicSemester, AcademicSection
 } from '../../models/models';
 
 @Component({
@@ -34,6 +35,19 @@ export class MarkListComponent implements OnInit {
   students: Student[] = [];
 
   classes: ClassRoom[] = [];
+
+  // Academic hierarchy filters
+  departments: AcademicDepartment[] = [];
+  branches: AcademicBranch[] = [];
+  semesters: AcademicSemester[] = [];
+  sections: AcademicSection[] = [];
+
+  selectedDepartmentId: number | null = null;
+  selectedBranchId: number | null = null;
+  selectedSemesterId: number | null = null;
+  selectedSectionId: number | null = null;
+
+  filteredStudents: Student[] = [];
 
   loading = false;
 
@@ -55,6 +69,7 @@ private classUrl =
   constructor(
     private markService: MarkService,
     private studentService: StudentService,
+    private academicService: AcademicService,
     private http: HttpClient,
     private cdr: ChangeDetectorRef
   ) {}
@@ -65,6 +80,8 @@ private classUrl =
   // =========================
 
   ngOnInit(): void {
+
+    this.loadAcademicFilters();
 
     this.loadMarks();
 
@@ -95,12 +112,8 @@ private classUrl =
           data
         );
 
-        this.marks = (data ?? []).filter(mark =>
-          (mark.student?.classRoom?.grade === '5th Semester' &&
-           (mark.student?.classRoom?.section === 'I1' || mark.student?.classRoom?.section === 'I2')) ||
-          (mark.classRoom?.grade === '5th Semester' &&
-           (mark.classRoom?.section === 'I1' || mark.classRoom?.section === 'I2'))
-        );
+        this.marks = data ?? [];
+        this.applyAcademicFilters();
 
         this.loading = false;
 
@@ -153,10 +166,8 @@ private classUrl =
           data
         );
 
-        this.students = (data ?? []).filter(student =>
-          student.classRoom?.grade === '5th Semester' &&
-          (student.classRoom?.section === 'I1' || student.classRoom?.section === 'I2')
-        );
+        this.students = data ?? [];
+        this.applyAcademicFilters();
 
         this.cdr.detectChanges();
       },
@@ -190,10 +201,7 @@ private classUrl =
             data
           );
 
-          this.classes = (data ?? []).filter(classRoom =>
-          classRoom.grade === '5th Semester' &&
-          (classRoom.section === 'I1' || classRoom.section === 'I2')
-        );
+          this.classes = data ?? [];
 
           this.cdr.detectChanges();
         },
@@ -209,6 +217,127 @@ private classUrl =
       });
   }
 
+
+
+  // =========================
+  // ACADEMIC FILTERS
+  // =========================
+
+  loadAcademicFilters(): void {
+    this.academicService.departments().subscribe({
+      next: d => this.departments = (d ?? []).filter(x => x.active !== false)
+    });
+  }
+
+  onDepartmentFilterChange(): void {
+    this.selectedBranchId = null;
+    this.selectedSemesterId = null;
+    this.selectedSectionId = null;
+    this.branches = [];
+    this.semesters = [];
+    this.sections = [];
+    if (this.selectedDepartmentId != null) {
+      this.academicService.branches(this.selectedDepartmentId).subscribe({
+        next: b => this.branches = (b ?? []).filter(x => x.active !== false)
+      });
+    }
+    this.applyAcademicFilters();
+  }
+
+  onBranchFilterChange(): void {
+    this.selectedSemesterId = null;
+    this.selectedSectionId = null;
+    this.semesters = [];
+    this.sections = [];
+    if (this.selectedBranchId != null) {
+      this.academicService.semesters(this.selectedBranchId).subscribe({
+        next: s => this.semesters = (s ?? []).filter(x => x.active !== false)
+      });
+    }
+    this.applyAcademicFilters();
+  }
+
+  onSemesterFilterChange(): void {
+    this.selectedSectionId = null;
+    this.sections = [];
+    if (this.selectedSemesterId != null) {
+      this.academicService.sections(this.selectedSemesterId).subscribe({
+        next: s => this.sections = (s ?? []).filter(x => x.active !== false)
+      });
+    }
+    this.applyAcademicFilters();
+  }
+
+  onSectionFilterChange(): void {
+    this.applyAcademicFilters();
+  }
+
+  resetAcademicFilters(): void {
+    this.selectedDepartmentId = null;
+    this.selectedBranchId = null;
+    this.selectedSemesterId = null;
+    this.selectedSectionId = null;
+    this.branches = [];
+    this.semesters = [];
+    this.sections = [];
+    this.applyAcademicFilters();
+  }
+
+  private classMatchesAcademic(cls?: ClassRoom): boolean {
+    if (!cls) return false;
+
+    const deptValue = String(cls.department ?? '').trim().toLowerCase();
+    const branchValue = String(cls.branch ?? '').trim().toLowerCase();
+    const semesterValue = Number(cls.semester ?? 0);
+
+    const department = this.departments.find(d => d.id === this.selectedDepartmentId);
+    const branch = this.branches.find(b => b.id === this.selectedBranchId);
+    const semester = this.semesters.find(s => s.id === this.selectedSemesterId);
+    const section = this.sections.find(s => s.id === this.selectedSectionId);
+
+    const deptMatch = !department ||
+      deptValue === String(department.name ?? '').trim().toLowerCase() ||
+      deptValue === String((department as any).code ?? '').trim().toLowerCase();
+
+    const branchMatch = !branch ||
+      branchValue === String(branch.name ?? '').trim().toLowerCase() ||
+      branchValue === String((branch as any).code ?? '').trim().toLowerCase();
+
+    const semesterMatch = !semester ||
+      semesterValue === Number((semester as any).semesterNumber ?? (semester as any).number ?? 0) ||
+      String(cls.grade ?? '').trim().toLowerCase() === String(semester.name ?? '').trim().toLowerCase();
+
+    const sectionMatch = !section ||
+      String(cls.section ?? '').trim().toLowerCase() === String(section.name ?? '').trim().toLowerCase();
+
+    return deptMatch && branchMatch && semesterMatch && sectionMatch;
+  }
+
+  applyAcademicFilters(): void {
+    this.filteredStudents = (this.students ?? []).filter(s =>
+      this.classMatchesAcademic(s.classRoom)
+    );
+
+    // Keep the add/edit dropdown scoped to the selected academic hierarchy.
+    if (this.formMark && this.formMark.student?.id) {
+      const selected = this.students.find(s => s.id === this.formMark.student?.id);
+      if (selected && !this.classMatchesAcademic(selected.classRoom)) {
+        this.formMark.student = undefined;
+      }
+    }
+  }
+
+  get filteredMarks(): Mark[] {
+    return (this.marks ?? []).filter(m =>
+      this.classMatchesAcademic(m.student?.classRoom ?? m.classRoom)
+    );
+  }
+
+  get filteredClasses(): ClassRoom[] {
+    return (this.classes ?? []).filter(cls =>
+      this.classMatchesAcademic(cls)
+    );
+  }
 
   // =========================
   // EMPTY MARK
@@ -572,6 +701,15 @@ private classUrl =
 
         section:
           this.formMark.classRoom.section,
+
+        department:
+          this.formMark.classRoom.department,
+
+        branch:
+          this.formMark.classRoom.branch,
+
+        semester:
+          this.formMark.classRoom.semester,
 
         // NEW TEACHER RELATION
         teacher:

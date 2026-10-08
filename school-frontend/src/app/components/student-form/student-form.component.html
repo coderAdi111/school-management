@@ -213,58 +213,73 @@
 
 
         <!-- ================================
-             CLASS
+             ACADEMIC PLACEMENT
         ================================= -->
 
         <div class="form-group">
-
-          <label>
-            Class
-            <span>*</span>
-          </label>
-
+          <label>Department <span>*</span></label>
           <select
-            name="classRoom"
-            [ngModel]="student.classRoom?.id || ''"
-            (ngModelChange)="selectClass($event)"
-            [disabled]="loadingClasses"
+            name="department"
+            [(ngModel)]="selectedDepartment"
+            (ngModelChange)="onDepartmentChange()"
             required
           >
-
-            <option
-              value=""
-              disabled
-            >
-              {{
-                loadingClasses
-                  ? 'Loading classes...'
-                  : 'Select class'
-              }}
+            <option value="">Select department</option>
+            <option *ngFor="let department of departments" [value]="department">
+              {{ department }}
             </option>
-
-            <option
-              *ngFor="let classroom of classes"
-              [value]="classroom.id"
-            >
-
-              {{ classroom.name }}
-
-              <span
-                *ngIf="classroom.section"
-              >
-                - {{ classroom.section }}
-              </span>
-
-              <span
-                *ngIf="classroom.grade"
-              >
-                (Grade {{ classroom.grade }})
-              </span>
-
-            </option>
-
           </select>
+        </div>
 
+        <div class="form-group">
+          <label>Branch <span>*</span></label>
+          <select
+            name="branch"
+            [(ngModel)]="selectedBranch"
+            (ngModelChange)="onBranchChange()"
+            [disabled]="!selectedDepartment"
+            required
+          >
+            <option value="">Select branch</option>
+            <option *ngFor="let branch of branches" [value]="branch">
+              {{ branch }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Semester <span>*</span></label>
+          <select
+            name="semester"
+            [(ngModel)]="selectedSemester"
+            (ngModelChange)="onSemesterChange()"
+            [disabled]="!selectedBranch"
+            required
+          >
+            <option value="">Select semester</option>
+            <option *ngFor="let semester of semesters" [ngValue]="semester">
+              {{ semester }} Semester
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Section <span>*</span></label>
+          <select
+            name="section"
+            [(ngModel)]="selectedSection"
+            (ngModelChange)="onSectionChange()"
+            [disabled]="!selectedSemester"
+            required
+          >
+            <option value="">Select section</option>
+            <option *ngFor="let section of sections" [value]="section">
+              {{ section }}
+            </option>
+          </select>
+          <small class="text-muted" *ngIf="selectedSection && !student.classRoom?.id">
+            No class record exists for this Department / Branch / Semester / Section.
+          </small>
         </div>
 
 

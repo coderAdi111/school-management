@@ -22,13 +22,10 @@ public class StudentDaoImpl implements StudentDao {
         return em.createQuery(
                 "SELECT s FROM Student s " +
                 "JOIN FETCH s.classRoom c " +
-                "WHERE c.grade = :grade " +
-                "AND c.section IN :sections " +
-                "AND s.status = :status",
+                "WHERE s.status = :status " +
+                "ORDER BY c.department, c.branch, c.semester, c.section, s.firstName, s.lastName",
                 Student.class
         )
-        .setParameter("grade", "5th Semester")
-        .setParameter("sections", List.of("I1", "I2"))
         .setParameter("status", Student.Status.ACTIVE)
         .getResultList();
     }
@@ -82,16 +79,14 @@ public class StudentDaoImpl implements StudentDao {
                 "JOIN FETCH s.classRoom c " +
                 "WHERE (" +
                 "LOWER(s.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR " +
-                "LOWER(s.lastName) LIKE LOWER(CONCAT('%', :name, '%'))" +
+                "LOWER(s.lastName) LIKE LOWER(CONCAT('%', :name, '%')) OR " +
+                "LOWER(s.email) LIKE LOWER(CONCAT('%', :name, '%'))" +
                 ") " +
-                "AND c.grade = :grade " +
-                "AND c.section IN :sections " +
-                "AND s.status = :status",
+                "AND s.status = :status " +
+                "ORDER BY c.department, c.branch, c.semester, c.section, s.firstName, s.lastName",
                 Student.class
         )
         .setParameter("name", name)
-        .setParameter("grade", "5th Semester")
-        .setParameter("sections", List.of("I1", "I2"))
         .setParameter("status", Student.Status.ACTIVE)
         .getResultList();
     }
@@ -144,4 +139,33 @@ public class StudentDaoImpl implements StudentDao {
 
         return updated;
     }
+    @Override
+    @Transactional
+    public int deactivateStudents(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        int updated = em.createQuery(
+                "UPDATE Student s SET s.status = :status, s.classRoom = NULL WHERE s.id IN :ids"
+        )
+        .setParameter("status", Student.Status.INACTIVE)
+        .setParameter("ids", ids)
+        .executeUpdate();
+        em.clear();
+        return updated;
+    }
+
+    @Override
+    @Transactional
+    public int moveStudentsToClass(List<Long> ids, Long classId) {
+        if (ids == null || ids.isEmpty() || classId == null) return 0;
+        int updated = em.createQuery(
+                "UPDATE Student s SET s.classRoom = :classRoom WHERE s.id IN :ids AND s.status = :status"
+        )
+        .setParameter("classRoom", em.getReference(com.school.management.entity.ClassRoom.class, classId))
+        .setParameter("ids", ids)
+        .setParameter("status", Student.Status.ACTIVE)
+        .executeUpdate();
+        em.clear();
+        return updated;
+    }
+
 }

@@ -10,6 +10,9 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TimetableEntry {
+
+    @Column(length = 120)
+    private String department = "Computer Science And Engineering";
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,6 +27,9 @@ public class TimetableEntry {
     @NotBlank
     @Column(nullable = false, length = 10)
     private String section;
+
+    @Column(length = 50)
+    private String sectionGroup;
 
     @NotBlank
     @Column(nullable = false, length = 12)

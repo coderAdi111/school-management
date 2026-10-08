@@ -20,7 +20,7 @@
 
       <p class="eyebrow">
 
-        ENGINEERING COLLEGE AJMER · INFORMATION TECHNOLOGY
+        ENGINEERING COLLEGE AJMER · {{ selectedBranch || 'ACADEMIC' }}
 
       </p>
 
@@ -30,7 +30,7 @@
 
 
 
-      <p>5th Semester · Session 2026–27</p>
+      <p>{{ selectedSemester ? (selectedSemester + (selectedSemester === 1 ? 'st' : selectedSemester === 2 ? 'nd' : selectedSemester === 3 ? 'rd' : 'th')) : '' }} Semester · Session 2026–27</p>
 
     </div>
 
@@ -38,42 +38,23 @@
 
     <!-- SECTION SWITCH -->
 
-    <div class="section-switch">
-
-
-
-      <button
-
-        type="button"
-
-        [class.active]="section === 'I1'"
-
-        (click)="section = 'I1'; changeSection()"
-
-      >
-
-        Section I1
-
-      </button>
-
-
-
-      <button
-
-        type="button"
-
-        [class.active]="section === 'I2'"
-
-        (click)="section = 'I2'; changeSection()"
-
-      >
-
-        Section I2
-
-      </button>
-
-
-
+    <div class="section-switch academic-selectors">
+      <select [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentChange()" aria-label="Department">
+        <option value="">Department</option>
+        <option *ngFor="let item of availableDepartments" [value]="item">{{ item }}</option>
+      </select>
+      <select [(ngModel)]="selectedBranch" (ngModelChange)="onBranchChange()" aria-label="Branch">
+        <option value="">Branch</option>
+        <option *ngFor="let item of availableBranches" [value]="item">{{ item }}</option>
+      </select>
+      <select [(ngModel)]="selectedSemester" (ngModelChange)="onSemesterChange()" aria-label="Semester">
+        <option [ngValue]="0">Semester</option>
+        <option *ngFor="let item of availableSemesters" [ngValue]="item">{{ item }}{{ item === 1 ? 'st' : item === 2 ? 'nd' : item === 3 ? 'rd' : 'th' }} Semester</option>
+      </select>
+      <select [(ngModel)]="section" (ngModelChange)="onSectionChange()" aria-label="Section">
+        <option value="">Section</option>
+        <option *ngFor="let item of availableSections" [value]="item">Section {{ item }}</option>
+      </select>
     </div>
 
 
@@ -579,11 +560,8 @@
 
 
       <p class="muted">
-
-        Selected section:
-
-        <strong>{{ section }}</strong>
-
+        Selected section: <strong>{{ section }}</strong>
+        <span *ngIf="selectedTimetableGroup"> · Shared timetable: <strong>{{ sectionGroupLabel() }}</strong></span>
       </p>
 
 
@@ -598,6 +576,25 @@
 
       >
 
+
+
+        <!-- TIMETABLE TARGET -->
+        <label>
+          Timetable applies to
+          <select
+            name="timetableGroup"
+            [(ngModel)]="selectedTimetableGroup"
+            [disabled]="!!editingId"
+          >
+            <option value="">Only Section {{ section }}</option>
+            <option *ngFor="let group of availableSectionGroups" [value]="group.name">
+              {{ group.name }} — {{ group.sections.join(', ') }}
+            </option>
+          </select>
+          <small class="muted" *ngIf="availableSectionGroups.length">
+            Example: CA will save the same class to CA1 + CA2; CB will save it to CB1 + CB2.
+          </small>
+        </label>
 
 
         <!-- DAY -->
@@ -938,7 +935,7 @@
 
         <div>
 
-          <h2>Section {{ section }} weekly schedule</h2>
+          <h2>{{ selectedTimetableGroup ? sectionGroupLabel() : ('Section ' + section) }} weekly schedule</h2>
 
           <p class="muted">Weekly timetable in the same day × time-slot format as the official college timetable.</p>
 
@@ -960,7 +957,7 @@
 
           <button class="delete-all" type="button" (click)="deleteAllTimetable()" [disabled]="deletingAll || loading || importing || saving">
 
-            {{ deletingAll ? 'Deleting…' : '🗑 Delete All Timetable' }}
+            {{ deletingAll ? 'Deleting…' : '🗑 Delete Selected Timetable' }}
 
           </button>
 
@@ -1000,7 +997,7 @@
             type="button"
             (click)="downloadTeacherTimetablePdf()"
             [disabled]="teacherLoading || deletingAll || importing || saving"
-            title="Download selected teacher's I1 + I2 timetable"
+            title="Download selected teacher's complete weekly timetable"
           >
             ⬇ Download Teacher TT
           </button>
@@ -1029,7 +1026,7 @@
 
           </label>
 
-          <p class="muted" *ngIf="selectedTeacherName">Showing classes for <strong>{{ selectedTeacherName }}</strong> across I1 and I2.</p>
+          <p class="muted" *ngIf="selectedTeacherName">Showing complete weekly schedule for <strong>{{ selectedTeacherName }}</strong> across all departments, branches, semesters and sections.</p>
 
         </div>
 

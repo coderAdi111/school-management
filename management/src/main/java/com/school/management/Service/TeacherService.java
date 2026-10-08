@@ -114,6 +114,12 @@ public class TeacherService {
                 updated.getSubject()
         );
 
+        // Keep all department/branch/semester/section/subject assignments
+        // when a teacher is updated/imported again.
+        existing.setTeachingAssignments(
+                updated.getTeachingAssignments()
+        );
+
         existing.setQualification(
                 updated.getQualification()
         );

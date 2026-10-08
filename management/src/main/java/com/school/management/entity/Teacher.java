@@ -40,6 +40,13 @@ public class Teacher {
     @Column(name = "faculty_code", length = 30)
     private String facultyCode;
 
+    /** Multiple academic teaching assignments stored as JSON.
+     * Each assignment can target a different department/branch/semester/section/subject.
+     */
+    @Lob
+    @Column(name = "teaching_assignments", columnDefinition = "TEXT")
+    private String teachingAssignments;
+
     @Column(length = 100)
     private String qualification;
 

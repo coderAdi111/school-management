@@ -130,4 +130,19 @@ private baseUrl =
 
   }
 
+
+  bulkDelete(ids: number[]): Observable<{ deleted: number }> {
+    return this.http.post<{ deleted: number }>(
+      `${this.baseUrl}/bulk-delete`,
+      ids
+    );
+  }
+
+  bulkMove(ids: number[], classId: number): Observable<{ moved: number }> {
+    return this.http.post<{ moved: number }>(
+      `${this.baseUrl}/bulk-move/${classId}`,
+      ids
+    );
+  }
+
 }

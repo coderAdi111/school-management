@@ -17,6 +17,8 @@ public class Student {
 @GeneratedValue(strategy = GenerationType.IDENTITY)
 
 private Long id;
+@Column(name = "roll_no", length = 30)
+private String rollNo;
 @NotBlank(message = "First name is required")
 @Column(name = "first_name", nullable = false, length = 100)
 
