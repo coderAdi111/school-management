@@ -1,6 +1,12 @@
+
+
 /* =========================================================
 
-   TIMETABLE — PREMIUM iOS / APPLE UI
+   TIMETABLE — APPLE / iOS 18 INSPIRED UI
+
+   Drop-in replacement for timetable.component.css
+
+   Keeps existing Angular/HTML behavior unchanged.
 
    ========================================================= */
 
@@ -12,33 +18,25 @@
 
   min-height: 100%;
 
+  color: #1d1d1f;
 
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
 
-  color: #172033;
+    "SF Pro Text", Inter, "Segoe UI", sans-serif;
 
+  -webkit-font-smoothing: antialiased;
 
-
-  font-family:
-
-    -apple-system,
-
-    BlinkMacSystemFont,
-
-    "SF Pro Display",
-
-    "SF Pro Text",
-
-    Inter,
-
-    "Segoe UI",
-
-    sans-serif;
+  text-rendering: optimizeLegibility;
 
 }
 
 
 
-* {
+*,
+
+*::before,
+
+*::after {
 
   box-sizing: border-box;
 
@@ -46,193 +44,175 @@
 
 
 
+button,
+
+input,
+
+select,
+
+textarea {
+
+  font: inherit;
+
+}
 
 
-/* =========================================================
 
-   PAGE
+button,
 
-   ========================================================= */
+select,
+
+label {
+
+  -webkit-tap-highlight-color: transparent;
+
+}
+
+
+
+button {
+
+  border: 0;
+
+}
 
 
 
 .tt-page {
 
+  --blue: #007aff;
+
+  --blue-2: #0a84ff;
+
+  --indigo: #5856d6;
+
+  --green: #34c759;
+
+  --red: #ff3b30;
+
+  --orange: #ff9500;
+
+  --text: #1d1d1f;
+
+  --muted: #86868b;
+
+  --line: rgba(60, 60, 67, .16);
+
+  --soft-line: rgba(60, 60, 67, .09);
+
+  --surface: rgba(255, 255, 255, .82);
+
+  --surface-solid: #fff;
+
+  --soft: #f5f5f7;
+
+  --soft-blue: #eef5ff;
+
+  --shadow: 0 20px 60px rgba(0, 0, 0, .07), 0 2px 10px rgba(0, 0, 0, .035);
+
+
+
   position: relative;
-
-
 
   width: 100%;
 
-  max-width: 1550px;
+  max-width: 1660px;
 
+  min-height: 100%;
 
+  margin: 0 auto;
 
-  margin: auto;
-
-
-
-  padding: 30px 38px 45px;
-
-
+  padding: 28px clamp(18px, 3vw, 42px) 54px;
 
   overflow: hidden;
 
-}
-
-
-
-
-
-/* Ambient Apple-style background */
-
-
-
-.tt-page::before {
-
-  content: "";
-
-
-
-  position: fixed;
-
-
-
-  width: 500px;
-
-  height: 500px;
-
-
-
-  top: 30px;
-
-  right: -220px;
-
-
-
-  border-radius: 50%;
-
-
-
   background:
 
-    radial-gradient(
+    radial-gradient(circle at 85% 3%, rgba(0, 122, 255, .075), transparent 27%),
 
-      circle,
+    radial-gradient(circle at 4% 92%, rgba(88, 86, 214, .055), transparent 25%),
 
-      rgba(99, 102, 241, .12),
-
-      transparent 68%
-
-    );
-
-
-
-  filter: blur(15px);
-
-
-
-  pointer-events: none;
-
-
-
-  animation: ambientFloat 11s ease-in-out infinite alternate;
+    #f5f5f7;
 
 }
 
 
 
+/* Ambient glass light */
 
+.tt-page::before,
 
 .tt-page::after {
 
   content: "";
 
-
-
   position: fixed;
 
-
-
-  width: 390px;
-
-  height: 390px;
-
-
-
-  left: -190px;
-
-  bottom: -170px;
-
-
-
-  border-radius: 50%;
-
-
-
-  background:
-
-    radial-gradient(
-
-      circle,
-
-      rgba(37, 99, 235, .08),
-
-      transparent 68%
-
-    );
-
-
+  z-index: 0;
 
   pointer-events: none;
 
+  border-radius: 50%;
+
+  filter: blur(4px);
+
+}
 
 
-  animation: ambientFloat 13s ease-in-out infinite alternate-reverse;
+
+.tt-page::before {
+
+  width: 460px;
+
+  height: 460px;
+
+  top: 90px;
+
+  right: -250px;
+
+  background: radial-gradient(circle, rgba(0, 122, 255, .12), transparent 68%);
 
 }
 
 
 
+.tt-page::after {
 
+  width: 360px;
 
-@keyframes ambientFloat {
+  height: 360px;
 
+  bottom: -190px;
 
+  left: -180px;
 
-  from {
-
-    transform:
-
-      translate3d(0, 0, 0)
-
-      scale(1);
-
-  }
-
-
-
-  to {
-
-    transform:
-
-      translate3d(0, -22px, 0)
-
-      scale(1.08);
-
-  }
-
-
+  background: radial-gradient(circle, rgba(88, 86, 214, .09), transparent 68%);
 
 }
 
 
+
+.tt-heading,
+
+.bulk-import,
+
+.tt-layout,
+
+.error,
+
+.import-message {
+
+  position: relative;
+
+  z-index: 1;
+
+}
 
 
 
 /* =========================================================
 
-   HEADER
+   PAGE HEADER
 
    ========================================================= */
 
@@ -240,37 +220,19 @@
 
 .tt-heading {
 
-  position: relative;
+  display: grid;
 
-  z-index: 2;
-
-
-
-  display: flex;
-
-
-
-  justify-content: space-between;
+  grid-template-columns: minmax(260px, 1fr) minmax(650px, 1.65fr);
 
   align-items: center;
 
+  gap: 28px;
 
+  margin-bottom: 22px;
 
-  gap: 25px;
-
-
-
-  margin-bottom: 24px;
-
-
-
-  animation:
-
-    headerEnter .5s cubic-bezier(.2,.8,.2,1);
+  animation: pageIn .45s ease both;
 
 }
-
-
 
 
 
@@ -278,69 +240,45 @@
 
   margin: 0 0 8px;
 
+  color: #8e8e93;
 
+  font-size: 11px;
 
-  color: #7b8494;
+  font-weight: 700;
 
+  letter-spacing: 1.15px;
 
-
-  font-size: 10px;
-
-
-
-  font-weight: 800;
-
-
-
-  letter-spacing: 1.25px;
+  text-transform: uppercase;
 
 }
-
-
 
 
 
 .tt-heading h1 {
 
-  margin: 0 0 5px;
+  margin: 0;
 
+  color: var(--text);
 
+  font-size: clamp(30px, 3vw, 42px);
 
-  color: #111827;
-
-
-
-  font-size: 31px;
-
-
+  line-height: 1.03;
 
   font-weight: 800;
 
-
-
-  letter-spacing: -.9px;
+  letter-spacing: -.045em;
 
 }
 
 
 
+.tt-heading p:last-child {
 
+  margin: 9px 0 0;
 
-.tt-heading p:last-child,
+  color: var(--muted);
 
-.muted {
-
-  margin: 0;
-
-
-
-  color: #8a94a6;
-
-
-
-  font-size: 13px;
-
-
+  font-size: 14px;
 
   font-weight: 500;
 
@@ -348,1255 +286,155 @@
 
 
 
-
-
-@keyframes headerEnter {
-
-
-
-  from {
-
-    opacity: 0;
-
-
-
-    transform:
-
-      translateY(-9px);
-
-  }
-
-
-
-  to {
-
-    opacity: 1;
-
-
-
-    transform:
-
-      translateY(0);
-
-  }
-
-
-
-}
-
-
-
-
-
 /* =========================================================
 
-   SECTION SWITCH
+   ACADEMIC SELECTOR / SECTION CONTROL
 
    ========================================================= */
 
 
 
-.section-switch {
-
-  display: flex;
-
-
-
-  gap: 4px;
-
-
-
-  padding: 5px;
-
-
-
-  border: 1px solid rgba(15,23,42,.06);
-
-
-
-  border-radius: 15px;
-
-
-
-  background: rgba(238,242,248,.78);
-
-
-
-  backdrop-filter: blur(15px);
-
-  -webkit-backdrop-filter: blur(15px);
-
-
-
-  box-shadow:
-
-    inset 0 1px 0 rgba(255,255,255,.85);
-
-}
-
-
-
-
-
-.section-switch button {
-
-  position: relative;
-
-
-
-  min-width: 100px;
-
-
-
-  border: 0;
-
-
-
-  padding: 10px 18px;
-
-
-
-  border-radius: 11px;
-
-
-
-  background: transparent;
-
-
-
-  color: #667085;
-
-
-
-  font-size: 12px;
-
-
-
-  font-weight: 750;
-
-
-
-  cursor: pointer;
-
-
-
-  transition:
-
-    color .2s ease,
-
-    background .2s ease,
-
-    transform .2s ease,
-
-    box-shadow .2s ease;
-
-}
-
-
-
-
-
-.section-switch button:hover {
-
-  color: #172033;
-
-
-
-  background: rgba(255,255,255,.7);
-
-
-
-  transform: translateY(-1px);
-
-}
-
-
-
-
-
-.section-switch button.active {
-
-  color: #111827;
-
-
-
-  background: rgba(255,255,255,.98);
-
-
-
-  box-shadow:
-
-    0 6px 15px rgba(15,23,42,.08),
-
-    0 1px 3px rgba(15,23,42,.05);
-
-}
-
-
-
-
-
-.section-switch button.active::after {
-
-  content: "";
-
-
-
-  position: absolute;
-
-
-
-  bottom: 3px;
-
-  left: 50%;
-
-
-
-  width: 18px;
-
-  height: 3px;
-
-
-
-  border-radius: 999px;
-
-
-
-  background: #111827;
-
-
-
-  transform: translateX(-50%);
-
-
-
-  animation: sectionIndicator .25s ease;
-
-}
-
-
-
-
-
-@keyframes sectionIndicator {
-
-
-
-  from {
-
-    width: 5px;
-
-    opacity: 0;
-
-  }
-
-
-
-  to {
-
-    width: 18px;
-
-    opacity: 1;
-
-  }
-
-
-
-}
-
-
-
-
-
-/* =========================================================
-
-   PANELS
-
-   ========================================================= */
-
-
-
-.panel,
-
-.day-card {
-
-  border: 1px solid rgba(255,255,255,.82);
-
-
-
-  border-radius: 21px;
-
-
-
-  background:
-
-    rgba(255,255,255,.78);
-
-
-
-  backdrop-filter: blur(22px);
-
-  -webkit-backdrop-filter: blur(22px);
-
-
-
-  box-shadow:
-
-    0 18px 50px rgba(15,23,42,.065),
-
-    0 3px 10px rgba(15,23,42,.035);
-
-}
-
-
-
-
-
-.panel {
-
-  animation:
-
-    cardEnter .5s cubic-bezier(.2,.8,.2,1);
-
-}
-
-
-
-
-
-@keyframes cardEnter {
-
-
-
-  from {
-
-    opacity: 0;
-
-
-
-    transform:
-
-      translateY(12px)
-
-      scale(.985);
-
-  }
-
-
-
-  to {
-
-    opacity: 1;
-
-
-
-    transform:
-
-      translateY(0)
-
-      scale(1);
-
-  }
-
-
-
-}
-
-
-
-
-
-/* =========================================================
-
-   BULK IMPORT
-
-   ========================================================= */
-
-
-
-.bulk-import {
-
-  position: relative;
-
-  z-index: 2;
-
-
-
-  padding: 22px 23px;
-
-
-
-  margin-bottom: 20px;
-
-}
-
-
-
-
-
-.bulk-head {
-
-  display: flex;
-
-
-
-  justify-content: space-between;
-
-  align-items: center;
-
-
-
-  gap: 18px;
-
-}
-
-
-
-
-
-.bulk-head h2 {
-
-  margin: 0 0 6px;
-
-
-
-  color: #172033;
-
-
-
-  font-size: 17px;
-
-
-
-  font-weight: 800;
-
-
-
-  letter-spacing: -.25px;
-
-}
-
-
-
-
-
-.bulk-head p {
-
-  margin: 0;
-
-
-
-  max-width: 700px;
-
-
-
-  color: #8a94a6;
-
-
-
-  font-size: 12px;
-
-
-
-  line-height: 1.55;
-
-}
-
-
-
-
-
-/* =========================================================
-
-   BUTTONS
-
-   ========================================================= */
-
-
-
-.primary,
-
-.secondary,
-
-.delete-all {
-
-  min-height: 41px;
-
-
-
-  padding: 9px 15px;
-
-
-
-  border-radius: 11px;
-
-
-
-  font-size: 12px;
-
-
-
-  font-weight: 750;
-
-
-
-  cursor: pointer;
-
-
-
-  transition:
-
-    transform .2s ease,
-
-    box-shadow .2s ease,
-
-    background .2s ease;
-
-}
-
-
-
-
-
-.primary {
-
-  border: 0;
-
-
-
-  background:
-
-    linear-gradient(
-
-      135deg,
-
-      #111827,
-
-      #374151
-
-    );
-
-
-
-  color: #fff;
-
-
-
-  box-shadow:
-
-    0 8px 20px rgba(15,23,42,.14);
-
-}
-
-
-
-
-
-.primary:hover {
-
-  transform: translateY(-2px);
-
-
-
-  box-shadow:
-
-    0 12px 25px rgba(15,23,42,.2);
-
-}
-
-
-
-
-
-.secondary {
-
-  border: 1px solid #dfe4eb;
-
-
-
-  background: #f5f7fa;
-
-
-
-  color: #4b5563;
-
-}
-
-
-
-
-
-.secondary:hover {
-
-  background: #111827;
-
-
-
-  border-color: #111827;
-
-
-
-  color: #fff;
-
-
-
-  transform: translateY(-2px);
-
-}
-
-
-
-
-
-.primary:active,
-
-.secondary:active,
-
-.delete-all:active {
-
-  transform: scale(.96);
-
-}
-
-
-
-
-
-.primary:disabled,
-
-.secondary:disabled,
-
-.delete-all:disabled {
-
-  opacity: .55;
-
-
-
-  cursor: not-allowed;
-
-
-
-  transform: none;
-
-}
-
-
-
-
-
-/* =========================================================
-
-   UPLOAD
-
-   ========================================================= */
-
-
-
-.upload-row {
-
-  display: flex;
-
-
-
-  align-items: center;
-
-
-
-  gap: 9px;
-
-
-
-  margin-top: 17px;
-
-
-
-  flex-wrap: wrap;
-
-}
-
-
-
-
-
-.file-picker {
-
-  position: relative;
-
-
-
-  display: inline-flex;
-
-
-
-  align-items: center;
-
-
-
-  min-height: 41px;
-
-
-
-  padding: 9px 14px;
-
-
-
-  border: 1px solid #dce3ed;
-
-
-
-  border-radius: 11px;
-
-
-
-  background: #f5f7fa;
-
-
-
-  color: #4b63b9;
-
-
-
-  font-size: 11px;
-
-
-
-  font-weight: 750;
-
-
-
-  cursor: pointer;
-
-
-
-  transition:
-
-    transform .2s ease,
-
-    background .2s ease,
-
-    box-shadow .2s ease;
-
-}
-
-
-
-
-
-.file-picker:hover {
-
-  background: #eef2ff;
-
-
-
-  border-color: #ccd6ff;
-
-
-
-  transform: translateY(-1px);
-
-
-
-  box-shadow:
-
-    0 6px 14px rgba(79,99,209,.08);
-
-}
-
-
-
-
-
-.file-picker input {
-
-  max-width: 210px;
-
-
-
-  margin-left: 9px;
-
-
-
-  font-size: 11px;
-
-}
-
-
-
-
-
-/* =========================================================
-
-   IMPORT STATUS
-
-   ========================================================= */
-
-
-
-.import-status {
-
-  margin-top: 16px;
-
-
-
-  padding: 17px;
-
-
-
-  border: 1px solid #dce5f1;
-
-
-
-  border-radius: 16px;
-
-
-
-  background:
-
-    linear-gradient(
-
-      145deg,
-
-      #f8fbff,
-
-      #f4f7fc
-
-    );
-
-
-
-  animation: fadeSlide .35s ease;
-
-}
-
-
-
-
-
-.import-status-head {
-
-  display: flex;
-
-
-
-  justify-content: space-between;
-
-
-
-  gap: 16px;
-
-
-
-  margin-bottom: 10px;
-
-
-
-  color: #334155;
-
-
-
-  font-size: 12px;
-
-}
-
-
-
-
-
-.import-progress-track {
-
-  width: 100%;
-
-
-
-  height: 9px;
-
-
-
-  overflow: hidden;
-
-
-
-  border-radius: 999px;
-
-
-
-  background: #e5eaf2;
-
-}
-
-
-
-
-
-.import-progress-bar {
-
-  position: relative;
-
-
-
-  height: 100%;
-
-
-
-  border-radius: inherit;
-
-
-
-  background:
-
-    linear-gradient(
-
-      90deg,
-
-      #4f67d9,
-
-      #7b8ff3
-
-    );
-
-
-
-  transition:
-
-    width .25s ease;
-
-}
-
-
-
-
-
-.import-progress-bar::after {
-
-  content: "";
-
-
-
-  position: absolute;
-
-
-
-  inset: 0;
-
-
-
-  background:
-
-    linear-gradient(
-
-      90deg,
-
-      transparent,
-
-      rgba(255,255,255,.4),
-
-      transparent
-
-    );
-
-
-
-  animation: progressShine 1.4s linear infinite;
-
-}
-
-
-
-
-
-@keyframes progressShine {
-
-
-
-  from {
-
-    transform: translateX(-100%);
-
-  }
-
-
-
-  to {
-
-    transform: translateX(100%);
-
-  }
-
-
-
-}
-
-
-
-
-
-.import-status-message {
-
-  margin: 10px 0 12px;
-
-
-
-  color: #526071;
-
-
-
-  font-size: 12px;
-
-
-
-  font-weight: 650;
-
-}
-
-
-
-
-
-.import-diagnostics {
+.section-switch.academic-selectors {
 
   display: grid;
 
+  grid-template-columns: minmax(180px, 1.7fr) minmax(100px, .7fr)
 
+    minmax(130px, .9fr) minmax(130px, .9fr);
 
-  gap: 6px;
+  align-items: center;
 
+  gap: 9px;
 
+  padding: 9px;
 
-  font-size: 11px;
+  border: 1px solid rgba(255,255,255,.92);
 
-}
+  border-radius: 22px;
 
-
-
-
-
-.import-diagnostics > div {
-
-  display: flex;
-
-
-
-  justify-content: space-between;
-
-
-
-  gap: 12px;
-
-
-
-  padding-top: 7px;
-
-
-
-  border-top: 1px solid #e7edf5;
-
-}
-
-
-
-
-
-.import-diagnostics span {
-
-  color: #8a94a6;
-
-}
-
-
-
-
-
-.import-diagnostics strong {
-
-  color: #39465a;
-
-
-
-  text-align: right;
-
-}
-
-
-
-
-
-/* =========================================================
-
-   OCR RESULT
-
-   ========================================================= */
-
-
-
-.ocr-result {
-
-  margin-top: 17px;
-
-
-
-  padding: 17px;
-
-
-
-  border: 1px solid #dfe5ed;
-
-
-
-  border-radius: 16px;
-
-
-
-  background: #f9fafc;
-
-
-
-  animation: fadeSlide .35s ease;
-
-}
-
-
-
-
-
-.ocr-result h3 {
-
-  margin: 0 0 10px;
-
-
-
-  color: #334155;
-
-
-
-  font-size: 14px;
-
-
-
-  font-weight: 750;
-
-}
-
-
-
-
-
-.ocr-result textarea {
-
-  width: 100%;
-
-
-
-  min-height: 170px;
-
-
-
-  padding: 12px;
-
-
-
-  border: 1px solid #dce3eb;
-
-
-
-  border-radius: 11px;
-
-
-
-  outline: none;
-
-
-
-  resize: vertical;
-
-
-
-  background: #fff;
-
-
-
-  color: #475569;
-
-
-
-  font-family:
-
-    ui-monospace,
-
-    SFMono-Regular,
-
-    Menlo,
-
-    monospace;
-
-
-
-  font-size: 12px;
-
-
-
-  line-height: 1.5;
-
-
-
-  transition:
-
-    border-color .2s ease,
-
-    box-shadow .2s ease;
-
-}
-
-
-
-
-
-.ocr-result textarea:focus {
-
-  border-color: #8199ff;
-
-
+  background: rgba(255,255,255,.72);
 
   box-shadow:
 
-    0 0 0 4px rgba(79,110,247,.08);
+    0 14px 45px rgba(0,0,0,.055),
+
+    inset 0 1px 0 rgba(255,255,255,.95);
+
+  backdrop-filter: blur(24px) saturate(150%);
+
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
 
 }
 
 
 
+.academic-selectors > select,
 
+.teacher-filter select,
 
-.ocr-result .secondary {
+.editor select,
 
-  margin-top: 9px;
+.editor input[type="text"],
+
+.editor input[type="time"],
+
+.editor textarea {
+
+  width: 100%;
+
+  min-height: 46px;
+
+  padding: 0 14px;
+
+  border: 1px solid rgba(60,60,67,.14);
+
+  border-radius: 13px;
+
+  outline: none;
+
+  background: rgba(255,255,255,.88);
+
+  color: #1d1d1f;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.025);
+
+  transition: border-color .18s ease, box-shadow .18s ease, *background* .18s ease;
 
 }
 
 
 
+.academic-selectors > select:hover,
+
+.teacher-filter select:hover,
+
+.editor select:hover,
+
+.editor input:hover,
+
+.editor textarea:hover {
+
+  border-color: rgba(0,122,255,.28);
+
+  background: #fff;
+
+}
 
 
-/* =========================================================
 
-   IMPORT MESSAGE / ERROR
+.academic-selectors > select:focus,
 
-   ========================================================= */
+.teacher-filter select:focus,
+
+.editor select:focus,
+
+.editor input:focus,
+
+.editor textarea:focus {
+
+  border-color: rgba(0,122,255,.65);
+
+  background: #fff;
+
+  box-shadow: 0 0 0 4px rgba(0,122,255,.11);
+
+}
 
 
 
-.import-message {
+.section-picker {
 
-  margin: 13px 0 0;
+  grid-column: 1 / -1;
+
+  display: flex;
+
+  align-items: center;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  min-height: 48px;
+
+  padding: 7px 8px;
+
+  border-top: 1px solid rgba(60,60,67,.08);
+
+}
 
 
 
-  color: #047857;
+.section-picker-label {
 
+  margin-right: 3px;
 
+  color: #6e6e73;
 
   font-size: 12px;
-
-
 
   font-weight: 700;
 
@@ -1604,65 +442,675 @@
 
 
 
+.section-chip {
 
+  display: inline-flex;
 
-.error {
+  align-items: center;
 
-  margin: 12px 0 0;
+  gap: 7px;
 
+  min-height: 34px;
 
+  padding: 6px 11px;
 
-  color: #b91c1c;
+  border: 1px solid rgba(60,60,67,.12);
 
+  border-radius: 999px;
 
+  background: rgba(245,245,247,.82);
+
+  color: #515154;
 
   font-size: 12px;
 
+  font-weight: 700;
 
+  cursor: pointer;
 
-  font-weight: 650;
+  user-select: none;
 
-
-
-  animation: fadeSlide .3s ease;
+  transition: all .18s ease;
 
 }
 
 
+
+.section-chip input {
+
+  width: 14px;
+
+  height: 14px;
+
+  margin: 0;
+
+  accent-color: var(--blue);
+
+}
+
+
+
+.section-chip:hover {
+
+  border-color: rgba(0,122,255,.28);
+
+  background: #eef5ff;
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.section-chip.selected {
+
+  border-color: rgba(0,122,255,.18);
+
+  background: #e8f2ff;
+
+  color: #006ee6;
+
+  box-shadow: 0 3px 10px rgba(0,122,255,.09);
+
+}
+
+
+
+.generate-section-btn {
+
+  min-height: 36px;
+
+  margin-left: auto;
+
+  padding: 0 15px;
+
+  border-radius: 999px;
+
+  background: var(--blue);
+
+  color: #fff;
+
+  font-size: 12px;
+
+  font-weight: 750;
+
+  box-shadow: 0 7px 18px rgba(0,122,255,.22);
+
+  cursor: pointer;
+
+  transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+
+}
+
+
+
+.generate-section-btn:hover:not(:disabled) {
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 10px 23px rgba(0,122,255,.28);
+
+}
+
+
+
+.generate-section-btn:active:not(:disabled) {
+
+  transform: scale(.97);
+
+}
+
+
+
+.generate-section-btn:disabled {
+
+  opacity: .5;
+
+  cursor: not-allowed;
+
+}
 
 
 
 /* =========================================================
 
-   PREVIEW
+   COMMON GLASS PANELS
 
    ========================================================= */
 
 
 
-.preview-wrap {
+.panel,
 
-  margin-top: 19px;
+.schedule,
+
+.day-card {
+
+  border: 1px solid rgba(255,255,255,.9);
+
+  border-radius: 24px;
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow);
+
+  backdrop-filter: blur(25px) saturate(145%);
+
+  -webkit-backdrop-filter: blur(25px) saturate(145%);
 
 }
 
 
 
+.panel {
 
+  animation: cardIn .42s ease both;
+
+}
+
+
+
+.bulk-import {
+
+  padding: 24px;
+
+  margin-bottom: 20px;
+
+}
+
+
+
+.bulk-head {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+}
+
+
+
+.bulk-head h2,
+
+.editor h2,
+
+.schedule-title h2 {
+
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: 18px;
+
+  font-weight: 800;
+
+  letter-spacing: -.025em;
+
+}
+
+
+
+.bulk-head p {
+
+  max-width: 760px;
+
+  margin: 6px 0 0;
+
+  color: var(--muted);
+
+  font-size: 12px;
+
+  line-height: 1.55;
+
+}
+
+
+
+.muted {
+
+  color: var(--muted);
+
+}
+
+
+
+.upload-row {
+
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 12px;
+
+  margin-top: 18px;
+
+}
+
+
+
+.file-picker {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 12px;
+
+  min-height: 52px;
+
+  padding: 9px 12px 9px 15px;
+
+  border: 1px dashed rgba(0,122,255,.26);
+
+  border-radius: 15px;
+
+  background: rgba(245,249,255,.82);
+
+  color: #1671d9;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: .18s ease;
+
+}
+
+
+
+.file-picker:hover {
+
+  border-color: rgba(0,122,255,.5);
+
+  background: #eef6ff;
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.file-picker input {
+
+  max-width: 220px;
+
+  min-width: 0;
+
+  font-size: 11px;
+
+  color: #6e6e73;
+
+}
+
+
+
+.secondary,
+
+.primary,
+
+.delete-all,
+
+.download-weekly,
+
+.download-pdf-btn,
+
+.teacher-pdf {
+
+  min-height: 42px;
+
+  padding: 0 15px;
+
+  border-radius: 13px;
+
+  font-size: 12px;
+
+  font-weight: 750;
+
+  cursor: pointer;
+
+  transition: transform .18s ease, box-shadow .18s ease, *background* .18s ease, border-color .18s ease;
+
+}
+
+
+
+.primary {
+
+  background: #1d1d1f;
+
+  color: #fff;
+
+  box-shadow: 0 8px 20px rgba(0,0,0,.15);
+
+}
+
+
+
+.primary:hover:not(:disabled) {
+
+  background: #000;
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 12px 25px rgba(0,0,0,.2);
+
+}
+
+
+
+.secondary,
+
+.download-pdf-btn {
+
+  border: 1px solid rgba(60,60,67,.13);
+
+  background: rgba(255,255,255,.84);
+
+  color: #3a3a3c;
+
+  box-shadow: 0 3px 10px rgba(0,0,0,.035);
+
+}
+
+
+
+.secondary:hover:not(:disabled),
+
+.download-pdf-btn:hover:not(:disabled) {
+
+  border-color: rgba(0,122,255,.22);
+
+  background: #f2f8ff;
+
+  color: #006ee6;
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.download-weekly {
+
+  border: 1px solid rgba(0,122,255,.15);
+
+  background: #eaf3ff;
+
+  color: #006ee6;
+
+}
+
+
+
+.download-weekly:hover:not(:disabled) {
+
+  background: #dcecff;
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 8px 18px rgba(0,122,255,.12);
+
+}
+
+
+
+.delete-all {
+
+  border: 1px solid rgba(255,59,48,.18);
+
+  background: #fff1f0;
+
+  color: #d92d20;
+
+}
+
+
+
+.delete-all:hover:not(:disabled) {
+
+  background: #ffe4e1;
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.teacher-pdf {
+
+  border: 1px solid rgba(52,199,89,.2);
+
+  background: #edfff2;
+
+  color: #198f3b;
+
+}
+
+
+
+.teacher-pdf:hover:not(:disabled) {
+
+  background: #ddfbe6;
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.primary:active,
+
+.secondary:active,
+
+.delete-all:active,
+
+.download-weekly:active,
+
+.download-pdf-btn:active,
+
+.teacher-pdf:active {
+
+  transform: scale(.97);
+
+}
+
+
+
+.primary:disabled,
+
+.secondary:disabled,
+
+.delete-all:disabled,
+
+.download-weekly:disabled,
+
+.download-pdf-btn:disabled,
+
+.teacher-pdf:disabled {
+
+  opacity: .5;
+
+  cursor: not-allowed;
+
+  transform: none;
+
+}
+
+
+
+/* =========================================================
+
+   IMPORT STATUS / OCR / PREVIEW
+
+   ========================================================= */
+
+
+
+.import-status,
+
+.ocr-result {
+
+  margin-top: 16px;
+
+  padding: 17px;
+
+  border: 1px solid rgba(0,122,255,.11);
+
+  border-radius: 17px;
+
+  background: rgba(248,251,255,.84);
+
+}
+
+
+
+.import-status-head {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 10px;
+
+  color: #3a3a3c;
+
+  font-size: 12px;
+
+}
+
+
+
+.import-progress-track {
+
+  height: 8px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background: #e8e8ed;
+
+}
+
+
+
+.import-progress-bar {
+
+  position: relative;
+
+  height: 100%;
+
+  border-radius: inherit;
+
+  background: linear-gradient(90deg, #007aff, #5e5ce6);
+
+  transition: width .25s ease;
+
+}
+
+
+
+.import-progress-bar::after {
+
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent);
+
+  animation: progressShine 1.4s linear infinite;
+
+}
+
+
+
+.import-status-message,
+
+.import-message {
+
+  margin: 10px 0 0;
+
+  color: #5f6368;
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+}
+
+
+
+.import-diagnostics {
+
+  display: grid;
+
+  gap: 7px;
+
+  margin-top: 13px;
+
+  font-size: 11px;
+
+}
+
+
+
+.import-diagnostics > div {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 15px;
+
+  padding-top: 7px;
+
+  border-top: 1px solid rgba(60,60,67,.08);
+
+}
+
+
+
+.import-diagnostics span {
+
+  color: var(--muted);
+
+}
+
+
+
+.import-diagnostics strong {
+
+  color: #3a3a3c;
+
+  text-align: right;
+
+}
+
+
+
+.ocr-result h3,
 
 .preview-wrap h3 {
 
   margin: 0 0 10px;
 
-
-
-  color: #334155;
-
-
+  color: #3a3a3c;
 
   font-size: 14px;
-
-
 
   font-weight: 800;
 
@@ -1670,63 +1118,91 @@
 
 
 
-
-
-.preview-table {
-
-  max-height: 310px;
-
-
-
-  overflow: auto;
-
-
-
-  border: 1px solid #e0e6ee;
-
-
-
-  border-radius: 13px;
-
-
-
-  background: #fff;
-
-
-
-  box-shadow:
-
-    inset 0 1px 0 rgba(255,255,255,.8);
-
-}
-
-
-
-
-
-.preview-table table {
+.ocr-result textarea {
 
   width: 100%;
 
+  min-height: 170px;
 
+  padding: 12px;
 
-  border-collapse: separate;
+  border: 1px solid rgba(60,60,67,.13);
 
+  border-radius: 13px;
 
+  outline: none;
 
-  border-spacing: 0;
+  resize: vertical;
 
+  background: #fff;
 
+  color: #3a3a3c;
 
-  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 
+  font-size: 12px;
 
-
-  white-space: nowrap;
+  line-height: 1.5;
 
 }
 
 
+
+.ocr-result textarea:focus {
+
+  border-color: rgba(0,122,255,.5);
+
+  box-shadow: 0 0 0 4px rgba(0,122,255,.1);
+
+}
+
+
+
+.preview-wrap {
+
+  margin-top: 18px;
+
+}
+
+
+
+.preview-table,
+
+.official-table-wrap,
+
+.weekly-table-wrap,
+
+.schedule-table {
+
+  overflow: auto;
+
+  border: 1px solid rgba(60,60,67,.11);
+
+  border-radius: 18px;
+
+  background: rgba(255,255,255,.88);
+
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95);
+
+}
+
+
+
+.preview-table table,
+
+.official-timetable,
+
+.weekly-day-table {
+
+  width: 100%;
+
+  border-collapse: separate;
+
+  border-spacing: 0;
+
+  font-size: 11px;
+
+}
 
 
 
@@ -1736,17 +1212,13 @@
 
   padding: 10px 12px;
 
-
-
-  border-bottom: 1px solid #e8edf3;
-
-
+  border-bottom: 1px solid rgba(60,60,67,.08);
 
   text-align: left;
 
+  white-space: nowrap;
+
 }
-
-
 
 
 
@@ -1754,321 +1226,15 @@
 
   position: sticky;
 
-
-
   top: 0;
 
-
-
   z-index: 2;
 
+  background: #f5f5f7;
 
+  color: #6e6e73;
 
-  background: #111827;
-
-
-
-  color: #aeb8c8;
-
-
-
-  font-size: 9.5px;
-
-
-
-  font-weight: 800;
-
-
-
-  letter-spacing: .4px;
-
-
-
-  text-transform: uppercase;
-
-}
-
-
-
-
-
-.preview-table td {
-
-  color: #596579;
-
-}
-
-
-
-
-
-.preview-table tbody tr:hover {
-
-  background: #f7f9fc;
-
-}
-
-
-
-
-
-.preview-table input,
-
-.preview-table select {
-
-  width: 100%;
-
-
-
-  min-width: 90px;
-
-
-
-  height: 35px;
-
-
-
-  padding: 6px 8px;
-
-
-
-  box-sizing: border-box;
-
-
-
-  border: 1px solid #dbe2ea;
-
-
-
-  border-radius: 8px;
-
-
-
-  outline: none;
-
-
-
-  background: #fff;
-
-
-
-  color: #334155;
-
-
-
-  font-size: 11px;
-
-
-
-  transition:
-
-    border-color .2s ease,
-
-    box-shadow .2s ease;
-
-}
-
-
-
-
-
-.preview-table input:focus,
-
-.preview-table select:focus {
-
-  border-color: #8199ff;
-
-
-
-  box-shadow:
-
-    0 0 0 3px rgba(79,110,247,.08);
-
-}
-
-
-
-
-
-.preview-time {
-
-  display: flex;
-
-
-
-  align-items: center;
-
-
-
-  gap: 4px;
-
-
-
-  min-width: 180px;
-
-}
-
-
-
-
-
-.preview-time input {
-
-  min-width: 78px;
-
-}
-
-
-
-
-
-.import-actions {
-
-  margin-top: 14px;
-
-
-
-  display: flex;
-
-
-
-  gap: 8px;
-
-}
-
-
-
-
-
-/* =========================================================
-
-   MAIN LAYOUT
-
-   ========================================================= */
-
-
-
-.tt-layout {
-
-  position: relative;
-
-  z-index: 2;
-
-
-
-  display: grid;
-
-
-
-  grid-template-columns:
-
-    295px
-
-    minmax(0, 1fr);
-
-
-
-  gap: 20px;
-
-
-
-  align-items: start;
-
-}
-
-
-
-
-
-/* =========================================================
-
-   EDITOR
-
-   ========================================================= */
-
-
-
-.editor {
-
-  padding: 21px;
-
-
-
-  position: sticky;
-
-
-
-  top: 90px;
-
-}
-
-
-
-
-
-.editor h2,
-
-.schedule h2 {
-
-  margin: 0 0 7px;
-
-
-
-  color: #172033;
-
-
-
-  font-size: 17px;
-
-
-
-  font-weight: 800;
-
-
-
-  letter-spacing: -.3px;
-
-}
-
-
-
-
-
-.editor form {
-
-  display: grid;
-
-
-
-  gap: 14px;
-
-
-
-  margin-top: 19px;
-
-}
-
-
-
-
-
-.editor label {
-
-  display: grid;
-
-
-
-  gap: 6px;
-
-
-
-  color: #465164;
-
-
-
-  font-size: 11px;
-
-
+  font-size: 10px;
 
   font-weight: 750;
 
@@ -2076,117 +1242,97 @@
 
 
 
+/* =========================================================
 
+   MAIN TWO-COLUMN WORKSPACE
 
-.editor input:not([type=checkbox]),
+   ========================================================= */
 
-.editor select {
 
-  width: 100%;
 
-
-
-  height: 43px;
-
-
-
-  padding: 0 11px;
-
-
-
-  border: 1px solid #dfe4eb;
-
-
-
-  border-radius: 11px;
-
-
-
-  outline: none;
-
-
-
-  box-sizing: border-box;
-
-
-
-  background: rgba(255,255,255,.9);
-
-
-
-  color: #172033;
-
-
-
-  font: inherit;
-
-
-
-  font-size: 12px;
-
-
-
-  transition:
-
-    border-color .2s ease,
-
-    box-shadow .2s ease,
-
-    transform .2s ease;
-
-}
-
-
-
-
-
-.editor input:not([type=checkbox]):focus,
-
-.editor select:focus {
-
-  border-color: #8199ff;
-
-
-
-  box-shadow:
-
-    0 0 0 4px rgba(79,110,247,.08);
-
-
-
-  transform: translateY(-1px);
-
-}
-
-
-
-
-
-.editor input::placeholder {
-
-  color: #a1a9b5;
-
-}
-
-
-
-
-
-.two {
+.tt-layout {
 
   display: grid;
 
+  grid-template-columns: minmax(290px, 340px) minmax(0, 1fr);
 
+  gap: 20px;
 
-  grid-template-columns: 1fr 1fr;
-
-
-
-  gap: 9px;
+  align-items: start;
 
 }
 
 
+
+.editor {
+
+  padding: 22px;
+
+  position: sticky;
+
+  top: 18px;
+
+}
+
+
+
+.editor > p {
+
+  margin: 7px 0 18px;
+
+  font-size: 12px;
+
+}
+
+
+
+.editor form {
+
+  display: grid;
+
+  gap: 15px;
+
+}
+
+
+
+.editor label:not(.check) {
+
+  display: grid;
+
+  gap: 7px;
+
+  color: #515154;
+
+  font-size: 11px;
+
+  font-weight: 750;
+
+}
+
+
+
+.editor small {
+
+  display: block;
+
+  line-height: 1.45;
+
+  font-size: 10px;
+
+}
+
+
+
+.editor .two {
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 10px;
+
+}
 
 
 
@@ -2194,41 +1340,41 @@
 
   display: flex;
 
-
-
   align-items: center;
 
+  gap: 9px;
 
+  min-height: 42px;
 
-  gap: 8px;
+  padding: 10px 12px;
 
+  border: 1px solid rgba(60,60,67,.1);
 
+  border-radius: 12px;
 
-  min-height: 35px;
+  background: #f7f7f8;
 
+  color: #515154;
 
+  font-size: 12px;
 
-  cursor: pointer;
+  font-weight: 650;
 
 }
-
-
 
 
 
 .editor .check input {
 
-  width: 16px;
+  width: 17px;
 
-  height: 16px;
+  height: 17px;
 
+  margin: 0;
 
-
-  accent-color: #4f67d9;
+  accent-color: var(--blue);
 
 }
-
-
 
 
 
@@ -2236,23 +1382,17 @@
 
   display: flex;
 
-
+  flex-wrap: wrap;
 
   gap: 8px;
-
-
-
-  flex-wrap: wrap;
 
 }
 
 
 
-
-
 /* =========================================================
 
-   SCHEDULE
+   SCHEDULE HEADER
 
    ========================================================= */
 
@@ -2262,15 +1402,9 @@
 
   min-width: 0;
 
-
-
-  animation:
-
-    cardEnter .55s cubic-bezier(.2,.8,.2,1) .05s both;
+  padding: 20px;
 
 }
-
-
 
 
 
@@ -2278,33 +1412,37 @@
 
   display: flex;
 
-
+  align-items: flex-start;
 
   justify-content: space-between;
 
-  align-items: center;
+  gap: 16px;
 
-
-
-  gap: 15px;
-
-
-
-  margin-bottom: 14px;
+  margin-bottom: 15px;
 
 }
 
 
 
+.schedule-title h2 {
 
-
-.schedule-title .muted {
-
-  font-size: 12px;
+  font-size: 20px;
 
 }
 
 
+
+.schedule-title p {
+
+  max-width: 700px;
+
+  margin: 6px 0 0;
+
+  font-size: 11px;
+
+  line-height: 1.5;
+
+}
 
 
 
@@ -2312,543 +1450,175 @@
 
   display: flex;
 
-
-
   align-items: center;
 
+  justify-content: flex-end;
 
+  flex-wrap: wrap;
 
-  gap: 7px;
-
-}
-
-
-
-
-
-.delete-all {
-
-  border: 1px solid #ffd5d5;
-
-
-
-  background: #fff3f3;
-
-
-
-  color: #b42318;
+  gap: 8px;
 
 }
 
 
 
+.schedule-view-switch {
 
+  display: inline-flex;
 
-.delete-all:hover {
+  padding: 3px;
 
-  border-color: #dc4b4b;
+  border: 1px solid rgba(60,60,67,.1);
 
+  border-radius: 11px;
 
-
-  background: #dc4b4b;
-
-
-
-  color: #fff;
-
-
-
-  transform: translateY(-2px);
-
-
-
-  box-shadow:
-
-    0 8px 17px rgba(220,75,75,.17);
+  background: #f1f1f3;
 
 }
 
 
 
+.schedule-view-switch button {
 
+  min-height: 35px;
 
-/* =========================================================
+  padding: 0 12px;
 
-   DAY GRID
+  border-radius: 9px;
 
-   ========================================================= */
+  background: transparent;
 
-
-
-.day-grid {
-
-  display: grid;
-
-
-
-  grid-template-columns:
-
-    repeat(3, minmax(0, 1fr));
-
-
-
-  gap: 13px;
-
-}
-
-
-
-
-
-.day-card {
-
-  position: relative;
-
-
-
-  min-height: 150px;
-
-
-
-  padding: 15px;
-
-
-
-  overflow: hidden;
-
-
-
-  transition:
-
-    transform .22s ease,
-
-    box-shadow .22s ease,
-
-    border-color .22s ease;
-
-}
-
-
-
-
-
-.day-card:hover {
-
-  transform: translateY(-3px);
-
-
-
-  border-color: #dce4f8;
-
-
-
-  box-shadow:
-
-    0 15px 35px rgba(15,23,42,.08);
-
-}
-
-
-
-
-
-.day-card h3 {
-
-  margin: 0 0 12px;
-
-
-
-  padding-bottom: 10px;
-
-
-
-  border-bottom: 1px solid #e8edf3;
-
-
-
-  color: #263247;
-
-
-
-  font-size: 13px;
-
-
-
-  font-weight: 800;
-
-
-
-  letter-spacing: -.1px;
-
-}
-
-
-
-
-
-/* =========================================================
-
-   CLASS ITEM
-
-   ========================================================= */
-
-
-
-.class-item {
-
-  position: relative;
-
-
-
-  display: grid;
-
-
-
-  gap: 4px;
-
-
-
-  margin-bottom: 9px;
-
-
-
-  padding: 10px 10px 9px;
-
-
-
-  border-left: 3px solid #5871e5;
-
-
-
-  border-radius: 0 11px 11px 0;
-
-
-
-  background:
-
-    linear-gradient(
-
-      135deg,
-
-      #f2f5ff,
-
-      #f8faff
-
-    );
-
-
+  color: #6e6e73;
 
   font-size: 11px;
-
-
-
-  transition:
-
-    transform .2s ease,
-
-    box-shadow .2s ease,
-
-    background .2s ease;
-
-}
-
-
-
-
-
-.class-item:hover {
-
-  transform:
-
-    translateX(3px);
-
-
-
-  background:
-
-    linear-gradient(
-
-      135deg,
-
-      #edf2ff,
-
-      #f7f9ff
-
-    );
-
-
-
-  box-shadow:
-
-    0 7px 17px rgba(79,99,209,.08);
-
-}
-
-
-
-
-
-.class-item:last-child {
-
-  margin-bottom: 0;
-
-}
-
-
-
-
-
-.time {
-
-  color: #5269d9;
-
-
-
-  font-size: 9.5px;
-
-
-
-  font-weight: 800;
-
-
-
-  letter-spacing: .15px;
-
-}
-
-
-
-
-
-.class-item strong {
-
-  color: #1f2b40;
-
-
-
-  font-size: 12px;
-
-
-
-  font-weight: 800;
-
-}
-
-
-
-
-
-.class-item span {
-
-  color: #788396;
-
-
-
-  font-size: 10.5px;
-
-}
-
-
-
-
-
-.lab {
-
-  width: max-content;
-
-
-
-  padding: 3px 6px;
-
-
-
-  border: 1px solid #cbdcff;
-
-
-
-  border-radius: 5px;
-
-
-
-  background: #e7efff;
-
-
-
-  color: #3155c7 !important;
-
-
-
-  font-size: 8.5px !important;
-
-
-
-  font-weight: 800;
-
-}
-
-
-
-
-
-/* =========================================================
-
-   ITEM ACTIONS
-
-   ========================================================= */
-
-
-
-.item-actions {
-
-  display: flex;
-
-
-
-  gap: 12px;
-
-
-
-  margin-top: 5px;
-
-
-
-  padding-top: 5px;
-
-
-
-  border-top: 1px solid rgba(79,99,209,.08);
-
-}
-
-
-
-
-
-.item-actions button {
-
-  padding: 0;
-
-
-
-  border: 0;
-
-
-
-  background: none;
-
-
-
-  color: #5269d9;
-
-
-
-  font-size: 10px;
-
-
 
   font-weight: 750;
 
-
-
   cursor: pointer;
 
-
-
-  transition:
-
-    transform .18s ease,
-
-    color .18s ease;
+  transition: .18s ease;
 
 }
 
 
 
+.schedule-view-switch button.active {
 
+  background: #fff;
 
-.item-actions button:hover {
+  color: #1d1d1f;
 
-  color: #111827;
-
-
-
-  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,.09);
 
 }
-
-
-
-
-
-.item-actions .delete {
-
-  color: #dc4b4b;
-
-}
-
-
-
-
-
-.item-actions .delete:hover {
-
-  color: #b42318;
-
-}
-
-
 
 
 
 /* =========================================================
 
-   EMPTY / LOADING
+   OFFICIAL TIMETABLE GRID
 
    ========================================================= */
 
 
 
-.no-class,
+.official-table-wrap {
 
-.empty {
-
-  margin: 15px 0 5px;
-
-
-
-  color: #a0a9b7;
-
-
-
-  font-size: 11px;
-
-
-
-  font-weight: 550;
+  scrollbar-width: thin;
 
 }
 
 
 
+.official-timetable {
 
+  min-width: 790px;
 
-.empty {
+  table-layout: fixed;
 
-  padding: 30px;
-
-
-
-  border: 1px dashed #d9e0e9;
-
-
-
-  border-radius: 15px;
+}
 
 
 
-  background: rgba(248,250,252,.7);
+.official-timetable th,
+
+.official-timetable td {
+
+  border-right: 1px solid rgba(60,60,67,.09);
+
+  border-bottom: 1px solid rgba(60,60,67,.09);
+
+}
 
 
+
+.official-timetable th:last-child,
+
+.official-timetable td:last-child {
+
+  border-right: 0;
+
+}
+
+
+
+.official-timetable thead th {
+
+  height: 66px;
+
+  padding: 8px 5px;
+
+  background: #f5f5f7;
+
+  color: #6e6e73;
+
+  font-size: 10px;
+
+  font-weight: 800;
+
+  text-align: center;
+
+  vertical-align: middle;
+
+}
+
+
+
+.official-timetable .day-head {
+
+  width: 82px;
+
+  background: #f0f0f2;
+
+  color: #1d1d1f;
+
+}
+
+
+
+.official-timetable tbody td {
+
+  height: 118px;
+
+  padding: 6px;
+
+  background: rgba(255,255,255,.66);
+
+  vertical-align: middle;
+
+}
+
+
+
+.official-timetable tbody td:first-child {
+
+  background: #f8f8f9;
+
+  color: #1d1d1f;
+
+  font-size: 11px;
+
+  font-weight: 800;
 
   text-align: center;
 
@@ -2856,167 +1626,539 @@
 
 
 
+.official-class {
 
+  display: flex;
 
-/* =========================================================
+  min-height: 98px;
 
-   ANIMATIONS
+  flex-direction: column;
 
-   ========================================================= */
+  align-items: center;
 
+  justify-content: center;
 
+  gap: 3px;
 
-.day-card {
+  padding: 9px 7px;
 
-  animation:
+  border: 1px solid rgba(0,122,255,.09);
 
-    dayCardIn .4s ease both;
+  border-radius: 13px;
 
-}
+  background:
 
+    linear-gradient(145deg, rgba(255,255,255,.98), rgba(246,250,255,.94));
 
+  box-shadow: 0 5px 14px rgba(0,0,0,.045);
 
+  text-align: center;
 
-
-.day-card:nth-child(1) {
-
-  animation-delay: .03s;
-
-}
-
-
-
-.day-card:nth-child(2) {
-
-  animation-delay: .06s;
+  transition: transform .18s ease, box-shadow .18s ease;
 
 }
 
 
 
-.day-card:nth-child(3) {
+.official-class:hover {
 
-  animation-delay: .09s;
+  transform: translateY(-2px);
 
-}
-
-
-
-.day-card:nth-child(4) {
-
-  animation-delay: .12s;
+  box-shadow: 0 9px 20px rgba(0,0,0,.075);
 
 }
 
 
 
-.day-card:nth-child(5) {
+.official-class strong {
 
-  animation-delay: .15s;
+  color: #1d1d1f;
 
-}
+  font-size: 11px;
 
-
-
-.day-card:nth-child(6) {
-
-  animation-delay: .18s;
+  font-weight: 800;
 
 }
 
 
 
+.official-class span {
 
+  color: #6e6e73;
 
-@keyframes dayCardIn {
+  font-size: 9px;
 
-
-
-  from {
-
-    opacity: 0;
-
-
-
-    transform:
-
-      translateY(8px)
-
-      scale(.99);
-
-  }
-
-
-
-  to {
-
-    opacity: 1;
-
-
-
-    transform:
-
-      translateY(0)
-
-      scale(1);
-
-  }
-
-
+  line-height: 1.25;
 
 }
 
 
 
+.official-class .time {
 
+  color: #8e8e93;
 
-@keyframes fadeSlide {
+  font-size: 8px;
 
-
-
-  from {
-
-    opacity: 0;
-
-
-
-    transform:
-
-      translateY(7px);
-
-  }
-
-
-
-  to {
-
-    opacity: 1;
-
-
-
-    transform:
-
-      translateY(0);
-
-  }
-
-
+  font-weight: 600;
 
 }
 
 
+
+.official-class .lab,
+
+.official-class.lab {
+
+  border-color: rgba(88,86,214,.13);
+
+  background: linear-gradient(145deg, #fff, #f5f3ff);
+
+}
+
+
+
+.empty,
+
+.no-class,
+
+.table-empty {
+
+  color: #8e8e93;
+
+  font-size: 11px;
+
+  text-align: center;
+
+}
 
 
 
 /* =========================================================
 
-   RESPONSIVE
+   TEACHER SCHEDULE
 
    ========================================================= */
 
 
 
-@media (max-width: 1150px) {
+.teacher-schedule {
+
+  min-width: 0;
+
+}
+
+
+
+.teacher-filter {
+
+  display: grid;
+
+  grid-template-columns: minmax(230px, 360px) 1fr;
+
+  align-items: end;
+
+  gap: 15px;
+
+  margin-bottom: 16px;
+
+  padding: 16px;
+
+  border: 1px solid rgba(60,60,67,.08);
+
+  border-radius: 17px;
+
+  background: rgba(248,248,250,.76);
+
+}
+
+
+
+.teacher-filter label {
+
+  display: grid;
+
+  gap: 7px;
+
+  color: #515154;
+
+  font-size: 11px;
+
+  font-weight: 750;
+
+}
+
+
+
+.teacher-filter p {
+
+  margin: 0;
+
+  align-self: center;
+
+  font-size: 11px;
+
+  line-height: 1.45;
+
+}
+
+
+
+.teacher-table {
+
+  min-width: 790px;
+
+}
+
+
+
+/* =========================================================
+
+   MISC / STATUS
+
+   ========================================================= */
+
+
+
+.error {
+
+  color: #c62828;
+
+  font-size: 12px;
+
+  font-weight: 650;
+
+}
+
+
+
+.import-message {
+
+  color: #248a45;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+}
+
+
+
+.item-actions {
+
+  display: flex;
+
+  gap: 5px;
+
+}
+
+
+
+.class-item,
+
+.day-class {
+
+  transition: transform .18s ease, box-shadow .18s ease;
+
+}
+
+
+
+.class-item:hover,
+
+.day-class:hover {
+
+  transform: translateY(-1px);
+
+}
+
+
+
+.official-actions {
+
+  display: flex;
+
+  justify-content: flex-end;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  margin-bottom: 12px;
+
+}
+
+
+
+/* =========================================================
+
+   SCROLLBARS
+
+   ========================================================= */
+
+
+
+.preview-table::-webkit-scrollbar,
+
+.official-table-wrap::-webkit-scrollbar,
+
+.weekly-table-wrap::-webkit-scrollbar,
+
+.schedule-table::-webkit-scrollbar {
+
+  width: 7px;
+
+  height: 7px;
+
+}
+
+
+
+.preview-table::-webkit-scrollbar-thumb,
+
+.official-table-wrap::-webkit-scrollbar-thumb,
+
+.weekly-table-wrap::-webkit-scrollbar-thumb,
+
+.schedule-table::-webkit-scrollbar-thumb {
+
+  border-radius: 999px;
+
+  background: rgba(60,60,67,.2);
+
+}
+
+
+
+.preview-table::-webkit-scrollbar-track,
+
+.official-table-wrap::-webkit-scrollbar-track,
+
+.weekly-table-wrap::-webkit-scrollbar-track,
+
+.schedule-table::-webkit-scrollbar-track {
+
+  background: transparent;
+
+}
+
+
+
+/* =========================================================
+
+   MOTION
+
+   ========================================================= */
+
+
+
+@keyframes pageIn {
+
+  from { opacity: 0; transform: translateY(-8px); }
+
+  to { opacity: 1; transform: translateY(0); }
+
+}
+
+
+
+@keyframes cardIn {
+
+  from { opacity: 0; transform: translateY(10px) scale(.99); }
+
+  to { opacity: 1; transform: translateY(0) scale(1); }
+
+}
+
+
+
+@keyframes progressShine {
+
+  from { transform: translateX(-100%); }
+
+  to { transform: translateX(100%); }
+
+}
+
+
+
+/* =========================================================
+
+   TABLET
+
+   ========================================================= */
+
+
+
+@media (max-width: 1200px) {
+
+  .tt-heading {
+
+    grid-template-columns: 1fr;
+
+    gap: 17px;
+
+  }
+
+
+
+  .section-switch.academic-selectors {
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  }
+
+
+
+  .section-picker {
+
+    grid-column: 1 / -1;
+
+  }
+
+
+
+  .tt-layout {
+
+    grid-template-columns: 300px minmax(0, 1fr);
+
+  }
+
+
+
+  .schedule-title {
+
+    flex-direction: column;
+
+  }
+
+
+
+  .schedule-actions {
+
+    justify-content: flex-start;
+
+  }
+
+}
+
+
+
+/* =========================================================
+
+   MOBILE
+
+   ========================================================= */
+
+
+
+@media (max-width: 820px) {
+
+  .tt-page {
+
+    padding: 18px 12px 35px;
+
+  }
+
+
+
+  .tt-heading h1 {
+
+    font-size: 30px;
+
+  }
+
+
+
+  .section-switch.academic-selectors {
+
+    grid-template-columns: 1fr;
+
+    padding: 8px;
+
+    border-radius: 18px;
+
+  }
+
+
+
+  .section-picker {
+
+    grid-column: auto;
+
+    align-items: stretch;
+
+    padding: 9px 2px 2px;
+
+  }
+
+
+
+  .section-chip {
+
+    flex: 0 0 auto;
+
+  }
+
+
+
+  .generate-section-btn {
+
+    width: 100%;
+
+    margin: 3px 0 0;
+
+  }
+
+
+
+  .upload-row {
+
+    grid-template-columns: 1fr;
+
+  }
+
+
+
+  .bulk-import,
+
+  .schedule,
+
+  .editor {
+
+    padding: 16px;
+
+    border-radius: 19px;
+
+  }
+
+
+
+  .bulk-head {
+
+    align-items: flex-start;
+
+    flex-direction: column;
+
+  }
+
+
+
+  .file-picker {
+
+    align-items: flex-start;
+
+    flex-direction: column;
+
+  }
+
+
+
+  .file-picker input {
+
+    max-width: 100%;
+
+  }
 
 
 
@@ -3030,205 +2172,7 @@
 
   .editor {
 
-    position: relative;
-
-
-
-    top: auto;
-
-  }
-
-
-
-  .day-grid {
-
-    grid-template-columns:
-
-      repeat(2, minmax(0, 1fr));
-
-  }
-
-
-
-}
-
-
-
-
-
-@media (max-width: 800px) {
-
-
-
-  .tt-page {
-
-    padding: 24px 20px 35px;
-
-  }
-
-
-
-  .tt-heading {
-
-    align-items: flex-start;
-
-
-
-    flex-direction: column;
-
-  }
-
-
-
-  .section-switch {
-
-    width: 100%;
-
-  }
-
-
-
-  .section-switch button {
-
-    flex: 1;
-
-  }
-
-
-
-  .bulk-head {
-
-    align-items: flex-start;
-
-
-
-    flex-direction: column;
-
-  }
-
-
-
-  .bulk-head .secondary {
-
-    width: 100%;
-
-  }
-
-
-
-}
-
-
-
-
-
-@media (max-width: 620px) {
-
-
-
-  .tt-page {
-
-    padding: 18px 12px 30px;
-
-  }
-
-
-
-  .tt-heading h1 {
-
-    font-size: 25px;
-
-  }
-
-
-
-  .eyebrow {
-
-    font-size: 9px;
-
-
-
-    letter-spacing: .9px;
-
-  }
-
-
-
-  .tt-heading p:last-child {
-
-    font-size: 11px;
-
-  }
-
-
-
-  .section-switch {
-
-    padding: 4px;
-
-  }
-
-
-
-  .section-switch button {
-
-    min-width: 0;
-
-
-
-    padding: 9px 10px;
-
-
-
-    font-size: 11px;
-
-  }
-
-
-
-  .bulk-import {
-
-    padding: 18px;
-
-  }
-
-
-
-  .upload-row {
-
-    align-items: stretch;
-
-
-
-    flex-direction: column;
-
-  }
-
-
-
-  .file-picker {
-
-    width: 100%;
-
-
-
-    justify-content: center;
-
-  }
-
-
-
-  .file-picker input {
-
-    max-width: 160px;
-
-  }
-
-
-
-  .day-grid {
-
-    grid-template-columns: 1fr;
+    position: static;
 
   }
 
@@ -3236,11 +2180,7 @@
 
   .schedule-title {
 
-    align-items: flex-start;
-
-
-
-    flex-direction: column;
+    gap: 13px;
 
   }
 
@@ -3250,255 +2190,9 @@
 
     width: 100%;
 
-
-
-    flex-wrap: wrap;
-
   }
 
 
-
-  .schedule-actions button {
-
-    flex: 1;
-
-  }
-
-
-
-  .two {
-
-    grid-template-columns: 1fr;
-
-  }
-
-
-
-  .editor {
-
-    padding: 18px;
-
-  }
-
-
-
-  .preview-table {
-
-    max-height: 260px;
-
-  }
-
-
-
-  .preview-time {
-
-    min-width: 170px;
-
-  }
-
-
-
-}
-
-
-
-
-
-/* =========================================================
-
-   REDUCED MOTION
-
-   ========================================================= */
-
-
-
-@media (prefers-reduced-motion: reduce) {
-
-
-
-  *,
-
-  *::before,
-
-  *::after {
-
-    animation-duration: .01ms !important;
-
-    animation-iteration-count: 1 !important;
-
-    transition-duration: .01ms !important;
-
-  }
-
-
-
-}
-
-/* =========================================================
-
-   ADDITIONAL TIMETABLE VIEWS
-
-   Kept intentionally consistent with the existing timetable UI.
-
-   ========================================================= */
-
-
-
-.schedule-view-switch {
-
-  display: inline-flex;
-
-  align-items: center;
-
-  gap: 4px;
-
-  padding: 4px;
-
-  border: 1px solid #e4e7ec;
-
-  border-radius: 12px;
-
-  background: #f8fafc;
-
-}
-
-
-
-.schedule-view-switch button {
-
-  border: 0;
-
-  padding: 9px 12px;
-
-  border-radius: 9px;
-
-  background: transparent;
-
-  color: #667085;
-
-  font-size: 12px;
-
-  font-weight: 750;
-
-  cursor: pointer;
-
-  transition: .2s ease;
-
-}
-
-
-
-.schedule-view-switch button.active {
-
-  background: #fff;
-
-  color: #1d2939;
-
-  box-shadow: 0 1px 4px rgba(16, 24, 40, .08);
-
-}
-
-
-
-.teacher-schedule,
-
-.weekly-table-wrap {
-
-  margin-top: 18px;
-
-}
-
-
-
-.teacher-filter {
-
-  display: grid;
-
-  gap: 8px;
-
-  margin-bottom: 16px;
-
-}
-
-
-
-.teacher-filter label {
-
-  display: grid;
-
-  gap: 7px;
-
-  max-width: 420px;
-
-  color: #344054;
-
-  font-size: 12px;
-
-  font-weight: 750;
-
-}
-
-
-
-.teacher-filter select {
-
-  width: 100%;
-
-}
-
-
-
-.schedule-table {
-
-  max-height: 520px;
-
-  overflow: auto;
-
-}
-
-
-
-.schedule-table table {
-
-  min-width: 900px;
-
-}
-
-
-
-.schedule-table th,
-
-.schedule-table td {
-
-  white-space: nowrap;
-
-}
-
-
-
-.schedule-table td:nth-child(5) {
-
-  white-space: normal;
-
-  min-width: 150px;
-
-}
-
-
-
-.table-empty {
-
-  text-align: center;
-
-  padding: 28px !important;
-
-  color: #667085;
-
-}
-
-
-
-@media (max-width: 760px) {
 
   .schedule-view-switch {
 
@@ -3516,11 +2210,27 @@
 
 
 
-  .schedule-table {
+  .schedule-actions > button {
 
-    margin-left: -2px;
+    flex: 1;
 
-    margin-right: -2px;
+  }
+
+
+
+  .teacher-filter {
+
+    grid-template-columns: 1fr;
+
+  }
+
+
+
+  .official-timetable,
+
+  .teacher-table {
+
+    min-width: 730px;
 
   }
 
@@ -3528,465 +2238,35 @@
 
 
 
+@media (max-width: 520px) {
 
+  .tt-page {
 
-/* =========================================================
-
-   WEEKLY DAY-COLUMN TABLE
-
-   ========================================================= */
-
-
-
-.weekly-day-table {
-
-  width: 100%;
-
-  max-height: 620px;
-
-  overflow: auto;
-
-}
-
-
-
-.weekly-day-table table {
-
-  width: 100%;
-
-  min-width: 1050px;
-
-  table-layout: fixed;
-
-  border-collapse: separate;
-
-  border-spacing: 0;
-
-}
-
-
-
-.weekly-day-table th {
-
-  position: sticky;
-
-  top: 0;
-
-  z-index: 2;
-
-  text-align: center;
-
-}
-
-
-
-.weekly-day-table td.day-column {
-
-  vertical-align: top;
-
-  padding: 10px;
-
-  min-width: 170px;
-
-  white-space: normal;
-
-}
-
-
-
-.day-class {
-
-  display: grid;
-
-  gap: 4px;
-
-  margin-bottom: 10px;
-
-  padding: 11px;
-
-  border-left: 3px solid #5871e5;
-
-  border-radius: 0 11px 11px 0;
-
-  background: linear-gradient(135deg, #f2f5ff, #f8faff);
-
-  font-size: 11px;
-
-}
-
-
-
-.day-class:last-child {
-
-  margin-bottom: 0;
-
-}
-
-
-
-.day-class strong {
-
-  color: #1f2b40;
-
-  font-size: 12px;
-
-  font-weight: 800;
-
-}
-
-
-
-.day-class span:not(.lab) {
-
-  color: #788396;
-
-  font-size: 10.5px;
-
-}
-
-
-
-.day-class .item-actions {
-
-  display: flex;
-
-  gap: 6px;
-
-  margin-top: 4px;
-
-}
-
-
-
-.day-class .item-actions button {
-
-  padding: 5px 8px;
-
-  font-size: 10px;
-
-}
-
-
-
-.weekly-day-table .no-class {
-
-  margin: 8px 0;
-
-  text-align: center;
-
-  color: #98a2b3;
-
-  font-size: 11px;
-
-}
-
-
-
-@media (max-width: 760px) {
-
-  .weekly-day-table table {
-
-    min-width: 900px;
+    padding-inline: 8px;
 
   }
 
-}
 
 
+  .tt-heading h1 {
 
+    font-size: 27px;
 
+  }
 
-/* =========================================================
 
-   OFFICIAL COLLEGE TIMETABLE MATRIX
 
-   ========================================================= */
+  .editor .two {
 
-.official-table-wrap {
+    grid-template-columns: 1fr;
 
-  width: 100%;
+  }
 
-  overflow-x: auto;
 
-  border: 1px solid #d9dee7;
 
-  border-radius: 14px;
+  .schedule-actions > button {
 
-  background: #fff;
-
-  box-shadow: 0 8px 24px rgba(15,23,42,.055);
-
-}
-
-
-
-.official-timetable {
-
-  width: 100%;
-
-  min-width: 980px;
-
-  border-collapse: collapse;
-
-  table-layout: fixed;
-
-  background: #fff;
-
-  color: #172033;
-
-}
-
-
-
-.official-timetable th,
-
-.official-timetable td {
-
-  border: 1px solid #aeb6c3;
-
-  vertical-align: middle;
-
-}
-
-
-
-.official-timetable thead th {
-
-  min-height: 64px;
-
-  padding: 10px 7px;
-
-  background: #f7f8fa;
-
-  color: #111827;
-
-  font-size: 11px;
-
-  font-weight: 850;
-
-  line-height: 1.35;
-
-  text-align: center;
-
-  white-space: pre-line;
-
-}
-
-
-
-.official-timetable .day-head {
-
-  width: 96px;
-
-  background: #f1f3f6;
-
-}
-
-
-
-.official-timetable .day-cell {
-
-  width: 96px;
-
-  padding: 12px 7px;
-
-  background: #fafafa;
-
-  color: #111827;
-
-  font-size: 12px;
-
-  font-weight: 850;
-
-  text-align: center;
-
-  letter-spacing: .3px;
-
-}
-
-
-
-.official-timetable td {
-
-  min-height: 88px;
-
-  padding: 5px;
-
-  text-align: center;
-
-  background: #fff;
-
-}
-
-
-
-.official-timetable td.covered-slot {
-
-  background: #fbfbfc;
-
-}
-
-
-
-.official-class {
-
-  min-height: 70px;
-
-  padding: 8px 6px;
-
-  margin: 1px;
-
-  border-radius: 7px;
-
-  background: linear-gradient(180deg, #f8faff, #f3f6fc);
-
-  color: #172033;
-
-  display: flex;
-
-  flex-direction: column;
-
-  justify-content: center;
-
-  align-items: center;
-
-  gap: 3px;
-
-  line-height: 1.2;
-
-}
-
-
-
-.official-class + .official-class {
-
-  margin-top: 4px;
-
-  border-top: 1px dashed #c8cfda;
-
-}
-
-
-
-.official-class strong {
-
-  font-size: 11px;
-
-  font-weight: 850;
-
-}
-
-
-
-.official-class span {
-
-  font-size: 10px;
-
-  font-weight: 650;
-
-  color: #536074;
-
-}
-
-
-
-.official-class small {
-
-  font-size: 9px;
-
-  color: #7a8596;
-
-  font-weight: 700;
-
-}
-
-
-
-.official-class .lab {
-
-  padding: 2px 5px;
-
-  border-radius: 999px;
-
-  background: #eef2ff;
-
-  color: #4056b5;
-
-  font-size: 8px;
-
-  font-weight: 850;
-
-  letter-spacing: .4px;
-
-}
-
-
-
-.official-actions {
-
-  display: flex;
-
-  gap: 4px;
-
-  margin-top: 3px;
-
-}
-
-
-
-.official-actions button {
-
-  border: 0;
-
-  padding: 3px 6px;
-
-  border-radius: 5px;
-
-  background: #e9edf3;
-
-  color: #4b5563;
-
-  font-size: 8px;
-
-  font-weight: 750;
-
-  cursor: pointer;
-
-}
-
-
-
-.official-actions button:hover {
-
-  background: #111827;
-
-  color: #fff;
-
-}
-
-
-
-.official-actions button.delete:hover {
-
-  background: #b91c1c;
-
-}
-
-
-
-.teacher-table .official-class {
-
-  min-height: 64px;
-
-}
-
-
-
-@media (max-width: 900px) {
-
-  .official-table-wrap {
-
-    border-radius: 12px;
+    flex: 1 1 100%;
 
   }
 
@@ -3994,7 +2274,29 @@
 
   .official-timetable {
 
-    min-width: 900px;
+    min-width: 700px;
+
+  }
+
+}
+
+
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+
+  *::before,
+
+  *::after {
+
+    animation-duration: .01ms !important;
+
+    animation-iteration-count: 1 !important;
+
+    scroll-behavior: auto !important;
+
+    transition-duration: .01ms !important;
 
   }
 
@@ -4004,43 +2306,433 @@
 
 
 
-/* Multi-hour classes/labs are rendered as ONE table cell with colspan.
-   Do not add a border at the hour boundary: the single spanning <td>
-   owns the whole duration, so there must be no vertical divider through it. */
+/* =========================================================
+
+   TIMETABLE GRID — FINAL CARD / BUTTON POLISH
+
+   ========================================================= */
+
+
+
+/* Every timetable slot keeps the same vertical card size.
+
+   LABs may span multiple time columns, but NEVER become taller. */
+
+.official-timetable tbody td {
+
+  height: 128px;
+
+  padding: 6px;
+
+  vertical-align: middle;
+
+}
+
+
 
 .official-timetable .official-entry-cell {
-  padding: 5px;
+
+  height: 128px;
+
+  padding: 6px;
+
   vertical-align: middle;
-  position: relative;
+
 }
 
-.official-timetable .official-entry-cell .official-class {
+
+
+/* One fixed-height class card for theory + LAB */
+
+.official-class,
+
+.official-timetable .official-entry-cell .official-class,
+
+.official-timetable .official-entry-cell[colspan] .official-class {
+
   width: 100%;
+
+  height: 108px;
+
+  min-height: 108px;
+
+  max-height: 108px;
+
   box-sizing: border-box;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 2px;
+
+  overflow: hidden;
+
+  padding: 8px 7px;
+
+  border: 1px solid rgba(0, 122, 255, .13);
+
+  border-radius: 15px;
+
+  background: linear-gradient(145deg, #ffffff 0%, #f7fbff 100%);
+
+  box-shadow:
+
+    0 5px 16px rgba(0, 0, 0, .045),
+
+    inset 0 1px 0 rgba(255, 255, 255, .95);
+
 }
 
-/* Keep the spanning cell visually continuous across all occupied columns. */
-.official-timetable .official-entry-cell[colspan] {
-  border-right: 1px solid #aeb6c3;
+
+
+/* LAB gets same height as every other card */
+
+.official-class.lab,
+
+.official-timetable .official-entry-cell .official-class.lab {
+
+  height: 108px;
+
+  min-height: 108px;
+
+  max-height: 108px;
+
+  background: linear-gradient(145deg, #ffffff 0%, #f8f6ff 100%);
+
+  border-color: rgba(88, 86, 214, .15);
+
 }
 
-/* Weekly timetable download action */
 
-.download-weekly {
 
-  border: 1px solid #d8e3ff;
+/* Keep text compact so every card fits identically */
 
-  background: #f5f8ff;
+.official-class strong {
 
-  color: #2457d6;
+  display: block;
 
-  border-radius: 12px;
+  max-width: 100%;
 
-  padding: 10px 14px;
+  overflow: hidden;
 
-  font-weight: 700;
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+  font-size: 11px;
+
+  line-height: 1.2;
+
+}
+
+
+
+.official-class span {
+
+  max-width: 100%;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+  line-height: 1.25;
+
+}
+
+
+
+.official-class .time {
+
+  white-space: nowrap;
+
+  font-size: 8px;
+
+}
+
+
+
+/* =========================================================
+
+   EDIT + DELETE — ALWAYS HORIZONTAL
+
+   ========================================================= */
+
+
+
+.official-actions {
+
+  display: flex !important;
+
+  flex-direction: row !important;
+
+  align-items: center;
+
+  justify-content: center;
+
+  flex-wrap: nowrap !important;
+
+  gap: 6px;
+
+  width: 100%;
+
+  margin-top: 5px;
+
+}
+
+
+
+.official-actions button {
+
+  flex: 0 0 auto;
+
+  width: auto;
+
+  min-width: 48px;
+
+  height: 27px;
+
+  padding: 0 9px;
+
+  border: 1px solid rgba(60, 60, 67, .10);
+
+  border-radius: 8px;
+
+  background: #f2f2f4;
+
+  color: #3a3a3c;
+
+  font-size: 9px;
+
+  font-weight: 750;
+
+  line-height: 1;
 
   cursor: pointer;
+
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .035);
+
+  transition:
+
+    transform .18s cubic-bezier(.2,.8,.2,1),
+
+    *background* .18s ease,
+
+    color .18s ease,
+
+    border-color .18s ease,
+
+    box-shadow .18s ease;
+
+}
+
+
+
+.official-actions button:hover {
+
+  transform: translateY(-2px);
+
+  background: #e8f2ff;
+
+  border-color: rgba(0, 122, 255, .18);
+
+  color: #006ee6;
+
+  box-shadow: 0 5px 12px rgba(0, 122, 255, .13);
+
+}
+
+
+
+.official-actions button:active {
+
+  transform: scale(.92);
+
+}
+
+
+
+.official-actions button.delete:hover {
+
+  background: #fff0ef;
+
+  border-color: rgba(255, 59, 48, .2);
+
+  color: #d92d20;
+
+  box-shadow: 0 5px 12px rgba(255, 59, 48, .12);
+
+}
+
+
+
+/* If button has no delete class but is the second action, make it red on hover */
+
+.official-actions button:nth-child(2):hover {
+
+  background: #fff0ef;
+
+  border-color: rgba(255, 59, 48, .2);
+
+  color: #d92d20;
+
+  box-shadow: 0 5px 12px rgba(255, 59, 48, .12);
+
+}
+
+
+
+/* Prevent LAB spanning cells from changing card height */
+
+.official-timetable .official-entry-cell[colspan] {
+
+  height: 128px;
+
+  vertical-align: middle;
+
+}
+
+
+
+.official-timetable .official-entry-cell[colspan] > .official-class {
+
+  height: 108px;
+
+}
+
+
+
+/* Slightly cleaner day column */
+
+.official-timetable .day-head,
+
+.official-timetable tbody td:first-child {
+
+  width: 82px;
+
+  min-width: 82px;
+
+}
+
+
+
+/* On smaller screens retain horizontal action buttons */
+
+@media (max-width: 820px) {
+
+  .official-actions {
+
+    flex-wrap: nowrap !important;
+
+    gap: 5px;
+
+  }
+
+
+
+  .official-actions button {
+
+    min-width: 46px;
+
+    height: 26px;
+
+    padding-inline: 7px;
+
+  }
+
+
+
+  .official-class,
+
+  .official-timetable .official-entry-cell .official-class,
+
+  .official-timetable .official-entry-cell[colspan] .official-class {
+
+    height: 106px;
+
+    min-height: 106px;
+
+    max-height: 106px;
+
+  }
+
+}
+
+
+
+/* =========================================================
+
+   FINAL FIX — UNCLIPPED TIMETABLE CARDS
+
+   Keep every card uniform, but give the content enough room.
+
+   ========================================================= */
+
+
+
+.official-timetable tbody td,
+
+.official-timetable .official-entry-cell,
+
+.official-timetable .official-entry-cell[colspan] {
+
+  height: 142px !important;
+
+  padding: 7px !important;
+
+  vertical-align: middle !important;
+
+}
+
+
+
+.official-timetable .official-entry-cell .official-class,
+
+.official-timetable .official-entry-cell[colspan] .official-class,
+
+.official-class,
+
+.official-class.lab {
+
+  height: 124px !important;
+
+  min-height: 124px !important;
+
+  max-height: 124px !important;
+
+  overflow: visible !important;
+
+  box-sizing: border-box;
+
+  padding: 9px 7px !important;
+
+  gap: 3px !important;
+
+  justify-content: center !important;
+
+}
+
+
+
+/* Do not clip subject names/faculty/room */
+
+.official-class strong,
+
+.official-class span,
+
+.official-class small {
+
+  max-width: 100%;
+
+  overflow: visible !important;
+
+  text-overflow: clip !important;
 
   white-space: nowrap;
 
@@ -4048,78 +2740,1066 @@
 
 
 
-.download-weekly:hover:not(:disabled) {
+.official-class strong {
 
-  background: #eaf0ff;
+  font-size: 11px !important;
 
-}
-
-
-
-.download-weekly:disabled {
-
-  opacity: .55;
-
-  cursor: not-allowed;
+  line-height: 14px !important;
 
 }
 
 
 
+.official-class span {
+
+  font-size: 9px !important;
+
+  line-height: 12px !important;
+
+}
 
 
-.download-pdf-btn {
 
+.official-class small {
+
+  font-size: 8px !important;
+
+  line-height: 11px !important;
+
+}
+
+
+
+/* Time line */
+
+.official-class .time {
+
+  font-size: 8px !important;
+
+  line-height: 11px !important;
+
+  white-space: nowrap !important;
+
+}
+
+
+
+/* LAB badge should not consume unnecessary height */
+
+.official-class .lab {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-height: 17px;
+
+  padding: 2px 6px !important;
+
+  margin: 1px 0;
+
+  border-radius: 999px;
+
+}
+
+
+
+/* Buttons stay side-by-side and sit at the bottom of every card */
+
+.official-actions {
+
+  display: flex !important;
+
+  flex-direction: row !important;
+
+  align-items: center !important;
+
+  justify-content: center !important;
+
+  flex-wrap: nowrap !important;
+
+  gap: 6px !important;
+
+  width: 100%;
+
+  margin-top: 6px !important;
+
+}
+
+
+
+.official-actions button {
+
+  flex: 0 0 auto !important;
+
+  min-width: 49px !important;
+
+  height: 26px !important;
+
+  padding: 0 9px !important;
+
+  border-radius: 8px !important;
+
+  font-size: 9px !important;
+
+  line-height: 1 !important;
+
+  white-space: nowrap !important;
+
+}
+
+
+
+.official-actions button:hover {
+
+  transform: translateY(-2px) scale(1.02) !important;
+
+}
+
+
+
+.official-actions button:active {
+
+  transform: scale(.92) !important;
+
+}
+
+
+
+/* Make the empty slot visually match the grid */
+
+.official-timetable tbody td:empty {
+
+  background: rgba(255,255,255,.52);
+
+}
+
+
+
+/* Mobile: same-height cards, slightly smaller */
+
+@media (max-width: 820px) {
+
+  .official-timetable tbody td,
+
+  .official-timetable .official-entry-cell,
+
+  .official-timetable .official-entry-cell[colspan] {
+
+    height: 136px !important;
+
+  }
+
+
+
+  .official-timetable .official-entry-cell .official-class,
+
+  .official-timetable .official-entry-cell[colspan] .official-class,
+
+  .official-class,
+
+  .official-class.lab {
+
+    height: 118px !important;
+
+    min-height: 118px !important;
+
+    max-height: 118px !important;
+
+  }
+
+
+
+  .official-actions button {
+
+    min-width: 46px !important;
+
+    padding-inline: 7px !important;
+
+  }
+
+}
+
+
+
+
+
+/* =========================================================
+
+   CLEAN OFFICIAL TIMETABLE CARD
+
+   Section + Faculty stay on one horizontal line.
+
+   ========================================================= */
+
+
+
+.official-timetable .official-class {
+
+  display: grid !important;
+
+  grid-template-columns: 1fr 1fr;
+
+  align-items: center;
+
+  justify-items: center;
+
+  gap: 3px 6px;
+
+  min-height: 70px;
+
+  padding: 8px 6px;
+
+  box-sizing: border-box;
+
+  overflow: hidden;
+
+}
+
+
+
+/* Subject */
+
+.official-timetable .official-class > strong {
+
+  grid-column: 1 / 3;
+
+  grid-row: 1;
+
+  width: 100%;
+
+  text-align: center;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+}
+
+
+
+/* Section */
+
+.official-timetable .official-class > span.section-badge {
+
+  grid-column: 1;
+
+  grid-row: 2;
+
+  width: auto;
+
+  margin: 0;
+
+  justify-self: end;
+
+  white-space: nowrap;
+
+}
+
+
+
+/* Faculty / teacher */
+
+.official-timetable .official-class > span.section-badge + span {
+
+  grid-column: 2;
+
+  grid-row: 2;
+
+  width: auto;
+
+  margin: 0;
+
+  justify-self: start;
+
+  white-space: nowrap;
+
+}
+
+
+
+/* Room = third span */
+
+.official-timetable .official-class > span.section-badge + span + span {
+
+  grid-column: 1 / 3;
+
+  grid-row: 3;
+
+  white-space: nowrap;
+
+}
+
+
+
+/* Duration + time */
+
+.official-timetable .official-class > small {
+
+  grid-column: 1 / 3;
+
+  grid-row: 4;
+
+  white-space: nowrap;
+
+}
+
+
+
+/* LAB */
+
+.official-timetable .official-class > .lab {
+
+  grid-column: 1 / 3;
+
+  grid-row: 5;
+
+}
+
+
+
+/* Edit / Delete */
+
+.official-timetable .official-class > .official-actions {
+
+  grid-column: 1 / 3;
+
+  grid-row: 6;
+
+}
+
+
+
+/* Teacher timetable uses the same clean layout */
+
+.teacher-table .official-class {
+
+  grid-template-columns: 1fr 1fr;
+
+}
+
+
+
+/* Small separator between section and faculty */
+
+.official-timetable .official-class > span.section-badge + span::before {
+
+  content: "";
+
+  display: inline-block;
+
+  width: 1px;
+
+  height: 11px;
+
+  margin-right: 5px;
+
+  background: #c8ced8;
+
+  vertical-align: -1px;
+
+}
+
+
+
+/* =========================================================
+
+   FINAL TABLE CLEANUP
+
+   1) Day names centered inside their cells
+
+   2) Long subject names never overflow their card
+
+   ========================================================= */
+
+
+
+/* Center MON / TUE / WED / THU / FRI */
+
+.official-timetable tbody td:first-child,
+
+.official-timetable tbody td.day-cell {
+
+  height: 142px !important;
+
+  min-width: 82px;
+
+  width: 82px;
+
+  padding: 8px 6px !important;
+
+  text-align: center !important;
+
+  vertical-align: middle !important;
+
+}
+
+
+
+.official-timetable tbody td:first-child {
+
+  display: table-cell !important;
+
+}
+
+
+
+/* Keep the complete class content inside its card */
+
+.official-timetable .official-class,
+
+.official-timetable .official-entry-cell .official-class {
+
+  overflow: hidden !important;
+
+  min-width: 0 !important;
+
+  width: 100% !important;
+
+}
+
+
+
+/* Subject/title: allow wrapping instead of escaping the card */
+
+.official-timetable .official-class > strong {
+
+  display: -webkit-box !important;
+
+  width: 100% !important;
+
+  max-width: 100% !important;
+
+  min-width: 0 !important;
+
+  overflow: hidden !important;
+
+  white-space: normal !important;
+
+  overflow-wrap: anywhere !important;
+
+  word-break: break-word !important;
+
+  text-overflow: ellipsis !important;
+
+  -webkit-box-orient: vertical !important;
+
+  -webkit-line-clamp: 2 !important;
+
+  line-clamp: 2 !important;
+
+  line-height: 13px !important;
+
+  max-height: 26px !important;
+
+  text-align: center !important;
+
+}
+
+
+
+/* Section / faculty / room remain compact and never escape */
+
+.official-timetable .official-class > span,
+
+.official-timetable .official-class > small {
+
+  max-width: 100% !important;
+
+  min-width: 0 !important;
+
+  overflow: hidden !important;
+
+  text-overflow: ellipsis !important;
+
+  white-space: nowrap !important;
+
+}
+
+
+
+/* Make the horizontal section + faculty line fit safely */
+
+.official-timetable .official-class > .section-badge,
+
+.official-timetable .official-class > .section-badge + span {
+
+  min-width: 0 !important;
+
+  max-width: 48% !important;
+
+}
+
+
+
+/* Buttons never overflow the card */
+
+.official-timetable .official-actions {
+
+  max-width: 100% !important;
+
+  min-width: 0 !important;
+
+  overflow: hidden !important;
+
+  flex-wrap: nowrap !important;
+
+}
+
+
+
+.official-timetable .official-actions button {
+
+  flex: 0 0 auto !important;
+
+  max-width: 48% !important;
+
+  overflow: hidden !important;
+
+  text-overflow: ellipsis !important;
+
+  white-space: nowrap !important;
+
+}
+
+
+
+/* Keep multi-hour LAB cards equally clean */
+
+.official-timetable .official-entry-cell[colspan] {
+
+  vertical-align: middle !important;
+
+}
+
+
+
+/* Mobile day labels */
+
+@media (max-width: 820px) {
+
+  .official-timetable tbody td:first-child,
+
+  .official-timetable tbody td.day-cell {
+
+    min-width: 74px;
+
+    width: 74px;
+
+    text-align: center !important;
+
+  }
+
+}
+
+
+
+/* =========================================================
+
+   FINAL SMALL FIX
+
+   - Wider timetable columns/cards so CA1 + faculty fit
+
+   - No "..." on faculty/teacher
+
+   - Day labels shifted slightly right
+
+   ========================================================= */
+
+
+
+.official-timetable {
+
+  min-width: 920px !important;
+
+}
+
+
+
+/* Day names: centered, with a tiny right visual shift */
+
+.official-timetable tbody td:first-child,
+
+.official-timetable tbody td.day-cell {
+
+  text-align: center !important;
+
+  vertical-align: middle !important;
+
+  padding-left: 13px !important;
+
+  padding-right: 5px !important;
+
+}
+
+
+
+.official-timetable tbody td:first-child {
+
+  transform: translateX(3px);
+
+}
+
+
+
+/* Give class cards the extra breathing room */
+
+.official-timetable .official-entry-cell .official-class,
+
+.official-timetable .official-entry-cell[colspan] .official-class,
+
+.official-timetable .official-class {
+
+  width: calc(100% - 4px) !important;
+
+  margin: 0 2px !important;
+
+}
+
+
+
+/* Section + faculty: full horizontal line, NO truncation */
+
+.official-timetable .official-class > .section-badge,
+
+.official-timetable .official-class > .section-badge + span {
+
+  max-width: none !important;
+
+  min-width: 0 !important;
+
+  width: auto !important;
+
+  overflow: visible !important;
+
+  text-overflow: clip !important;
+
+  white-space: nowrap !important;
+
+  font-size: 8.5px !important;
+
+}
+
+
+
+/* The pair itself gets the full card width */
+
+.official-timetable .official-class > .section-badge {
+
+  justify-self: end !important;
+
+}
+
+
+
+.official-timetable .official-class > .section-badge + span {
+
+  justify-self: start !important;
+
+}
+
+
+
+/* Don't add truncation to teacher/faculty text */
+
+.official-timetable .official-class > span {
+
+  text-overflow: clip !important;
+
+}
+
+
+
+/* Keep long subject names safely inside the wider card */
+
+.official-timetable .official-class > strong {
+
+  max-width: 100% !important;
+
+  padding-inline: 3px;
+
+}
+
+
+
+/* LAB cards use the same wider sizing */
+
+.official-timetable .official-entry-cell[colspan] .official-class {
+
+  width: calc(100% - 4px) !important;
+
+}
+
+
+
+/* Smaller screens: retain the extra width through horizontal scroll */
+
+@media (max-width: 820px) {
+
+  .official-timetable {
+
+    min-width: 900px !important;
+
+  }
+
+
+
+  .official-timetable tbody td:first-child,
+
+  .official-timetable tbody td.day-cell {
+
+    padding-left: 11px !important;
+
+  }
+
+}
+
+
+
+/* =========================================================
+
+   TEACHER SCHEDULE — SIMPLE NORMAL TABLE
+
+   No floating cards/boxes. Keep a clean timetable grid.
+
+   ========================================================= */
+
+
+
+.teacher-table {
+
+  min-width: 900px !important;
+
+  border-collapse: collapse !important;
+
+  border-spacing: 0 !important;
+
+  background: #fff !important;
+
+}
+
+
+
+/* Normal table cells */
+
+.teacher-table th,
+
+.teacher-table td {
+
+  border: 1px solid #e2e2e7 !important;
+
+  border-radius: 0 !important;
+
+  background: #fff !important;
+
+  box-shadow: none !important;
+
+  vertical-align: middle !important;
+
+}
+
+
+
+/* Header */
+
+.teacher-table thead th {
+
+  height: 62px !important;
+
+  padding: 8px 6px !important;
+
+  background: #f5f5f7 !important;
+
+  color: #3a3a3c !important;
+
+  font-size: 10px !important;
+
+  font-weight: 750 !important;
+
+  text-align: center !important;
+
+}
+
+
+
+/* Day column */
+
+.teacher-table tbody td:first-child {
+
+  width: 82px !important;
+
+  min-width: 82px !important;
+
+  padding: 8px !important;
+
+  background: #fafafa !important;
+
+  color: #1d1d1f !important;
+
+  font-size: 11px !important;
+
+  font-weight: 750 !important;
+
+  text-align: center !important;
+
+}
+
+
+
+/* Each teacher class is plain table content, not a card */
+
+.teacher-table .official-class,
+
+.teacher-table .official-entry-cell .official-class {
+
+  display: flex !important;
+
+  width: 100% !important;
+
+  min-width: 0 !important;
+
+  height: auto !important;
+
+  min-height: 0 !important;
+
+  max-height: none !important;
+
+  margin: 0 !important;
+
+  padding: 8px 5px !important;
+
+  align-items: center !important;
+
+  justify-content: center !important;
+
+  gap: 3px !important;
+
+  overflow: hidden !important;
+
+  border: 0 !important;
+
+  border-radius: 0 !important;
+
+  background: transparent !important;
+
+  box-shadow: none !important;
+
+  transform: none !important;
+
+}
+
+
+
+/* Simple text hierarchy */
+
+.teacher-table .official-class strong {
+
+  display: block !important;
+
+  width: 100% !important;
+
+  max-width: 100% !important;
+
+  margin: 0 !important;
+
+  padding: 0 !important;
+
+  color: #1d1d1f !important;
+
+  font-size: 11px !important;
+
+  font-weight: 750 !important;
+
+  line-height: 14px !important;
+
+  text-align: center !important;
+
+  white-space: normal !important;
+
+  overflow: hidden !important;
+
+  text-overflow: ellipsis !important;
+
+}
+
+
+
+.teacher-table .official-class span,
+
+.teacher-table .official-class small {
+
+  color: #6e6e73 !important;
+
+  font-size: 9px !important;
+
+  line-height: 12px !important;
+
+  white-space: nowrap !important;
+
+}
+
+
+
+/* Section + faculty on one clean line */
+
+.teacher-table .official-class > .section-badge,
+
+.teacher-table .official-class > .section-badge + span {
+
+  width: auto !important;
+
+  max-width: 48% !important;
+
+  overflow: hidden !important;
+
+  text-overflow: ellipsis !important;
+
+  white-space: nowrap !important;
+
+}
+
+
+
+/* No card hover effect */
+
+.teacher-table .official-class:hover {
+
+  transform: none !important;
+
+  box-shadow: none !important;
+
+  background: transparent !important;
+
+}
+
+
+
+/* No floating action buttons in teacher schedule */
+
+.teacher-table .official-actions {
+
+  display: none !important;
+
+}
+
+
+
+/* LAB text stays simple too */
+
+.teacher-table .official-class .lab,
+
+.teacher-table .official-class.lab {
+
+  min-height: 0 !important;
+
+  padding: 0 !important;
+
+  border: 0 !important;
+
+  border-radius: 0 !important;
+
+  background: transparent !important;
+
+  box-shadow: none !important;
+
+}
+
+
+
+/* Keep multi-hour cells as ordinary table cells */
+
+.teacher-table td[colspan] {
+
+  background: #fff !important;
+
+  vertical-align: middle !important;
+
+}
+
+
+
+/* Subtle hover on the whole table row only */
+
+.teacher-table tbody tr:hover td {
+
+  background: #fbfbfd !important;
+
+}
+
+
+
+.teacher-table tbody tr:hover td:first-child {
+
+  background: #f5f5f7 !important;
+
+}
+
+
+/* =========================================================
+   I1 + I2 SAME-TIME LAB / CLASS SUPPORT
+   If multiple sections have different classes at the same
+   start time, keep them in ONE timetable cell and stack
+   them vertically with a clear horizontal divider.
+   ========================================================= */
+
+.official-entry-cell.multi-entry-cell {
+  padding: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  vertical-align: stretch !important;
+}
+
+.official-entry-cell.multi-entry-cell .official-class-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.official-entry-cell.multi-entry-cell .official-class-stack > .official-class {
+  width: 100%;
+  height: 108px;
+  min-height: 108px;
+  max-height: none;
+  flex: 0 0 108px;
+  box-sizing: border-box;
   border: 0;
-
-  border-radius: 10px;
-
-  padding: 10px 16px;
-
-  background: #16243d;
-
-  color: #fff;
-
-  font-weight: 700;
-
-  cursor: pointer;
-
-  box-shadow: 0 8px 20px rgba(22, 36, 61, 0.14);
-
+  border-radius: 0;
+  box-shadow: none;
 }
 
-
-
-.download-pdf-btn:hover:not(:disabled) {
-
-  transform: translateY(-1px);
-
+.official-entry-cell.multi-entry-cell .official-class-stack > .official-class + .official-class {
+  border-top: 1px solid rgba(60, 60, 67, .20);
 }
 
-
-
-.download-pdf-btn:disabled {
-
-  opacity: .55;
-
-  cursor: not-allowed;
-
+.official-entry-cell.multi-entry-cell .official-class-stack > .official-class:hover {
+  transform: none;
+  box-shadow: none;
+  background: rgba(248, 251, 255, .82);
 }
 
-
-/* Separate visual treatment for the teacher PDF action. */
-.teacher-pdf {
-  border: 1px solid #cce9df;
-  background: #ecfdf5;
-  color: #047857;
+/* Labs use the same stacked layout but retain the LAB visual treatment. */
+.official-entry-cell.multi-entry-cell .official-class-stack > .official-class.lab {
+  height: 108px;
+  min-height: 108px;
+  max-height: none;
 }
 
-.teacher-pdf:hover:not(:disabled) {
-  background: #dff8ed;
-  box-shadow: 0 8px 18px rgba(4, 120, 87, .14);
+/* The stack cards need a positioning context for the divider. */
+.official-entry-cell.multi-entry-cell .official-class-stack > .official-class {
+  position: relative;
 }
 
-.teacher-pdf:disabled {
-  opacity: .55;
-  cursor: not-allowed;
+@media (max-width: 820px) {
+  .official-entry-cell.multi-entry-cell .official-class-stack > .official-class,
+  .official-entry-cell.multi-entry-cell .official-class-stack > .official-class.lab {
+    height: 118px;
+    min-height: 118px;
+    max-height: none;
+    flex-basis: 118px;
+  }
 }

@@ -13,6 +13,8 @@ public interface TeacherDao {
 
     List<Teacher> findByName(String name);
 
+    Optional<Teacher> findByFacultyCode(String facultyCode);
+
     Teacher save(Teacher teacher);
 
     void delete(Long id);

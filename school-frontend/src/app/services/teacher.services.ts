@@ -59,6 +59,23 @@ private baseUrl =
     );
   }
 
+
+  syncFromTimetable(payload: {
+    faculty: string;
+    fullName?: string;
+    department: string;
+    departmentId?: number;
+    branch: string;
+    branchId?: number;
+    semester: number;
+    semesterId?: number;
+    section: string;
+    sectionId?: number;
+    subject: string;
+  }): Observable<Teacher> {
+    return this.http.post<Teacher>(`${this.baseUrl}/sync-from-timetable`, payload);
+  }
+
   // DELETE
   delete(id: number): Observable<void> {
     return this.http.delete<void>(

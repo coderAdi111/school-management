@@ -30,10 +30,25 @@ public class TeacherDaoImpl implements TeacherDao {
 
     @Override
     public Optional<Teacher> findById(Long id) {
-
         return Optional.ofNullable(
                 em.find(Teacher.class, id)
         );
+    }
+
+    @Override
+    public Optional<Teacher> findByFacultyCode(String facultyCode) {
+        if (facultyCode == null || facultyCode.trim().isEmpty()) {
+            return Optional.empty();
+        }
+
+        return em.createQuery(
+                "SELECT t FROM Teacher t " +
+                "WHERE LOWER(TRIM(t.facultyCode)) = LOWER(TRIM(:code))",
+                Teacher.class
+        )
+        .setParameter("code", facultyCode.trim())
+        .getResultStream()
+        .findFirst();
     }
 
     @Override
@@ -55,11 +70,8 @@ public class TeacherDaoImpl implements TeacherDao {
     @Override
     @Transactional
     public Teacher save(Teacher teacher) {
-
         if (teacher.getId() == null) {
-
             em.persist(teacher);
-
             return teacher;
         }
 
@@ -69,14 +81,9 @@ public class TeacherDaoImpl implements TeacherDao {
     @Override
     @Transactional
     public void delete(Long id) {
-
-        Teacher teacher = em.find(
-                Teacher.class,
-                id
-        );
+        Teacher teacher = em.find(Teacher.class, id);
 
         if (teacher != null) {
-
             em.remove(teacher);
         }
     }

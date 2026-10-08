@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/teachers")
@@ -88,6 +89,18 @@ public class TeacherController {
                         teacher
                 )
         );
+    }
+
+
+    /**
+     * Creates/updates a teacher from a Weekly Timetable entry and keeps the
+     * teacher's teachingAssignments JSON in sync. If the faculty code/name
+     * already exists, the existing teacher is reused. If it is new, the
+     * frontend must provide fullName once.
+     */
+    @PostMapping("/sync-from-timetable")
+    public ResponseEntity<Teacher> syncFromTimetable(@RequestBody Map<String, Object> payload) {
+        return ResponseEntity.ok(teacherService.syncFromTimetable(payload));
     }
 
     // =========================

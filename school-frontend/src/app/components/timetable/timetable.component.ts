@@ -40,6 +40,7 @@ export class TimetableComponent implements OnInit {
   availableBranches: string[] = [];
   availableSemesters: number[] = [];
   availableSections: string[] = [];
+  selectedSections: string[] = [];
   availableSectionGroups: { name: string; sections: string[] }[] = [];
   selectedTimetableGroup = ''; // empty = only the currently selected section
   private academicDepartments: AcademicDepartment[] = [];
@@ -169,6 +170,7 @@ export class TimetableComponent implements OnInit {
     const sections = this.academicSections.filter(s => !semester || s.semester?.id === semester.id);
     this.availableSections = [...new Set(sections.map(s => s.name).filter(Boolean))].sort();
     if (!this.availableSections.includes(this.section)) this.section = this.availableSections[0] || '';
+    this.selectedSections = this.section ? [this.section] : [];
     this.buildSectionGroups();
     this.selectedTimetableGroup = '';
 
@@ -226,6 +228,7 @@ export class TimetableComponent implements OnInit {
     const rows = this.academicStructures.filter(r => (!this.selectedDepartment || r.department === this.selectedDepartment) && (!this.selectedBranch || r.branch === this.selectedBranch) && (!this.selectedSemester || Number(r.semester) === Number(this.selectedSemester)));
     this.availableSections = [...new Set(rows.map(r => r.section).filter(Boolean) as string[])].sort();
     if (!this.availableSections.includes(this.section)) this.section = this.availableSections[0] || '';
+    this.selectedSections = this.section ? [this.section] : [];
     this.buildSectionGroups();
     this.selectedTimetableGroup = '';
     this.form = this.blank();
@@ -235,7 +238,25 @@ export class TimetableComponent implements OnInit {
   onDepartmentChange(): void { this.loadAcademicSemestersForCurrentBranch(); }
   onBranchChange(): void { this.loadAcademicSemestersForCurrentBranch(); }
   onSemesterChange(): void { this.refreshAcademicSelections(); }
-  onSectionChange(): void { this.form = this.blank(); this.selectedTimetableGroup = ''; this.buildSectionGroups(); this.load(); }
+  onSectionChange(): void { this.form = this.blank(); this.selectedTimetableGroup = ''; this.selectedSections = this.section ? [this.section] : []; this.buildSectionGroups(); this.load(); }
+
+  toggleSection(section: string): void {
+    const set = new Set(this.selectedSections);
+    if (set.has(section)) set.delete(section); else set.add(section);
+    this.selectedSections = this.availableSections.filter(s => set.has(s));
+    if (!this.selectedSections.length && this.section) this.selectedSections = [this.section];
+  }
+
+  isSectionSelected(section: string): boolean { return this.selectedSections.includes(section); }
+
+  generateSelectedTimetable(): void {
+    if (!this.selectedSections.length && this.section) this.selectedSections = [this.section];
+    this.load();
+  }
+
+  selectedSectionsLabel(): string {
+    return this.selectedSections.length ? this.selectedSections.join(' + ') : 'No section selected';
+  }
 
   private loadAcademicSemestersForCurrentBranch(): void {
     const dept = this.academicDepartments.find(d => d.name === this.selectedDepartment);
@@ -248,6 +269,7 @@ export class TimetableComponent implements OnInit {
     const semester = this.academicSemesters.find(s => s.branch?.id === branch?.id && Number(s.semesterNumber) === Number(this.selectedSemester));
     this.availableSections = [...new Set(this.academicSections.filter(s => !semester || s.semester?.id === semester.id).map(s => s.name).filter(Boolean))].sort();
     if (!this.availableSections.includes(this.section)) this.section = this.availableSections[0] || '';
+    this.selectedSections = this.section ? [this.section] : [];
     this.buildSectionGroups();
     this.selectedTimetableGroup = '';
     this.form = this.blank();
@@ -280,17 +302,15 @@ export class TimetableComponent implements OnInit {
   // loading start -> API request -> success/error -> loading false.
   this.cdr.detectChanges();
 
-  if (!this.section) { this.entries = []; this.loading = false; return; }
+  const sections = this.selectedSections.length ? this.selectedSections : (this.section ? [this.section] : []);
+  if (!sections.length) { this.entries = []; this.loading = false; return; }
 
-  this.service.get(this.section, this.selectedDepartment, this.selectedBranch, this.selectedSemester).subscribe({
+  forkJoin(sections.map(sec => this.service.get(sec, this.selectedDepartment, this.selectedBranch, this.selectedSemester))).subscribe({
 
-    next: (data) => {
+    next: (datasets) => {
 
-      console.log('Timetable data loaded:', data);
-
-      this.entries = Array.isArray(data)
-        ? data
-        : [];
+      const raw = datasets.flatMap(data => Array.isArray(data) ? data : []);
+      this.entries = this.mergeSelectedSectionEntries(raw, sections);
 
       this.loading = false;
       this.error = '';
@@ -323,6 +343,27 @@ export class TimetableComponent implements OnInit {
   });
 
 }
+
+  /** Merge identical classes only for the currently selected sections. Database rows remain untouched. */
+  private mergeSelectedSectionEntries(rows: TimetableEntry[], selected: string[]): TimetableEntry[] {
+    if (selected.length <= 1) return rows;
+    const selectedSet = new Set(selected.map(s => s.toLowerCase()));
+    const groups = new Map<string, TimetableEntry[]>();
+    for (const row of rows) {
+      if (!selectedSet.has((row.section || '').toLowerCase())) continue;
+      const key = [row.dayOfWeek, row.startTime, row.endTime, (row.subject || '').trim().toLowerCase(), (row.faculty || '').trim().toLowerCase(), (row.room || '').trim().toLowerCase(), !!row.practical].join('|');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(row);
+    }
+    const result: TimetableEntry[] = [];
+    for (const rowsForClass of groups.values()) {
+      const first = rowsForClass[0];
+      const sections = [...new Set(rowsForClass.map(r => r.section).filter(Boolean))].sort();
+      result.push({ ...first, section: sections.length > 1 ? sections.join(' + ') : (sections[0] || first.section) });
+    }
+    // Keep deterministic official timetable ordering.
+    return result.sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.startTime.localeCompare(b.startTime) || a.section.localeCompare(b.section));
+  }
 
   // LOAD TEACHERS FOR THE TEACHER SCHEDULE VIEW
   loadTeachers(): void {
@@ -360,19 +401,12 @@ export class TimetableComponent implements OnInit {
     }
 
     try {
-      const sections = this.availableSections.length ? this.availableSections : (this.section ? [this.section] : []);
+      const sections = this.selectedSections.length ? this.selectedSections : (this.section ? [this.section] : []);
       const datasets = await Promise.all(sections.map(section =>
         firstValueFrom(this.service.get(section, this.selectedDepartment, this.selectedBranch, this.selectedSemester))
       ));
       const rawAll = datasets.flatMap(data => Array.isArray(data) ? data : []).filter(e => e?.dayOfWeek);
-      const allMap = new Map<string, TimetableEntry>();
-      for (const entry of rawAll) {
-        const key = entry.sectionGroup
-          ? [entry.department, entry.branch, entry.semester, entry.sectionGroup, entry.dayOfWeek, entry.startTime, entry.endTime, entry.subject, entry.faculty || '', entry.room || ''].join('|').toLowerCase()
-          : [entry.department, entry.branch, entry.semester, entry.section, entry.dayOfWeek, entry.startTime, entry.endTime, entry.subject, entry.faculty || '', entry.room || ''].join('|').toLowerCase();
-        if (!allMap.has(key)) allMap.set(key, entry);
-      }
-      const all = Array.from(allMap.values());
+      const all = this.mergeSelectedSectionEntries(rawAll, sections);
 
       if (!all.length) {
         alert('Selected academic structure ka timetable empty hai.');
@@ -767,6 +801,55 @@ export class TimetableComponent implements OnInit {
     return `${hour12}:${String(minute).padStart(2, '0')} ${suffix}`;
   }
 
+  /** Refresh the currently visible timetable view.
+   *  Weekly view reloads the selected timetable from the API.
+   *  Teacher view reloads the complete teacher schedule and teacher list.
+   */
+  async refreshCurrentView(): Promise<void> {
+    this.error = '';
+    this.teacherError = '';
+
+    try {
+      if (this.viewMode === 'teacher') {
+        this.teacherLoading = true;
+        await new Promise<void>((resolve, reject) => {
+          this.teacherService.getAll().subscribe({
+            next: teachers => {
+              this.teachers = (Array.isArray(teachers) ? teachers : [])
+                .filter(t => (t.status ?? 'ACTIVE') !== 'INACTIVE')
+                .sort((a, b) => this.teacherName(a).localeCompare(this.teacherName(b)));
+              resolve();
+            },
+            error: reject
+          });
+        });
+
+        // Keep the selected teacher after refreshing the teacher master list.
+        if (this.selectedTeacherName) {
+          const selected = this.teachers.find(t => this.teacherName(t) === this.selectedTeacherName);
+          this.selectedTeacherCode = (selected?.facultyCode ?? '').trim().toUpperCase();
+          await this.loadTeacherSchedule();
+        } else {
+          this.teacherEntries = [];
+        }
+        return;
+      }
+
+      // Weekly view: always reload from the backend instead of reusing the
+      // current in-memory entries. This makes the button a real refresh.
+      await this.load();
+    } catch (err: any) {
+      console.error('Timetable refresh error:', err);
+      this.error = 'Refresh nahi ho paaya. Backend/API check karein.';
+      this.teacherError = this.viewMode === 'teacher'
+        ? 'Teacher schedule refresh nahi ho paaya.'
+        : this.teacherError;
+    } finally {
+      this.teacherLoading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
   onTeacherChange(): void {
     const selected = this.teachers.find(t => this.teacherName(t) === this.selectedTeacherName);
     this.selectedTeacherCode = (selected?.facultyCode ?? '').trim().toUpperCase();
@@ -895,6 +978,71 @@ export class TimetableComponent implements OnInit {
     this.load();
   }
 
+  // Keep Teacher master data in sync with every Weekly Timetable save.
+  // Existing teachers are matched by faculty code/name. A new faculty code
+  // asks for the full name once, then the teacher is created automatically.
+  private async syncTeacherForTimetable(base: TimetableEntry, targets: string[]): Promise<TimetableEntry> {
+    const rawFaculty = (base.faculty ?? '').trim();
+    if (!rawFaculty) return base;
+
+    const normalized = rawFaculty.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    let teacher = this.teachers.find(t => {
+      const code = (t.facultyCode ?? '').trim().toLowerCase();
+      const name = this.teacherName(t).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      return !!code && code === normalized.replace(/[^a-z0-9]/g, '') || name === normalized;
+    });
+
+    let fullName = teacher ? this.teacherName(teacher) : '';
+    let facultyCode = teacher?.facultyCode?.trim().toUpperCase() || rawFaculty.toUpperCase();
+
+    // If the user entered a full name directly, use it as the new teacher name.
+    if (!teacher && rawFaculty.includes(' ') && rawFaculty.split(/\s+/).length >= 2) {
+      fullName = rawFaculty.replace(/\s+/g, ' ').trim();
+      facultyCode = fullName.split(/\s+/).filter(Boolean).map(p => p[0]).join('').slice(0, 6).toUpperCase();
+    }
+
+    // A CSV timetable may contain only a faculty code (for example AB).
+    // Do not stop the import or ask the user for a name for every new code.
+    // The backend creates "AB Teacher" automatically; the admin can later edit
+    // the teacher and replace the placeholder with the real full name.
+    if (!teacher && !fullName) {
+      fullName = '';
+      facultyCode = rawFaculty.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    }
+
+    const dept = this.academicDepartments.find(d => d.name === base.department);
+    const branch = this.academicBranches.find(b => (b.code || b.name) === base.branch && (!dept || b.department?.id === dept.id));
+    const semester = this.academicSemesters.find(s => Number(s.semesterNumber) === Number(base.semester) && (!branch || s.branch?.id === branch.id));
+
+    const requests = targets.map(sectionName => {
+      const sec = this.academicSections.find(x => x.name === sectionName && (!semester || x.semester?.id === semester.id));
+      return firstValueFrom(this.teacherService.syncFromTimetable({
+        faculty: facultyCode,
+        fullName,
+        department: base.department,
+        departmentId: dept?.id,
+        branch: branch?.name || base.branch,
+        branchId: branch?.id,
+        semester: base.semester,
+        semesterId: semester?.id,
+        section: sectionName,
+        sectionId: sec?.id,
+        subject: base.subject.trim()
+      }));
+    });
+
+    const synced = await Promise.all(requests);
+    if (synced.length) {
+      const latest = synced[synced.length - 1];
+      const existingIndex = this.teachers.findIndex(t => t.id === latest.id);
+      if (existingIndex >= 0) this.teachers[existingIndex] = latest;
+      else this.teachers = [...this.teachers, latest].sort((a, b) => this.teacherName(a).localeCompare(this.teacherName(b)));
+      this.cdr.detectChanges();
+    }
+
+    return { ...base, faculty: facultyCode };
+  }
+
   // ADD / UPDATE TIMETABLE ENTRY
   save(): void {
 
@@ -926,31 +1074,35 @@ export class TimetableComponent implements OnInit {
       subject: this.form.subject.trim()
     };
 
-    const request: Observable<unknown> = this.editingId
-      ? (this.form.sectionGroup ? this.service.updateGroup(this.editingId, payloadBase) : this.service.update(this.editingId, payloadBase))
-      : this.saveForTargetSections(payloadBase);
+    const group = this.availableSectionGroups.find(g => g.name === this.selectedTimetableGroup);
+    const targets = group ? group.sections : [this.section];
 
-    request.subscribe({
-      next: () => {
+    this.syncTeacherForTimetable(payloadBase, targets)
+      .then(canonicalPayload => {
+        const request: Observable<unknown> = this.editingId
+          ? (this.form.sectionGroup ? this.service.updateGroup(this.editingId, canonicalPayload) : this.service.update(this.editingId, canonicalPayload))
+          : this.saveForTargetSections(canonicalPayload);
+
+        request.subscribe({
+          next: () => {
+            this.saving = false;
+            this.cancelEdit();
+            this.load();
+          },
+          error: (err: any) => {
+            console.error('Timetable save error:', err);
+            this.saving = false;
+            this.error = err?.name === 'TimeoutError'
+              ? 'Server se 20 seconds mein response nahi aaya. Internet aur backend API check karein.'
+              : 'Save nahi hua. Browser console aur backend logs check karein.';
+          }
+        });
+      })
+      .catch((err: any) => {
+        console.error('Teacher auto-sync error:', err);
         this.saving = false;
-        this.cancelEdit();
-        this.load();
-      },
-      error: (err: any) => {
-        console.error('Timetable save error:', err);
-
-        this.saving = false;
-
-        if (err.name === 'TimeoutError') {
-          this.error =
-            'Server se 20 seconds mein response nahi aaya. Internet aur backend API check karein.';
-        } else {
-          this.error =
-            'Save nahi hua. Browser console aur backend logs check karein.';
-        }
-      }
-
-    });
+        this.error = err?.message || 'Teacher sync nahi ho paaya.';
+      });
   }
 
   private saveForTargetSections(base: TimetableEntry) {
@@ -1338,64 +1490,149 @@ export class TimetableComponent implements OnInit {
 
     this.importing = true;
     this.error = '';
-    this.importMessage = 'Importing...';
+    this.importProgress = 0;
+    this.importStage = 'Preparing import';
+    this.importMessage = 'Preparing teachers and timetable classes...';
+    this.cdr.detectChanges();
 
     let saved = 0;
 
     try {
+      // ============================================================
+      // 1. GROUP TEACHER ASSIGNMENTS BY FACULTY CODE
+      // ============================================================
+      // Different teachers can be synced in parallel. Entries of the
+      // same teacher stay sequential because TeacherService updates the
+      // teacher's teachingAssignments JSON and parallel writes could
+      // otherwise overwrite each other.
+      const teacherGroups = new Map<string, TimetableEntry[]>();
 
       for (const entry of this.importPreview) {
+        const faculty = (entry.faculty ?? '').trim();
+        if (!faculty) continue;
 
-        await firstValueFrom(
-          this.service.create(entry)
+        const key = faculty.toUpperCase();
+        if (!teacherGroups.has(key)) {
+          teacherGroups.set(key, []);
+        }
+
+        const group = teacherGroups.get(key)!;
+
+        const duplicate = group.some(existing =>
+          existing.section.trim().toUpperCase() === entry.section.trim().toUpperCase() &&
+          existing.subject.trim().toLowerCase() === entry.subject.trim().toLowerCase()
         );
 
-        saved++;
+        if (!duplicate) {
+          group.push(entry);
+        }
       }
 
-      const successMessage = `Successfully imported ${saved} classes.`;
+      const teacherJobs = Array.from(teacherGroups.values());
 
-      // Import complete: return the OCR/import area to its normal idle state.
-      // Keep the timetable data; only clear temporary OCR/preview diagnostics.
+      // ============================================================
+      // 2. SYNC DIFFERENT TEACHERS IN PARALLEL
+      // ============================================================
+      if (teacherJobs.length) {
+        let completedTeachers = 0;
+
+        await Promise.all(
+          teacherJobs.map(async entries => {
+            // Same teacher -> sequential, different teachers -> parallel.
+            for (const entry of entries) {
+              await this.syncTeacherForTimetable(
+                entry,
+                [entry.section]
+              );
+            }
+
+            completedTeachers++;
+            this.importProgress = Math.min(
+              30,
+              Math.round((completedTeachers / teacherJobs.length) * 30)
+            );
+            this.importMessage =
+              `Syncing teachers... ${completedTeachers}/${teacherJobs.length}`;
+            this.cdr.detectChanges();
+          })
+        );
+      } else {
+        this.importProgress = 30;
+      }
+
+      // ============================================================
+      // 3. SAVE TIMETABLE ROWS IN SMALL PARALLEL BATCHES
+      // ============================================================
+      // Instead of waiting for every request one-by-one, 10 rows are
+      // sent together. This keeps the browser/backend stable while
+      // removing most of the unnecessary network waiting time.
+      this.importStage = 'Saving timetable';
+      this.importMessage = 'Saving timetable classes...';
+      this.cdr.detectChanges();
+
+      const entries = [...this.importPreview];
+      const BATCH_SIZE = 10;
+
+      for (let start = 0; start < entries.length; start += BATCH_SIZE) {
+        const batch = entries.slice(start, start + BATCH_SIZE);
+
+        await Promise.all(
+          batch.map(entry =>
+            firstValueFrom(this.service.create(entry))
+          )
+        );
+
+        saved += batch.length;
+        this.importProgress =
+          30 + Math.round((saved / entries.length) * 70);
+        this.importMessage =
+          `Saving timetable classes... ${saved}/${entries.length}`;
+        this.cdr.detectChanges();
+      }
+
+      // ============================================================
+      // 4. IMPORT COMPLETE
+      // ============================================================
+      const successMessage =
+        `Successfully imported ${saved} classes.`;
+
       this.importPreview = [];
       this.importFileName = '';
       this.ocrText = '';
-      this.importProgress = 0;
-      this.importStage = 'Waiting for a file';
+      this.importProgress = 100;
+      this.importStage = 'Import completed';
       this.ocrWordCount = 0;
       this.detectedDays = [];
       this.detectedTimeSlots = 0;
       this.detectedSections = [];
       this.parserStatus = '';
-      this.importMessage = '';
+      this.importMessage = successMessage;
+      this.cdr.detectChanges();
 
-      this.load();
+      // Reload the selected timetable from the backend.
+      await this.load();
 
-      // Show a short success confirmation, then leave the import UI clean.
       window.setTimeout(() => {
         if (!this.ocrBusy && !this.importing) {
-          this.importMessage = successMessage;
+          this.importMessage = '';
+          this.importProgress = 0;
+          this.importStage = 'Waiting for a file';
           this.cdr.detectChanges();
-          window.setTimeout(() => {
-            if (!this.ocrBusy && !this.importing) {
-              this.importMessage = '';
-              this.cdr.detectChanges();
-            }
-          }, 2500);
         }
-      }, 0);
+      }, 2500);
 
-    } catch (err) {
-
+    } catch (err: any) {
       console.error('Bulk import error:', err);
 
       this.error =
         `${saved} entries were saved; the remaining entries failed. Check the backend/API.`;
+      this.importMessage = '';
+      this.importStage = 'Import failed';
+      this.cdr.detectChanges();
 
     } finally {
-
       this.importing = false;
-
+      this.cdr.detectChanges();
     }
   }
 
@@ -3031,8 +3268,27 @@ const createWorker = tesseract.createWorker;
     return Math.max(1, Math.min(this.timeSlots.length, span));
   }
 
+  // Return every class that STARTS in the same time slot.
+  // This is important when I1 and I2 have different labs at the same time:
+  // both classes must be rendered inside the same timetable cell.
+  entriesStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry[] {
+    return this.entriesForSlot(day, slot)
+      .filter(e => this.startsInSlot(e, slot))
+      .sort((a, b) =>
+        (a.section || '').localeCompare(b.section || '') ||
+        (a.subject || '').localeCompare(b.subject || '') ||
+        (a.room || '').localeCompare(b.room || '')
+      );
+  }
+
+  // The cell must span far enough for the longest class/lab starting here.
+  maxSlotSpan(entries: TimetableEntry[]): number {
+    if (!entries.length) return 1;
+    return Math.max(...entries.map(entry => this.slotSpan(entry)));
+  }
+
   firstEntryStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry | null {
-    return this.entriesForSlot(day, slot).find(e => this.startsInSlot(e, slot)) ?? null;
+    return this.entriesStartingInSlot(day, slot)[0] ?? null;
   }
 
   hasEntryStartingInSlot(day: string, slot: { start: string; end: string }): boolean {
@@ -3057,9 +3313,21 @@ const createWorker = tesseract.createWorker;
   }
 
   teacherEntriesStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry[] {
-    return this.teacherEntriesForDay(day)
+    const items = this.teacherEntriesForDay(day)
       .filter(e => this.startsInSlot(e, slot))
       .sort((a, b) => a.section.localeCompare(b.section));
+    if (items.length <= 1) return items;
+    const groups = new Map<string, TimetableEntry[]>();
+    for (const item of items) {
+      const key = [(item.startTime || ''), (item.endTime || ''), (item.subject || '').trim().toLowerCase(), (item.faculty || '').trim().toLowerCase(), (item.room || '').trim().toLowerCase(), !!item.practical].join('|');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    }
+    return [...groups.values()].map(group => {
+      const first = group[0];
+      const sections = [...new Set(group.map(x => x.section).filter(Boolean))].sort();
+      return { ...first, section: sections.length > 1 ? sections.join(' + ') : first.section };
+    });
   }
 
   teacherFirstEntryStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry | null {

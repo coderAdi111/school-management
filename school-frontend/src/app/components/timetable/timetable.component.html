@@ -1,14 +1,28 @@
 
 
+
+
 <div class="tt-page">
 
 
 
+
+
+
+
   <!-- ===================================== -->
+
+
 
   <!-- PAGE HEADER -->
 
+
+
   <!-- ===================================== -->
+
+
+
+
 
 
 
@@ -16,13 +30,27 @@
 
 
 
+
+
+
+
     <div>
+
+
 
       <p class="eyebrow">
 
+
+
         ENGINEERING COLLEGE AJMER · {{ selectedBranch || 'ACADEMIC' }}
 
+
+
       </p>
+
+
+
+
 
 
 
@@ -30,32 +58,87 @@
 
 
 
+
+
+
+
       <p>{{ selectedSemester ? (selectedSemester + (selectedSemester === 1 ? 'st' : selectedSemester === 2 ? 'nd' : selectedSemester === 3 ? 'rd' : 'th')) : '' }} Semester · Session 2026–27</p>
 
+
+
     </div>
+
+
+
+
 
 
 
     <!-- SECTION SWITCH -->
 
+
+
     <div class="section-switch academic-selectors">
+
       <select [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentChange()" aria-label="Department">
+
         <option value="">Department</option>
+
         <option *ngFor="let item of availableDepartments" [value]="item">{{ item }}</option>
+
       </select>
+
       <select [(ngModel)]="selectedBranch" (ngModelChange)="onBranchChange()" aria-label="Branch">
+
         <option value="">Branch</option>
+
         <option *ngFor="let item of availableBranches" [value]="item">{{ item }}</option>
+
       </select>
+
       <select [(ngModel)]="selectedSemester" (ngModelChange)="onSemesterChange()" aria-label="Semester">
+
         <option [ngValue]="0">Semester</option>
+
         <option *ngFor="let item of availableSemesters" [ngValue]="item">{{ item }}{{ item === 1 ? 'st' : item === 2 ? 'nd' : item === 3 ? 'rd' : 'th' }} Semester</option>
+
       </select>
-      <select [(ngModel)]="section" (ngModelChange)="onSectionChange()" aria-label="Section">
+
+      <select [(ngModel)]="section" (ngModelChange)="onSectionChange()" aria-label="Primary Section">
+
         <option value="">Section</option>
+
         <option *ngFor="let item of availableSections" [value]="item">Section {{ item }}</option>
+
       </select>
+
+
+
+      <div class="section-picker" aria-label="Select sections for timetable">
+
+        <span class="section-picker-label">Sections</span>
+
+        <label class="section-chip" *ngFor="let item of availableSections" [class.selected]="isSectionSelected(item)">
+
+          <input type="checkbox" [checked]="isSectionSelected(item)" (change)="toggleSection(item)">
+
+          <span>{{ item }}</span>
+
+        </label>
+
+        <button type="button" class="generate-section-btn" (click)="generateSelectedTimetable()" [disabled]="loading || !selectedSections.length">
+
+          {{ loading ? 'Generating…' : 'Generate Timetable' }}
+
+        </button>
+
+      </div>
+
     </div>
+
+
+
+
 
 
 
@@ -65,11 +148,25 @@
 
 
 
+
+
+
+
+
+
   <!-- ===================================== -->
+
+
 
   <!-- BULK IMPORT SECTION -->
 
+
+
   <!-- ===================================== -->
+
+
+
+
 
 
 
@@ -77,43 +174,89 @@
 
 
 
+
+
+
+
     <div class="bulk-head">
+
+
+
+
 
 
 
       <div>
 
+
+
         <h2>Bulk Import Timetable</h2>
+
+
+
+
 
 
 
         <p class="muted">
 
+
+
           Import a timetable from CSV, or upload an image/PDF to detect the actual timetable entries.
 
+
+
         </p>
+
+
 
       </div>
 
 
 
+
+
+
+
       <button
+
+
 
         class="secondary"
 
+
+
         type="button"
+
+
 
         (click)="downloadTemplate()"
 
+
+
       >
 
+
+
         ⬇ Download CSV Template
+
+
 
       </button>
 
 
 
+
+
+
+
     </div>
+
+
+
+
+
+
 
 
 
@@ -121,11 +264,21 @@
 
     <!-- FILE UPLOAD -->
 
+
+
     <div class="upload-row">
 
 
 
+
+
+
+
       <label class="file-picker">
+
+
+
+
 
 
 
@@ -133,19 +286,41 @@
 
 
 
+
+
+
+
         <input
+
+
 
           type="file"
 
+
+
           accept=".csv,text/csv"
 
+
+
           (change)="onImportFile($event)"
+
+
 
         >
 
 
 
+
+
+
+
       </label>
+
+
+
+
+
+
 
 
 
@@ -155,21 +330,43 @@
 
 
 
+
+
+
+
         Upload timetable image / PDF
+
+
+
+
 
 
 
         <input
 
+
+
           type="file"
+
+
 
           accept="image/*,.pdf,application/pdf"
 
+
+
           (change)="onImageOrPdf($event)"
+
+
 
           [disabled]="ocrBusy"
 
+
+
         >
+
+
+
+
 
 
 
@@ -179,21 +376,47 @@
 
 
 
+
+
+
+
+
+
       <span
+
+
 
         class="muted"
 
+
+
         *ngIf="importFileName"
+
+
 
       >
 
+
+
         {{ importFileName }}
+
+
 
       </span>
 
 
 
+
+
+
+
     </div>
+
+
+
+
+
+
 
 
 
@@ -201,31 +424,61 @@
 
     <!-- LIVE IMPORT STATUS -->
 
+
+
     <div class="import-status" *ngIf="ocrBusy || importProgress > 0">
+
+
+
+
 
 
 
       <div class="import-status-head">
 
+
+
         <strong>{{ importStage }}</strong>
+
+
 
         <strong>{{ importProgress }}%</strong>
 
+
+
       </div>
+
+
+
+
 
 
 
       <div class="import-progress-track" role="progressbar"
 
+
+
            [attr.aria-valuenow]="importProgress"
+
+
 
            aria-valuemin="0"
 
+
+
            aria-valuemax="100">
+
+
 
         <div class="import-progress-bar" [style.width.%]="importProgress"></div>
 
+
+
       </div>
+
+
+
+
 
 
 
@@ -233,25 +486,53 @@
 
 
 
+
+
+
+
       <div class="import-diagnostics" *ngIf="ocrBusy || ocrWordCount || detectedDays.length || detectedTimeSlots || detectedSections.length">
+
+
 
         <div><span>File</span><strong>{{ importFileName || '—' }}</strong></div>
 
+
+
         <div><span>OCR text regions</span><strong>{{ ocrWordCount }}</strong></div>
+
+
 
         <div><span>Days detected</span><strong>{{ detectedDays.length ? detectedDays.join(', ') : 'Not detected yet' }}</strong></div>
 
+
+
         <div><span>Time slots detected</span><strong>{{ detectedTimeSlots }}</strong></div>
+
+
 
         <div><span>Sections/classes detected</span><strong>{{ detectedSections.length ? detectedSections.join(', ') : 'Not detected yet' }}</strong></div>
 
+
+
         <div *ngIf="parserStatus"><span>Parser</span><strong>{{ parserStatus }}</strong></div>
+
+
 
       </div>
 
 
 
+
+
+
+
     </div>
+
+
+
+
+
+
 
 
 
@@ -259,13 +540,25 @@
 
     <!-- OCR RESULT -->
 
+
+
     <div
+
+
 
       class="ocr-result"
 
+
+
       *ngIf="ocrText"
 
+
+
     >
+
+
+
+
 
 
 
@@ -273,45 +566,93 @@
 
 
 
+
+
+
+
       <textarea
+
+
 
         rows="10"
 
+
+
         [(ngModel)]="ocrText"
 
+
+
         aria-label="Extracted timetable text"
+
+
 
       ></textarea>
 
 
 
+
+
+
+
       <button
+
+
 
         class="secondary"
 
+
+
         type="button"
+
+
 
         (click)="copyOcrText()"
 
+
+
       >
 
+
+
         Copy extracted text
+
+
 
       </button>
 
 
 
+
+
+
+
       <p class="muted">
+
+
 
         OCR text is shown for verification. The importer does not use fixed subjects or fixed class data.
 
+
+
         Always review the detected timetable entries before saving them.
+
+
 
       </p>
 
 
 
+
+
+
+
     </div>
+
+
+
+
+
+
 
 
 
@@ -319,17 +660,35 @@
 
     <!-- IMPORT MESSAGE -->
 
+
+
     <p
+
+
 
       class="import-message"
 
+
+
       *ngIf="importMessage"
+
+
 
     >
 
+
+
       {{ importMessage }}
 
+
+
     </p>
+
+
+
+
+
+
 
 
 
@@ -337,15 +696,27 @@
 
     <!-- ERROR MESSAGE -->
 
+
+
     <p
+
+
 
       class="error"
 
+
+
       *ngIf="error"
+
+
 
     >
 
+
+
       {{ error }}
+
+
 
     </p>
 
@@ -353,21 +724,45 @@
 
 
 
+
+
+
+
+
+
     <!-- ===================================== -->
+
+
 
     <!-- IMPORT PREVIEW -->
 
+
+
     <!-- ===================================== -->
+
+
+
+
 
 
 
     <div
 
+
+
       class="preview-wrap"
+
+
 
       *ngIf="importPreview.length"
 
+
+
     >
+
+
+
+
 
 
 
@@ -375,7 +770,15 @@
 
 
 
+
+
+
+
       <div class="preview-table">
+
+
+
+
 
 
 
@@ -383,27 +786,55 @@
 
 
 
+
+
+
+
           <thead>
+
+
 
             <tr>
 
+
+
               <th>Section</th>
+
+
 
               <th>Day</th>
 
+
+
               <th>Time</th>
+
+
 
               <th>Subject</th>
 
+
+
               <th>Faculty</th>
+
+
 
               <th>Room</th>
 
+
+
               <th>Type</th>
+
+
 
             </tr>
 
+
+
           </thead>
+
+
+
+
 
 
 
@@ -411,7 +842,15 @@
 
 
 
+
+
+
+
             <tr *ngFor="let row of importPreview">
+
+
+
+
 
 
 
@@ -419,15 +858,31 @@
 
 
 
+
+
+
+
               <td>{{ row.dayOfWeek }}</td>
+
+
+
+
 
 
 
               <td>
 
+
+
                 {{ row.startTime }}–{{ row.endTime }}
 
+
+
               </td>
+
+
+
+
 
 
 
@@ -435,7 +890,15 @@
 
 
 
+
+
+
+
               <td>{{ row.faculty || '—' }}</td>
+
+
+
+
 
 
 
@@ -443,11 +906,23 @@
 
 
 
+
+
+
+
               <td>
+
+
 
                 {{ row.practical ? 'Lab' : 'Theory' }}
 
+
+
               </td>
+
+
+
+
 
 
 
@@ -455,7 +930,15 @@
 
 
 
+
+
+
+
           </tbody>
+
+
+
+
 
 
 
@@ -463,7 +946,17 @@
 
 
 
+
+
+
+
       </div>
+
+
+
+
+
+
 
 
 
@@ -471,43 +964,85 @@
 
       <!-- IMPORT ACTIONS -->
 
+
+
       <div class="actions import-actions">
 
 
 
+
+
+
+
         <button
+
+
 
           class="primary"
 
+
+
           type="button"
+
+
 
           [disabled]="importing"
 
+
+
           (click)="saveImport()"
+
+
 
         >
 
+
+
           {{ importing ? 'Importing…' : 'Save All Classes' }}
 
+
+
         </button>
+
+
+
+
 
 
 
         <button
 
+
+
           class="secondary"
+
+
 
           type="button"
 
+
+
           [disabled]="importing"
+
+
 
           (click)="clearImport()"
 
+
+
         >
+
+
 
           Cancel
 
+
+
         </button>
+
+
+
+
 
 
 
@@ -515,7 +1050,15 @@
 
 
 
+
+
+
+
     </div>
+
+
+
+
 
 
 
@@ -525,11 +1068,25 @@
 
 
 
+
+
+
+
+
+
   <!-- ===================================== -->
+
+
 
   <!-- MAIN TIMETABLE LAYOUT -->
 
+
+
   <!-- ===================================== -->
+
+
+
+
 
 
 
@@ -539,11 +1096,25 @@
 
 
 
+
+
+
+
+
+
     <!-- ===================================== -->
+
+
 
     <!-- ADD / EDIT TIMETABLE FORM -->
 
+
+
     <!-- ===================================== -->
+
+
+
+
 
 
 
@@ -551,18 +1122,39 @@
 
 
 
+
+
+
+
       <h2>
 
+
+
         {{ editingId ? 'Edit class' : 'Add timetable class' }}
+
+
 
       </h2>
 
 
 
+
+
+
+
       <p class="muted">
+
         Selected section: <strong>{{ section }}</strong>
+
         <span *ngIf="selectedTimetableGroup"> · Shared timetable: <strong>{{ sectionGroupLabel() }}</strong></span>
+
       </p>
+
+
+
+
+
+
 
 
 
@@ -570,36 +1162,71 @@
 
       <form
 
+
+
         #timetableForm="ngForm"
 
+
+
         (ngSubmit)="save()"
+
+
 
       >
 
 
 
+
+
+
+
         <!-- TIMETABLE TARGET -->
+
         <label>
+
           Timetable applies to
+
           <select
+
             name="timetableGroup"
+
             [(ngModel)]="selectedTimetableGroup"
+
             [disabled]="!!editingId"
+
           >
+
             <option value="">Only Section {{ section }}</option>
+
             <option *ngFor="let group of availableSectionGroups" [value]="group.name">
+
               {{ group.name }} — {{ group.sections.join(', ') }}
+
             </option>
+
           </select>
+
           <small class="muted" *ngIf="availableSectionGroups.length">
+
             Example: CA will save the same class to CA1 + CA2; CB will save it to CB1 + CB2.
+
           </small>
+
         </label>
+
+
+
 
 
         <!-- DAY -->
 
+
+
         <label>
+
+
+
+
 
 
 
@@ -607,29 +1234,59 @@
 
 
 
+
+
+
+
           <select
+
+
 
             name="day"
 
+
+
             [(ngModel)]="form.dayOfWeek"
 
+
+
             required
+
+
 
           >
 
 
 
+
+
+
+
             <option
+
+
 
               *ngFor="let day of days"
 
+
+
               [value]="day"
+
+
 
             >
 
+
+
               {{ day }}
 
+
+
             </option>
+
+
+
+
 
 
 
@@ -637,7 +1294,17 @@
 
 
 
+
+
+
+
         </label>
+
+
+
+
+
+
 
 
 
@@ -645,7 +1312,13 @@
 
         <!-- SUBJECT -->
 
+
+
         <label>
+
+
+
+
 
 
 
@@ -653,23 +1326,49 @@
 
 
 
+
+
+
+
           <input
+
+
 
             type="text"
 
+
+
             name="subject"
+
+
 
             [(ngModel)]="form.subject"
 
+
+
             placeholder="e.g. CN / CN Lab"
 
+
+
             required
+
+
 
           >
 
 
 
+
+
+
+
         </label>
+
+
+
+
+
+
 
 
 
@@ -677,11 +1376,21 @@
 
         <!-- TIME -->
 
+
+
         <div class="two">
 
 
 
+
+
+
+
           <label>
+
+
+
+
 
 
 
@@ -689,21 +1398,45 @@
 
 
 
+
+
+
+
             <input
+
+
 
               type="time"
 
+
+
               name="start"
+
+
 
               [(ngModel)]="form.startTime"
 
+
+
               required
+
+
 
             >
 
 
 
+
+
+
+
           </label>
+
+
+
+
+
+
 
 
 
@@ -713,21 +1446,43 @@
 
 
 
+
+
+
+
             End time
+
+
+
+
 
 
 
             <input
 
+
+
               type="time"
+
+
 
               name="end"
 
+
+
               [(ngModel)]="form.endTime"
+
+
 
               required
 
+
+
             >
+
+
+
+
 
 
 
@@ -735,7 +1490,17 @@
 
 
 
+
+
+
+
         </div>
+
+
+
+
+
+
 
 
 
@@ -743,7 +1508,13 @@
 
         <!-- FACULTY -->
 
+
+
         <label>
+
+
+
+
 
 
 
@@ -751,21 +1522,45 @@
 
 
 
+
+
+
+
           <input
+
+
 
             type="text"
 
+
+
             name="faculty"
+
+
 
             [(ngModel)]="form.faculty"
 
+
+
             placeholder="Faculty initials/name"
+
+
 
           >
 
 
 
+
+
+
+
         </label>
+
+
+
+
+
+
 
 
 
@@ -773,7 +1568,13 @@
 
         <!-- ROOM -->
 
+
+
         <label>
+
+
+
+
 
 
 
@@ -781,21 +1582,45 @@
 
 
 
+
+
+
+
           <input
+
+
 
             type="text"
 
+
+
             name="room"
+
+
 
             [(ngModel)]="form.room"
 
+
+
             placeholder="Room number"
+
+
 
           >
 
 
 
+
+
+
+
         </label>
+
+
+
+
+
+
 
 
 
@@ -803,23 +1628,45 @@
 
         <!-- PRACTICAL -->
 
+
+
         <label class="check">
+
+
+
+
 
 
 
           <input
 
+
+
             type="checkbox"
+
+
 
             name="practical"
 
+
+
             [(ngModel)]="form.practical"
+
+
 
           >
 
 
 
+
+
+
+
           Practical / Lab
+
+
+
+
 
 
 
@@ -829,37 +1676,79 @@
 
 
 
+
+
+
+
+
+
         <!-- FORM ACTIONS -->
+
+
 
         <div class="actions">
 
 
 
+
+
+
+
           <button
+
+
 
             class="primary"
 
+
+
             type="submit"
+
+
 
             [disabled]="saving || !timetableForm.valid"
 
+
+
           >
+
+
 
             {{
 
+
+
               saving
+
+
 
                 ? 'Saving…'
 
+
+
                 : editingId
+
+
 
                   ? 'Update class'
 
+
+
                   : 'Add class'
+
+
 
             }}
 
+
+
           </button>
+
+
+
+
+
+
 
 
 
@@ -867,25 +1756,49 @@
 
           <button
 
+
+
             class="secondary"
+
+
 
             type="button"
 
+
+
             *ngIf="editingId"
+
+
 
             [disabled]="saving"
 
+
+
             (click)="cancelEdit()"
+
+
 
           >
 
+
+
             Cancel
 
+
+
           </button>
+
+
+
+
 
 
 
         </div>
+
+
+
+
 
 
 
@@ -895,19 +1808,41 @@
 
 
 
+
+
+
+
+
+
       <!-- FORM ERROR -->
+
+
 
       <p
 
+
+
         class="error"
+
+
 
         *ngIf="error"
 
+
+
       >
+
+
 
         {{ error }}
 
+
+
       </p>
+
+
+
+
 
 
 
@@ -917,13 +1852,29 @@
 
 
 
+
+
+
+
+
+
     <!-- ===================================== -->
+
+
 
     <!-- WEEKLY SCHEDULE -->
 
+
+
     <!-- Official timetable-style matrix: one row per day, one column per time slot. -->
 
+
+
     <!-- ===================================== -->
+
+
+
+
 
 
 
@@ -931,153 +1882,309 @@
 
 
 
+
+
+
+
       <div class="schedule-title">
+
+
 
         <div>
 
-          <h2>{{ selectedTimetableGroup ? sectionGroupLabel() : ('Section ' + section) }} weekly schedule</h2>
 
-          <p class="muted">Weekly timetable in the same day × time-slot format as the official college timetable.</p>
+
+          <h2>{{ selectedSectionsLabel() }} weekly schedule</h2>
+
+
+
+          <p class="muted">Selected sections are combined automatically. Identical classes appear once; different classes remain separate.</p>
+
+
 
         </div>
+
+
+
+
 
 
 
         <div class="schedule-actions">
 
+
+
           <div class="schedule-view-switch" role="tablist" aria-label="Timetable view">
+
+
 
             <button type="button" [class.active]="viewMode === 'weekly'" (click)="setView('weekly')">Weekly Schedule</button>
 
+
+
             <button type="button" [class.active]="viewMode === 'teacher'" (click)="setView('teacher')">Teacher Schedule</button>
+
+
 
           </div>
 
 
 
+
+
+
+
           <button class="delete-all" type="button" (click)="deleteAllTimetable()" [disabled]="deletingAll || loading || importing || saving">
+
+
 
             {{ deletingAll ? 'Deleting…' : '🗑 Delete Selected Timetable' }}
 
+
+
           </button>
 
 
 
-          <button class="secondary" type="button" (click)="viewMode === 'teacher' ? loadTeacherSchedule() : load()" [disabled]="loading || teacherLoading || deletingAll">
+
+
+
+
+          <button class="secondary" type="button" (click)="refreshCurrentView()" [disabled]="loading || teacherLoading || deletingAll">
+
+
 
             {{ (loading || teacherLoading) ? 'Loading…' : '↻ Refresh' }}
 
+
+
           </button>
 
 
 
+
+
+
+
           <button
+
+
 
             *ngIf="viewMode === 'weekly'"
 
+
+
             class="download-weekly"
 
+
+
             type="button"
+
+
 
             (click)="downloadWeeklyTimetablePdf()"
 
+
+
             [disabled]="loading || deletingAll || importing || saving"
+
+
 
             title="Download the current section's complete weekly timetable"
 
+
+
           >
+
+
 
             ⬇ Download Weekly TT
 
+
+
           </button>
+
+
 
           <button
+
             *ngIf="viewMode === 'teacher' && selectedTeacherName"
+
             class="download-teacher"
+
             type="button"
+
             (click)="downloadTeacherTimetablePdf()"
+
             [disabled]="teacherLoading || deletingAll || importing || saving"
+
             title="Download selected teacher's complete weekly timetable"
+
           >
+
             ⬇ Download Teacher TT
+
           </button>
 
+
+
         </div>
+
+
 
       </div>
 
 
 
+
+
+
+
       <div *ngIf="viewMode === 'teacher'" class="teacher-schedule">
+
+
 
         <div class="teacher-filter">
 
+
+
           <label>
+
+
 
             Select Teacher
 
+
+
             <select name="scheduleTeacher" [(ngModel)]="selectedTeacherName" (ngModelChange)="onTeacherChange()">
+
+
 
               <option value="">Choose a teacher</option>
 
+
+
               <option *ngFor="let teacher of teachers" [value]="teacherName(teacher)">{{ teacherName(teacher) }}</option>
+
+
 
             </select>
 
+
+
           </label>
 
+
+
           <p class="muted" *ngIf="selectedTeacherName">Showing complete weekly schedule for <strong>{{ selectedTeacherName }}</strong> across all departments, branches, semesters and sections.</p>
+
+
 
         </div>
 
 
 
+
+
+
+
         <p class="error" *ngIf="teacherError">{{ teacherError }}</p>
+
+
 
         <div *ngIf="teacherLoading" class="empty">Loading teacher schedule…</div>
 
 
 
+
+
+
+
         <div class="official-table-wrap" *ngIf="!teacherLoading && selectedTeacherName">
+
+
 
           <table class="official-timetable teacher-table">
 
+
+
             <thead>
+
+
 
               <tr>
 
+
+
                 <th class="day-head">DAY / TIME</th>
+
+
 
                 <th *ngFor="let slot of timeSlots" [innerText]="slot.label"></th>
 
+
+
               </tr>
+
+
 
             </thead>
 
+
+
             <tbody>
+
+
 
               <tr *ngFor="let day of days">
 
+
+
                 <th class="day-cell">{{ day.substring(0,3).toUpperCase() }}</th>
+
+
 
                 <ng-container *ngFor="let slot of timeSlots; let slotIndex = index">
 
+
+
                   <ng-container *ngIf="!isTeacherSlotCoveredByEarlierEntry(day, slotIndex)">
 
-                    <ng-container *ngIf="teacherFirstEntryStartingInSlot(day, slot) as item; else emptyTeacherSlot">
-                      <td [attr.colspan]="slotSpan(item)" class="official-entry-cell teacher-entry-cell">
-                        <div
-                          class="official-class"
-                          *ngFor="let teacherItem of teacherEntriesStartingInSlot(day, slot)"
-                        >
-                          <strong>{{ teacherItem.section }} - {{ teacherItem.subject }}</strong>
-                          <span>{{ teacherItem.faculty || selectedTeacherName }}</span>
-                          <span *ngIf="teacherItem.room">{{ teacherItem.room }}</span>
-                          <small>{{ duration(teacherItem) }} · {{ teacherItem.startTime }}–{{ teacherItem.endTime }}</small>
-                          <span class="lab" *ngIf="teacherItem.practical">LAB</span>
+                    <ng-container *ngIf="teacherEntriesStartingInSlot(day, slot) as items; else emptyTeacherSlot">
+
+                      <td
+                        [attr.colspan]="maxSlotSpan(items)"
+                        class="official-entry-cell teacher-entry-cell"
+                        [class.multi-entry-cell]="items.length > 1"
+                      >
+
+                        <div class="official-class-stack">
+
+                          <div
+                            class="official-class"
+                            *ngFor="let teacherItem of items"
+                          >
+
+                            <strong>{{ teacherItem.subject }}</strong>
+
+                            <span class="section-badge">{{ teacherItem.section }}</span>
+
+                            <span>{{ teacherItem.faculty || selectedTeacherName }}</span>
+
+                            <span *ngIf="teacherItem.room">{{ teacherItem.room }}</span>
+
+                            <small>{{ duration(teacherItem) }} · {{ teacherItem.startTime }}–{{ teacherItem.endTime }}</small>
+
+                            <span class="lab" *ngIf="teacherItem.practical">LAB</span>
+
+                          </div>
+
                         </div>
+
                       </td>
+
                     </ng-container>
+
                     <ng-template #emptyTeacherSlot>
 
                       <td></td>
@@ -1086,21 +2193,41 @@
 
                   </ng-container>
 
+
+
                 </ng-container>
+
+
 
               </tr>
 
+
+
             </tbody>
 
+
+
           </table>
+
+
 
         </div>
 
 
 
+
+
+
+
         <div *ngIf="!selectedTeacherName && !teacherLoading" class="empty">Select a teacher to view their weekly schedule.</div>
 
+
+
       </div>
+
+
+
+
 
 
 
@@ -1108,53 +2235,91 @@
 
 
 
+
+
+
+
       <div *ngIf="viewMode === 'weekly' && !loading" class="official-table-wrap">
+
+
 
         <table class="official-timetable">
 
+
+
           <thead>
+
+
 
             <tr>
 
+
+
               <th class="day-head">DAY / TIME</th>
+
+
 
               <th *ngFor="let slot of timeSlots" [innerText]="slot.label"></th>
 
+
+
             </tr>
+
+
 
           </thead>
 
+
+
           <tbody>
+
+
 
             <tr *ngFor="let day of days">
 
+
+
               <th class="day-cell">{{ day.substring(0,3).toUpperCase() }}</th>
+
+
 
               <ng-container *ngFor="let slot of timeSlots; let slotIndex = index">
 
+
+
                 <ng-container *ngIf="!isSlotCoveredByEarlierEntry(day, slotIndex)">
 
-                  <ng-container *ngIf="firstEntryStartingInSlot(day, slot) as item; else emptyWeeklySlot">
+                  <ng-container *ngIf="entriesStartingInSlot(day, slot) as items; else emptyWeeklySlot">
 
-                    <td [attr.colspan]="slotSpan(item)" class="official-entry-cell">
+                    <td
+                      [attr.colspan]="maxSlotSpan(items)"
+                      class="official-entry-cell"
+                      [class.multi-entry-cell]="items.length > 1"
+                    >
 
-                      <div class="official-class">
+                      <div class="official-class-stack">
 
-                        <strong>{{ item.section }}<span *ngIf="item.section">-</span>{{ item.subject }}</strong>
+                        <div class="official-class" *ngFor="let item of items">
 
-                        <span *ngIf="item.faculty">({{ item.faculty }})</span>
+                          <strong>{{ item.subject }}</strong>
 
-                        <span *ngIf="item.room">{{ item.room }}</span>
+                          <span class="section-badge" *ngIf="item.section">{{ item.section }}</span>
 
-                        <small>{{ duration(item) }} · {{ item.startTime }}–{{ item.endTime }}</small>
+                          <span *ngIf="item.faculty">({{ item.faculty }})</span>
 
-                        <span class="lab" *ngIf="item.practical">LAB</span>
+                          <span *ngIf="item.room">{{ item.room }}</span>
 
-                        <div class="official-actions">
+                          <small>{{ duration(item) }} · {{ item.startTime }}–{{ item.endTime }}</small>
 
-                          <button type="button" (click)="edit(item)">Edit</button>
+                          <span class="lab" *ngIf="item.practical">LAB</span>
 
-                          <button type="button" class="delete" (click)="remove(item)">Delete</button>
+                          <div class="official-actions">
+
+                            <button type="button" (click)="edit(item)">Edit</button>
+
+                            <button type="button" class="delete" (click)="remove(item)">Delete</button>
+
+                          </div>
 
                         </div>
 
@@ -1172,15 +2337,29 @@
 
                 </ng-container>
 
+
+
               </ng-container>
+
+
 
             </tr>
 
+
+
           </tbody>
+
+
 
         </table>
 
+
+
       </div>
+
+
+
+
 
 
 
@@ -1188,7 +2367,15 @@
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
