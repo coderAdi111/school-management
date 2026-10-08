@@ -165,7 +165,13 @@ public class TeacherService {
             String canonicalBranchCode = canonicalBranchCode(branchCode, branch);
             exists = assignments.stream().anyMatch(a ->
                 same(a.get("departmentName"), department) &&
-                same(canonicalBranchCode(a.get("branchCode"), a.get("branchName")), canonicalBranchCode) &&
+                same(
+    canonicalBranchCode(
+        a.get("branchCode") == null ? null : String.valueOf(a.get("branchCode")),
+        a.get("branchName") == null ? null : String.valueOf(a.get("branchName"))
+    ),
+    canonicalBranchCode
+) &&
                 sameNumber(a.get("semesterNumber"), semester) &&
                 same(a.get("sectionName"), section) &&
                 same(a.get("subject"), subject)
