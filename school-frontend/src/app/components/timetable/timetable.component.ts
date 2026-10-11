@@ -1010,9 +1010,31 @@ export class TimetableComponent implements OnInit {
       facultyCode = rawFaculty.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     }
 
-    const dept = this.academicDepartments.find(d => d.name === base.department);
-    const branch = this.academicBranches.find(b => (b.code || b.name) === base.branch && (!dept || b.department?.id === dept.id));
-    const semester = this.academicSemesters.find(s => Number(s.semesterNumber) === Number(base.semester) && (!branch || s.branch?.id === branch.id));
+    const normalizeAcademicLabel = (value: unknown) =>
+      String(value ?? '').trim().toLowerCase().replace(/\\s+/g, ' ');
+
+    const deptLabel = normalizeAcademicLabel(base.department);
+    const branchLabel = normalizeAcademicLabel(base.branch);
+
+    const dept = this.academicDepartments.find(d =>
+      normalizeAcademicLabel(d.name) === deptLabel ||
+      normalizeAcademicLabel(d.code) === deptLabel
+    );
+
+    // Match branch by code OR name, case-insensitively, and always constrain
+    // it to the selected department. This prevents "CY" / "Cyber Security"
+    // from failing lookup and being stored as a fake branch code.
+    const branch = this.academicBranches.find(b => {
+      const sameDepartment = !dept || b.department?.id === dept.id;
+      const codeMatches = normalizeAcademicLabel(b.code) === branchLabel;
+      const nameMatches = normalizeAcademicLabel(b.name) === branchLabel;
+      return sameDepartment && (codeMatches || nameMatches);
+    });
+
+    const semester = this.academicSemesters.find(s =>
+      Number(s.semesterNumber) === Number(base.semester) &&
+      (!branch || s.branch?.id === branch.id)
+    );
 
     const requests = targets.map(sectionName => {
       const sec = this.academicSections.find(x => x.name === sectionName && (!semester || x.semester?.id === semester.id));
@@ -1022,6 +1044,7 @@ export class TimetableComponent implements OnInit {
         department: base.department,
         departmentId: dept?.id,
         branch: branch?.name || base.branch,
+        branchCode: branch?.code || '',
         branchId: branch?.id,
         semester: base.semester,
         semesterId: semester?.id,
@@ -1316,6 +1339,7 @@ export class TimetableComponent implements OnInit {
     this.importPreview = [];
     this.importMessage = '';
     this.error = '';
+    this.cdr.detectChanges();
 
     if (!file) {
       return;
@@ -1447,15 +1471,21 @@ export class TimetableComponent implements OnInit {
       this.importMessage =
         `${rows.length} classes ready. ` +
         `${Object.entries(sectionCounts).map(([name, count]) => `${name}: ${count}`).join(', ')}.`;
+      this.importStage = 'File parsed successfully';
+      this.importProgress = 100;
+      this.cdr.detectChanges();
 
     } catch (err: any) {
 
       this.error =
         err?.message || 'The CSV could not be read.';
+      this.importStage = 'File parsing failed';
+      this.cdr.detectChanges();
 
     } finally {
 
       input.value = '';
+      this.cdr.detectChanges();
 
     }
   }
@@ -1571,6 +1601,11 @@ export class TimetableComponent implements OnInit {
       this.cdr.detectChanges();
 
       const entries = [...this.importPreview];
+      // Keep the exact sections from this import so the timetable view can
+      // switch to the imported classes after the database writes complete.
+      const importedSections = [...new Set(
+        entries.map(entry => (entry.section || '').trim().toUpperCase()).filter(Boolean)
+      )].sort();
       const BATCH_SIZE = 10;
 
       for (let start = 0; start < entries.length; start += BATCH_SIZE) {
@@ -1599,6 +1634,13 @@ export class TimetableComponent implements OnInit {
       this.importPreview = [];
       this.importFileName = '';
       this.ocrText = '';
+      // Automatically show the sections that were just imported instead of
+      // reloading only the section that happened to be selected beforehand.
+      if (importedSections.length) {
+        this.section = importedSections[0];
+        this.selectedSections = [...importedSections];
+        this.selectedTimetableGroup = '';
+      }
       this.importProgress = 100;
       this.importStage = 'Import completed';
       this.ocrWordCount = 0;

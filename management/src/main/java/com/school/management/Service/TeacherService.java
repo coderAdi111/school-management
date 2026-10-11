@@ -317,9 +317,19 @@ public class TeacherService {
             String code,
             String name
     ) {
+        // The academic branch name is the reliable fallback when legacy
+        // imports stored a display name (or an incorrect code) as branchCode.
+        if (name != null && !name.isBlank()) {
+            String normalizedName = name.trim().toLowerCase(Locale.ROOT);
+            if (normalizedName.equals("cyber security") ||
+                    normalizedName.equals("cybersecurity") ||
+                    normalizedName.equals("cy")) return "CY";
+        }
+
         if (code != null && !code.isBlank()) {
             String c = code.trim().toUpperCase(Locale.ROOT);
 
+            if (c.equals("CYBER SECURITY") || c.equals("CYBERSECURITY")) return "CY";
             if (c.equals("INFORMATION TECHNOLOGY")) return "IT";
             if (c.equals("COMPUTER SCIENCE AND ENGINEERING")) return "CS";
             if (c.equals("COMPUTER SCIENCE")) return "CS";
@@ -335,6 +345,7 @@ public class TeacherService {
 
         String n = name.trim().toLowerCase(Locale.ROOT);
 
+        if (n.equals("cyber security") || n.equals("cybersecurity") || n.equals("cy")) return "CY";
         if (n.equals("information technology") || n.equals("it")) return "IT";
         if (n.equals("computer science") || n.equals("computer science and engineering") || n.equals("cse")) return "CS";
         if (n.equals("electronics and communication engineering") || n.equals("electronics and communication") || n.equals("ece")) return "ECE";
@@ -385,8 +396,22 @@ public class TeacherService {
         return fallback;
     }
 
+    @Transactional
     public Teacher saveTeacher(Teacher teacher) {
+        normalizeTeacherAssignments(teacher);
         return teacherDao.save(teacher);
+    }
+
+    private void normalizeTeacherAssignments(Teacher teacher) {
+        if (teacher == null) return;
+        List<Map<String, Object>> assignments = normalizeAssignments(
+                readAssignments(teacher.getTeachingAssignments())
+        );
+        try {
+            teacher.setTeachingAssignments(objectMapper.writeValueAsString(assignments));
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to normalize teacher assignments.", e);
+        }
     }
 
     // =========================
@@ -429,6 +454,7 @@ public class TeacherService {
         existing.setTeachingAssignments(
                 updated.getTeachingAssignments()
         );
+        normalizeTeacherAssignments(existing);
 
         existing.setQualification(
                 updated.getQualification()

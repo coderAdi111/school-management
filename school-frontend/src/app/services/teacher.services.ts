@@ -65,8 +65,9 @@ private baseUrl =
     fullName?: string;
     department: string;
     departmentId?: number;
-    branch: string;
-    branchId?: number;
+   branch: string;
+branchCode?: string;
+branchId?: number;
     semester: number;
     semesterId?: number;
     section: string;
