@@ -346,10 +346,10 @@ export class AttendanceListComponent implements OnInit {
 
     this.timetableService
       .getSubjects(
-        this.selectedSection,
         this.selectedDepartment,
         this.selectedBranch,
-        Number(this.selectedSemester)
+        Number(this.selectedSemester),
+        this.selectedSection
       )
       .subscribe({
         next: (data: string[]) => {

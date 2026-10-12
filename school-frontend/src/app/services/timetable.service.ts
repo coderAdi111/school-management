@@ -21,7 +21,7 @@ export interface TimetableEntry {
 @Injectable({ providedIn: 'root' })
 export class TimetableService {
   private readonly baseUrl =
-  globalThis.location?.hostname === 'localhost' || globalThis.location?.hostname === '127.0.0.1'
+  globalThis.location?.hostname === 'localhost'
     ? 'http://localhost:8080/api/timetable'
     : 'https://school-management-vy1j.onrender.com/api/timetable';
   constructor(private http: HttpClient) {}
@@ -42,12 +42,9 @@ export class TimetableService {
   create(entry: TimetableEntry): Observable<TimetableEntry> { return this.http.post<TimetableEntry>(this.baseUrl, entry); }
   bulkUpsert(entries: TimetableEntry[], mode: 'merge' | 'overwrite' = 'merge'): Observable<TimetableEntry[]> {
     const params = new HttpParams().set('mode', mode);
-    return this.http.post<TimetableEntry[]>(`${this.baseUrl}/bulk`, entries, { params });
+    return this.http.post<TimetableEntry[]>(`${this.baseUrl}/bulk-upsert`, entries, { params });
   }
-  getDuplicates(): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/duplicates`);
-  }
-  getSubjects(section: string, department: string, branch: string, semester: number): Observable<string[]> {
+  getSubjects(department: string, branch: string, semester: number, section: string): Observable<string[]> {
     const params = new HttpParams()
       .set('department', department)
       .set('branch', branch)

@@ -33,14 +33,23 @@ public class TeacherService {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    private void updateTimetableFacultyCode(String oldCode, String newCode) {
-        var query = entityManager.createQuery(
-                "UPDATE TimetableEntry t SET t.faculty = :newCode " +
-                "WHERE LOWER(TRIM(t.faculty)) = LOWER(TRIM(:oldCode))"
-        );
-        query.setParameter("oldCode", oldCode);
-        query.setParameter("newCode", newCode == null ? "" : newCode);
-        query.executeUpdate();
+    private void updateTimetableFacultyValue(String oldValue, String newValue) {
+        if (oldValue == null || oldValue.isBlank()) return;
+        entityManager.createQuery(
+                "UPDATE TimetableEntry t SET t.faculty = :newValue " +
+                "WHERE LOWER(TRIM(t.faculty)) = LOWER(TRIM(:oldValue))"
+        ).setParameter("oldValue", oldValue.trim())
+         .setParameter("newValue", newValue == null ? "" : newValue.trim())
+         .executeUpdate();
+    }
+
+    private void deleteTimetableRowsForFaculty(String facultyValue) {
+        if (facultyValue == null || facultyValue.isBlank()) return;
+        entityManager.createQuery(
+                "DELETE FROM TimetableEntry t " +
+                "WHERE LOWER(TRIM(t.faculty)) = LOWER(TRIM(:facultyValue))"
+        ).setParameter("facultyValue", facultyValue.trim())
+         .executeUpdate();
     }
 
 
@@ -56,14 +65,47 @@ public class TeacherService {
     public List<Teacher> getAllTeachers() {
         List<Teacher> teachers = teacherDao.findAll();
 
-        // One-time cleanup for assignments created by older sync versions.
-        // This runs when the Teachers page loads, so existing teachers are
-        // cleaned without requiring another timetable upload.
+        // Timetable entries are the source of truth for timetable-linked
+        // teaching assignments. Reconcile on read so assignments left behind
+        // by older CSV imports, scoped deletes, or overwrite imports disappear.
+        // Existing academic IDs are retained for assignments that still match.
+        List<TimetableEntry> timetableEntries = entityManager.createQuery(
+                "SELECT t FROM TimetableEntry t ORDER BY t.id", TimetableEntry.class
+        ).getResultList();
+
         for (Teacher teacher : teachers) {
-            List<Map<String, Object>> cleaned = normalizeAssignments(
+            List<Map<String, Object>> oldAssignments = normalizeAssignments(
                     readAssignments(teacher.getTeachingAssignments())
             );
+            Map<String, Map<String, Object>> oldByKey = new java.util.LinkedHashMap<>();
+            for (Map<String, Object> old : oldAssignments) {
+                oldByKey.putIfAbsent(assignmentKey(old), old);
+            }
 
+            List<Map<String, Object>> currentAssignments = new ArrayList<>();
+            for (TimetableEntry entry : timetableEntries) {
+                if (!entryMatchesTeacher(entry, teacher)) continue;
+                Map<String, Object> current = new java.util.LinkedHashMap<>();
+                current.put("departmentName", text(entry.getDepartment()));
+                current.put("branchName", text(entry.getBranch()));
+                current.put("branchCode", canonicalBranchCode(null, text(entry.getBranch())));
+                current.put("semesterNumber", entry.getSemester());
+                current.put("sectionName", text(entry.getSection()));
+                current.put("subject", text(entry.getSubject()));
+
+                String key = assignmentKey(current);
+                Map<String, Object> previous = oldByKey.get(key);
+                if (previous != null) {
+                    current.put("departmentId", previous.get("departmentId"));
+                    current.put("branchId", previous.get("branchId"));
+                    current.put("semesterId", previous.get("semesterId"));
+                    current.put("semesterName", previous.get("semesterName"));
+                    current.put("sectionId", previous.get("sectionId"));
+                }
+                currentAssignments.add(current);
+            }
+
+            List<Map<String, Object>> cleaned = normalizeAssignments(currentAssignments);
             try {
                 String cleanedJson = objectMapper.writeValueAsString(cleaned);
                 if (!cleanedJson.equals(teacher.getTeachingAssignments())) {
@@ -72,13 +114,29 @@ public class TeacherService {
                 }
             } catch (Exception e) {
                 throw new IllegalStateException(
-                        "Unable to clean teaching assignments for teacher " + teacher.getId(),
-                        e
+                        "Unable to reconcile teaching assignments for teacher " + teacher.getId(), e
                 );
             }
         }
 
         return teachers;
+    }
+
+    private boolean entryMatchesTeacher(TimetableEntry entry, Teacher teacher) {
+        String faculty = text(entry.getFaculty());
+        if (faculty == null) return false;
+        String code = normalizeCode(teacher.getFacultyCode());
+        String fullName = ((teacher.getFirstName() == null ? "" : teacher.getFirstName()) + " " +
+                (teacher.getLastName() == null ? "" : teacher.getLastName())).trim();
+        if (code != null && faculty.equalsIgnoreCase(code)) return true;
+        if (!fullName.isBlank() && faculty.equalsIgnoreCase(fullName)) return true;
+        String initials = fullName.replaceAll("[^A-Za-z0-9 ]", " ").trim().replaceAll("\\s+", " ");
+        if (!initials.isBlank()) {
+            StringBuilder compact = new StringBuilder();
+            for (String part : initials.split(" ")) if (!part.isBlank()) compact.append(part.charAt(0));
+            if (compact.length() > 0 && faculty.replaceAll("[^A-Za-z0-9]", "").equalsIgnoreCase(compact.toString())) return true;
+        }
+        return false;
     }
 
     // =========================
@@ -146,7 +204,7 @@ public class TeacherService {
             teacher = new Teacher();
             teacher.setFirstName(first);
             teacher.setLastName(last);
-            teacher.setFacultyCode(codeFromNameOrFaculty(normalizedName, code));
+            teacher.setFacultyCode(code);
             teacher.setStatus(Teacher.Status.ACTIVE);
         }
 
@@ -419,66 +477,130 @@ public class TeacherService {
     // =========================
 
     @Transactional
-    public Teacher updateTeacher(
-            Long id,
-            Teacher updated
-    ) {
+    public Teacher updateTeacher(Long id, Teacher updated) {
+        Teacher existing = getTeacherById(id);
 
-        Teacher existing =
-                getTeacherById(id);
-
-        existing.setFirstName(
-                updated.getFirstName()
-        );
-
-        existing.setLastName(
-                updated.getLastName()
-        );
-
-        existing.setEmail(
-                updated.getEmail()
-        );
-
-        existing.setPhone(
-                updated.getPhone()
-        );
-
+        // Capture old values BEFORE changing the entity. Otherwise old and new
+        // names/codes become identical and timetable synchronization is skipped.
         String oldFacultyCode = normalizeCode(existing.getFacultyCode());
-
-        existing.setSubject(
-                updated.getSubject()
+        String oldFullName = fullName(existing);
+        List<Map<String, Object>> oldAssignments = normalizeAssignments(
+                readAssignments(existing.getTeachingAssignments())
         );
 
-        // Keep all department/branch/semester/section/subject assignments
-        // when a teacher is updated/imported again.
-        existing.setTeachingAssignments(
-                updated.getTeachingAssignments()
-        );
-        normalizeTeacherAssignments(existing);
+        List<Map<String, Object>> newAssignments = updated.getTeachingAssignments() == null
+                ? new ArrayList<>(oldAssignments)
+                : normalizeAssignments(readAssignments(updated.getTeachingAssignments()));
 
-        existing.setQualification(
-                updated.getQualification()
-        );
-
-        existing.setFacultyCode(
-                normalizeCode(updated.getFacultyCode())
-        );
-
-        existing.setStatus(
-                updated.getStatus()
-        );
+        existing.setFirstName(updated.getFirstName());
+        existing.setLastName(updated.getLastName());
+        existing.setEmail(updated.getEmail());
+        existing.setPhone(updated.getPhone());
+        existing.setSubject(updated.getSubject());
+        existing.setTeachingAssignments(writeAssignments(newAssignments));
+        existing.setQualification(updated.getQualification());
+        existing.setFacultyCode(normalizeCode(updated.getFacultyCode()));
+        existing.setStatus(updated.getStatus());
 
         Teacher saved = teacherDao.save(existing);
-
-        // Timetable entries store the faculty code (AB, BPS, RR, ...).
-        // When a teacher's code is edited, keep the Weekly Timetable linked
-        // to the same teacher by replacing the old code in I1/I2 entries.
         String newFacultyCode = normalizeCode(saved.getFacultyCode());
+        String newFullName = fullName(saved);
+        String newFacultyValue = newFacultyCode != null ? newFacultyCode : newFullName;
+
+        // Update timetable rows that used the old exact code or exact full name.
+        // Exact matching deliberately avoids changing combined/other faculty values.
         if (oldFacultyCode != null && !oldFacultyCode.equals(newFacultyCode)) {
-            updateTimetableFacultyCode(oldFacultyCode, newFacultyCode);
+            updateTimetableFacultyValue(oldFacultyCode, newFacultyValue);
+        }
+        if (!oldFullName.isBlank() && !oldFullName.equalsIgnoreCase(newFullName)
+                && !oldFullName.equalsIgnoreCase(oldFacultyCode == null ? "" : oldFacultyCode)) {
+            updateTimetableFacultyValue(oldFullName, newFacultyValue);
+        }
+
+        // Synchronize the teacher's edited assignment list with timetable rows.
+        // Removed assignments have only their faculty cleared; the class row,
+        // subject, time and room are preserved. New assignments claim only rows
+        // with a blank faculty or this same teacher's old/new faculty value.
+        for (Map<String, Object> oldAssignment : oldAssignments) {
+            String key = assignmentKey(oldAssignment);
+            boolean retained = newAssignments.stream().anyMatch(a -> assignmentKey(a).equals(key));
+            if (!retained) {
+                updateAssignmentRows(oldAssignment, newFacultyValue, null, oldFacultyCode,
+                        newFullName, oldFullName, true);
+            }
+        }
+
+        for (Map<String, Object> newAssignment : newAssignments) {
+            String key = assignmentKey(newAssignment);
+            boolean existed = oldAssignments.stream().anyMatch(a -> assignmentKey(a).equals(key));
+            // Run for both old and new assignments: this also repairs rows that
+            // were not synced correctly by an earlier edit.
+            updateAssignmentRows(newAssignment, newFacultyValue, newFacultyValue,
+                    oldFacultyCode, newFullName, oldFullName, false);
         }
 
         return saved;
+    }
+
+    private String fullName(Teacher teacher) {
+        return ((teacher.getFirstName() == null ? "" : teacher.getFirstName()) + " " +
+                (teacher.getLastName() == null ? "" : teacher.getLastName())).trim();
+    }
+
+    private String writeAssignments(List<Map<String, Object>> assignments) {
+        try {
+            return objectMapper.writeValueAsString(assignments);
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to save teacher assignments.", e);
+        }
+    }
+
+    private void updateAssignmentRows(Map<String, Object> assignment,
+                                      String oldOrNewFacultyValue,
+                                      String desiredFacultyValue,
+                                      String oldFacultyCode,
+                                      String newFullName,
+                                      String oldFullName,
+                                      boolean removeAssignment) {
+        String department = text(assignment.get("departmentName"));
+        String branch = text(assignment.get("branchName"));
+        Integer semester = number(assignment.get("semesterNumber"));
+        String section = text(assignment.get("sectionName"));
+        String subject = text(assignment.get("subject"));
+        if (department == null || branch == null || semester == null || section == null || subject == null) return;
+
+        List<TimetableEntry> rows = entityManager.createQuery(
+                "SELECT t FROM TimetableEntry t WHERE " +
+                "LOWER(TRIM(t.department)) = LOWER(TRIM(:department)) AND t.semester = :semester AND " +
+                "LOWER(TRIM(t.section)) = LOWER(TRIM(:section)) AND " +
+                "LOWER(TRIM(t.subject)) = LOWER(TRIM(:subject))", TimetableEntry.class)
+                .setParameter("department", department)
+                .setParameter("semester", semester)
+                .setParameter("section", section)
+                .setParameter("subject", subject)
+                .getResultList();
+
+        String wantedBranchCode = canonicalBranchCode(
+                text(assignment.get("branchCode")), branch);
+        String currentCode = normalizeCode(oldFacultyCode);
+        for (TimetableEntry row : rows) {
+            String rowBranchCode = canonicalBranchCode(null, text(row.getBranch()));
+            if (!same(rowBranchCode, wantedBranchCode)) continue;
+            String faculty = text(row.getFaculty());
+            boolean ownedByTeacher = faculty == null
+                    || (currentCode != null && faculty.equalsIgnoreCase(currentCode))
+                    || (!oldFullName.isBlank() && faculty.equalsIgnoreCase(oldFullName))
+                    || (!newFullName.isBlank() && faculty.equalsIgnoreCase(newFullName))
+                    || (oldOrNewFacultyValue != null && faculty != null && faculty.equalsIgnoreCase(oldOrNewFacultyValue));
+
+            if (removeAssignment) {
+                // Clear only rows currently assigned to this teacher.
+                if (faculty != null && ownedByTeacher) row.setFaculty(null);
+            } else if (ownedByTeacher && desiredFacultyValue != null && !desiredFacultyValue.isBlank()) {
+                row.setFaculty(desiredFacultyValue);
+            }
+        }
+        entityManager.flush();
     }
 
     // =========================
@@ -487,9 +609,23 @@ public class TeacherService {
 
     @Transactional
     public void deleteTeacher(Long id) {
-
         Teacher existing = getTeacherById(id);
-        existing.setStatus(Teacher.Status.INACTIVE);
-        teacherDao.save(existing);
+        String code = normalizeCode(existing.getFacultyCode());
+        String fullName = ((existing.getFirstName() == null ? "" : existing.getFirstName()) + " " +
+                (existing.getLastName() == null ? "" : existing.getLastName())).trim();
+
+        // Remove classroom references first, then permanently delete timetable rows
+        // assigned exactly to this teacher. Do not touch students, attendance, marks,
+        // fees, other teachers, or timetable rows assigned to a different faculty.
+        entityManager.createQuery(
+                "UPDATE ClassRoom c SET c.teacher = null WHERE c.teacher.id = :teacherId"
+        ).setParameter("teacherId", id).executeUpdate();
+
+        deleteTimetableRowsForFaculty(code);
+        if (!fullName.isBlank() && (code == null || !fullName.equalsIgnoreCase(code))) {
+            deleteTimetableRowsForFaculty(fullName);
+        }
+
+        teacherDao.delete(id);
     }
 }

@@ -53,6 +53,21 @@ public class TimetableService {
         }
         entry.setSection(entry.getSection().trim().toUpperCase());
 
+        // Protect Sem-5 official branch/section mappings against malformed CSVs.
+        if (entry.getSemester() == 5) {
+            String branchKey = entry.getBranch().trim().toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", "");
+            Set<String> allowed = switch (branchKey) {
+                case "IT", "INFORMATIONTECHNOLOGY" -> Set.of("I1", "I2");
+                case "CS", "CSE", "COMPUTERSCIENCE", "COMPUTERSCIENCEANDENGINEERING" -> Set.of("CA1", "CA2", "CB1", "CB2");
+                case "CY", "CYBER", "CYBERSECURITY" -> Set.of("CY1", "CY2");
+                default -> null;
+            };
+            if (allowed != null && !allowed.contains(entry.getSection())) {
+                throw new IllegalArgumentException("Row " + index + ": section " + entry.getSection() +
+                        " does not belong to branch " + entry.getBranch() + ". Expected: " + String.join(", ", allowed));
+            }
+        }
+
         if (entry.getSubject() == null || entry.getSubject().trim().isEmpty()) {
             throw new IllegalArgumentException("Row " + index + ": Subject is required");
         }
@@ -134,6 +149,20 @@ public class TimetableService {
             validateAndNormalize(entries.get(i), i + 1);
         }
 
+        // Deduplicate identical rows within the incoming batch itself
+        List<TimetableEntry> distinctEntries = new ArrayList<>();
+        Set<String> seenSignatures = new HashSet<>();
+        for (TimetableEntry e : entries) {
+            String sig = (e.getDepartment() + "|" + e.getBranch() + "|" + e.getSemester() + "|" +
+                    e.getSection() + "|" + e.getDayOfWeek() + "|" + e.getStartTime() + "|" +
+                    e.getEndTime() + "|" + normalizeStr(e.getSubject()) + "|" +
+                    normalizeStr(e.getFaculty()) + "|" + normalizeStr(e.getRoom())).toLowerCase();
+            if (seenSignatures.add(sig)) {
+                distinctEntries.add(e);
+            }
+        }
+        entries = distinctEntries;
+
         boolean overwrite = "overwrite".equalsIgnoreCase(mode);
 
         if (overwrite) {
@@ -154,7 +183,9 @@ public class TimetableService {
                         .toList();
 
                 List<String> safeSections = sections.isEmpty() ? List.of("__NONE__") : sections;
-                List<String> safeGroups = groups.isEmpty() ? List.of("__NONE__") : groups;
+                // Restrict overwrite to explicitly imported sections. Inferred groups such as
+                // I (I1/I2) or CA (CA1/CA2) must not cause unimported sections to be deleted.
+                List<String> safeGroups = List.of("__NONE__");
 
                 List<TimetableEntry> existing = timetableDao.findScopedEntries(
                         first.getDepartment(), first.getBranch(), first.getSemester(), safeSections, safeGroups);
@@ -188,7 +219,9 @@ public class TimetableService {
                     .toList();
 
             List<String> safeSections = sections.isEmpty() ? List.of("__NONE__") : sections;
-            List<String> safeGroups = groups.isEmpty() ? List.of("__NONE__") : groups;
+            // Use exact section scope; group labels are presentation metadata and
+            // must not let an I1 import match or mutate I2 rows (or CA1/CA2 rows).
+            List<String> safeGroups = List.of("__NONE__");
 
             List<TimetableEntry> existingScoped = timetableDao.findScopedEntries(
                     first.getDepartment(), first.getBranch(), first.getSemester(), safeSections, safeGroups);

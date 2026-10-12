@@ -709,8 +709,7 @@ export class TimetableComponent implements OnInit {
         { align: 'right' }
       );
 
-      const rows = this.teacherEntries
-        .slice()
+      const rows = this.mergeTeacherEntries(this.teacherEntries)
         .sort((a, b) => {
           const dayDiff =
             this.days.indexOf(a.dayOfWeek) - this.days.indexOf(b.dayOfWeek);
@@ -1369,10 +1368,10 @@ export class TimetableComponent implements OnInit {
 
     const csv =
       'department,branch,semester,section,dayOfWeek,subject,startTime,endTime,faculty,room,practical\n' +
-      'Computer Science And Engineering,IT,5,CA1,Monday,Cloud Computing,09:00,10:00,Dr. Deepak Gupta,Room 401,false\n' +
-      'Computer Science And Engineering,IT,5,CA2,Monday,Cloud Computing,09:00,10:00,Dr. Deepak Gupta,Room 401,false\n' +
-      'Computer Science And Engineering,IT,5,CA1,Tuesday,Web Development Lab,14:00,16:00,ML,Lab 3,true\n' +
-      'Computer Science And Engineering,IT,5,CA2,Tuesday,Data Structures Lab,14:00,16:00,AB,Lab 4,true';
+      'Computer Science And Engineering,IT,5,I1,Monday,Cloud Computing,09:00,10:00,AB,Room 401,false\n' +
+      'Computer Science And Engineering,IT,5,I2,Monday,Cloud Computing,09:00,10:00,AB,Room 401,false\n' +
+      'Computer Science And Engineering,IT,5,I1,Tuesday,Web Development Lab,14:00,16:00,ML,Lab 3,true\n' +
+      'Computer Science And Engineering,IT,5,I2,Tuesday,Web Development Lab,14:00,16:00,ML,Lab 3,true';
 
     const blob = new Blob(
       [csv],
@@ -1501,6 +1500,22 @@ export class TimetableComponent implements OnInit {
           const branch = val('branch') || this.selectedBranch || 'IT';
           const semester = val('semester') ? Number(val('semester')) : (this.selectedSemester || 5);
           const sectionGroup = val('sectiongroup') || (section.replace(/\d+$/, '') || section);
+          const branchKey = branch.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const validSectionsByBranch: Record<string, string[]> = {
+            IT: ['I1', 'I2'],
+            INFORMATIONTECHNOLOGY: ['I1', 'I2'],
+            CS: ['CA1', 'CA2', 'CB1', 'CB2'],
+            CSE: ['CA1', 'CA2', 'CB1', 'CB2'],
+            COMPUTERSCIENCE: ['CA1', 'CA2', 'CB1', 'CB2'],
+            COMPUTERSCIENCEANDENGINEERING: ['CA1', 'CA2', 'CB1', 'CB2'],
+            CY: ['CY1', 'CY2'],
+            CYBER: ['CY1', 'CY2'],
+            CYBERSECURITY: ['CY1', 'CY2']
+          };
+          const allowedSections = validSectionsByBranch[branchKey];
+          if (Number.isInteger(semester) && semester === 5 && allowedSections && !allowedSections.includes(section)) {
+            throw new Error(`Row ${rowIndex + 2}: section ${section} does not belong to branch ${branch}. Expected: ${allowedSections.join(', ')}.`);
+          }
 
           return {
             department,
@@ -3400,21 +3415,62 @@ const createWorker = tesseract.createWorker;
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
-  teacherEntriesStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry[] {
-    const items = this.teacherEntriesForDay(day)
-      .filter(e => this.startsInSlot(e, slot))
-      .sort((a, b) => a.section.localeCompare(b.section));
-    if (items.length <= 1) return items;
+  mergeTeacherEntries(entries: TimetableEntry[]): TimetableEntry[] {
+    if (!entries.length) return [];
     const groups = new Map<string, TimetableEntry[]>();
-    for (const item of items) {
-      const key = [(item.startTime || ''), (item.endTime || ''), (item.subject || '').trim().toLowerCase(), (item.faculty || '').trim().toLowerCase(), (item.room || '').trim().toLowerCase(), !!item.practical].join('|');
+    for (const item of entries) {
+      const key = [
+        item.dayOfWeek,
+        (item.branch || '').trim().toLowerCase(),
+        (item.startTime || ''),
+        (item.endTime || ''),
+        (item.subject || '').trim().toLowerCase(),
+        (item.faculty || '').trim().toLowerCase(),
+        (item.room || '').trim().toLowerCase(),
+        !!item.practical
+      ].join('|');
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(item);
     }
     return [...groups.values()].map(group => {
       const first = group[0];
       const sections = [...new Set(group.map(x => x.section).filter(Boolean))].sort();
-      return { ...first, section: sections.length > 1 ? sections.join(' + ') : first.section };
+      const branchPrefix = first.branch ? `${first.branch} ` : '';
+      return { ...first, section: sections.length > 1 ? `${branchPrefix}${sections.join(' + ')}` : `${branchPrefix}${first.section}` };
+    });
+  }
+
+  teacherEntriesStartingInSlot(day: string, slot: { start: string; end: string }): TimetableEntry[] {
+    const items = this.teacherEntriesForDay(day)
+      .filter(e => this.startsInSlot(e, slot))
+      .sort((a, b) => (a.branch || '').localeCompare(b.branch || '') || a.section.localeCompare(b.section));
+    if (items.length <= 1) {
+      if (items.length === 1) {
+        const item = items[0];
+        const branchPrefix = item.branch ? `${item.branch} ` : '';
+        return [{ ...item, section: `${branchPrefix}${item.section}` }];
+      }
+      return items;
+    }
+    const groups = new Map<string, TimetableEntry[]>();
+    for (const item of items) {
+      const key = [
+        (item.branch || '').trim().toLowerCase(),
+        (item.startTime || ''),
+        (item.endTime || ''),
+        (item.subject || '').trim().toLowerCase(),
+        (item.faculty || '').trim().toLowerCase(),
+        (item.room || '').trim().toLowerCase(),
+        !!item.practical
+      ].join('|');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    }
+    return [...groups.values()].map(group => {
+      const first = group[0];
+      const sections = [...new Set(group.map(x => x.section).filter(Boolean))].sort();
+      const branchPrefix = first.branch ? `${first.branch} ` : '';
+      return { ...first, section: sections.length > 1 ? `${branchPrefix}${sections.join(' + ')}` : `${branchPrefix}${first.section}` };
     });
   }
 

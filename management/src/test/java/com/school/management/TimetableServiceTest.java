@@ -106,6 +106,21 @@ class TimetableServiceTest {
     }
 
     @Test
+    void testBulkUpsert_BatchWithInternalDuplicates_DeduplicatesBeforeSaving() {
+        String testSection = "TEST_IDUP";
+        TimetableEntry e1 = createSampleEntry(testSection, "Tuesday", "10:00", "11:00", "CN", "Dr. A", "201");
+        TimetableEntry e1Clone = createSampleEntry(testSection, "Tuesday", "10:00", "11:00", "CN", "Dr. A", "201");
+
+        // The input list contains internal duplicate of the same slot
+        List<TimetableEntry> saved = timetableService.bulkUpsert(List.of(e1, e1Clone), "merge");
+        assertEquals(1, saved.size(), "Internal duplicates within imported batch must be deduplicated to 1 record");
+
+        List<TimetableEntry> fromDb = timetableDao.findByDepartmentIgnoreCaseAndBranchIgnoreCaseAndSemesterAndSectionIgnoreCaseOrderByDayOfWeekAscStartTimeAsc(
+                "Computer Science And Engineering", "IT", 5, testSection);
+        assertEquals(1, fromDb.size());
+    }
+
+    @Test
     void testBulkUpsert_ParallelLabEntries_PreservedIndependently() {
         String testSection = "TEST_LAB";
         // Two parallel lab sessions in the exact same time slot for the same section
