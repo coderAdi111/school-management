@@ -1,20 +1,24 @@
 package com.school.management.Controller;
 
 import com.school.management.Dao.TimetableDao;
+import com.school.management.Service.TimetableService;
 import com.school.management.entity.TimetableEntry;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/timetable")
 
 public class TimetableController {
     private final TimetableDao timetableDao;
+    private final TimetableService timetableService;
 
-    public TimetableController(TimetableDao timetableDao) {
+    public TimetableController(TimetableDao timetableDao, TimetableService timetableService) {
         this.timetableDao = timetableDao;
+        this.timetableService = timetableService;
     }
 
     @GetMapping
@@ -39,11 +43,40 @@ public class TimetableController {
 
     @PostMapping
     public ResponseEntity<TimetableEntry> create(@RequestBody TimetableEntry entry) {
-        entry.setId(null);
-        return ResponseEntity.status(HttpStatus.CREATED).body(timetableDao.save(entry));
+        TimetableEntry saved = timetableService.createWithDuplicateProtection(entry);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    @PutMapping("/{id}")
+    @PostMapping("/bulk")
+    public ResponseEntity<?> bulkUpsert(
+            @RequestParam(defaultValue = "merge") String mode,
+            @RequestBody List<TimetableEntry> entries) {
+        try {
+            List<TimetableEntry> saved = timetableService.bulkUpsert(entries, mode);
+            return ResponseEntity.ok(saved);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/duplicates")
+    public ResponseEntity<Map<String, Object>> getDuplicates() {
+        return ResponseEntity.ok(timetableService.analyzeDuplicates());
+    }
+
+    @GetMapping("/subjects")
+    public List<String> getSubjects(
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String branch,
+            @RequestParam(required = false) Integer semester,
+            @RequestParam(required = false) String section) {
+        if (department == null || branch == null || semester == null || section == null) {
+            return java.util.Collections.emptyList();
+        }
+        return timetableService.getSubjectsForSection(department, branch, semester, section);
+    }
+
+    @PutMapping("/{id:\\d+}")
     public ResponseEntity<TimetableEntry> update(@PathVariable Long id, @RequestBody TimetableEntry entry) {
         return timetableDao.findById(id).map(existing -> {
             entry.setId(id);
@@ -55,7 +88,7 @@ public class TimetableController {
      * Updates every copy of a grouped timetable class (for example CA1 + CA2)
      * that belongs to the same day/time slot.
      */
-    @PutMapping("/group/{id}")
+    @PutMapping("/group/{id:\\d+}")
     public ResponseEntity<TimetableEntry> updateGroup(@PathVariable Long id, @RequestBody TimetableEntry entry) {
         return timetableDao.findById(id).map(existing -> {
             if (existing.getSectionGroup() == null || existing.getSectionGroup().isBlank()) {
@@ -85,7 +118,7 @@ public class TimetableController {
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (!timetableDao.existsById(id)) return ResponseEntity.notFound().build();
         timetableDao.deleteById(id);
@@ -138,7 +171,7 @@ public class TimetableController {
         return ResponseEntity.ok(entries.size());
     }
 
-    @DeleteMapping("/group/{id}")
+    @DeleteMapping("/group/{id:\\d+}")
     public ResponseEntity<Void> deleteGroup(@PathVariable Long id) {
         return timetableDao.findById(id).map(existing -> {
             if (existing.getSectionGroup() == null || existing.getSectionGroup().isBlank()) {

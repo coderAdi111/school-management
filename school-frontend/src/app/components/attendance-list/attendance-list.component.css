@@ -1666,3 +1666,10 @@ tbody tr:hover .student-avatar {
     transition-duration: 0.01ms !important;
   }
 }
+
+.error-text {
+  color: #dc2626;
+  font-size: 0.78rem;
+  margin-top: 4px;
+  display: block;
+}

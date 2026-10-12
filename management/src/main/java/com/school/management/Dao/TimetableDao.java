@@ -12,6 +12,12 @@ public interface TimetableDao extends JpaRepository<TimetableEntry, Long> {
     List<TimetableEntry> findByDepartmentIgnoreCaseAndBranchIgnoreCaseAndSemesterAndSectionGroupIgnoreCaseAndDayOfWeekIgnoreCaseAndStartTimeAndEndTime(
             String department, String branch, Integer semester, String sectionGroup, String dayOfWeek, String startTime, String endTime);
 
+    List<TimetableEntry> findByDepartmentIgnoreCaseAndBranchIgnoreCaseAndSemesterAndSectionIgnoreCaseAndDayOfWeekIgnoreCaseAndStartTime(
+            String department, String branch, Integer semester, String section, String dayOfWeek, String startTime);
+
+    List<TimetableEntry> findByDepartmentIgnoreCaseAndBranchIgnoreCaseAndSemesterOrderByDayOfWeekAscStartTimeAsc(
+            String department, String branch, Integer semester);
+
     @Query("select t from TimetableEntry t where lower(trim(t.department)) = lower(trim(:department)) " +
            "and lower(trim(t.branch)) = lower(trim(:branch)) and t.semester = :semester " +
            "and (lower(trim(t.section)) in :sections or lower(trim(coalesce(t.sectionGroup, ''))) in :groups)")

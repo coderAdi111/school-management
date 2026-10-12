@@ -1,6 +1,7 @@
 import {
   ApplicationConfig,
-  provideBrowserGlobalErrorListeners
+  provideBrowserGlobalErrorListeners,
+  provideZonelessChangeDetection
 } from '@angular/core';
 
 import {
@@ -21,6 +22,8 @@ import { authInterceptor } from './auth/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideZonelessChangeDetection(),
+
     provideBrowserGlobalErrorListeners(),
 
     provideHttpClient(

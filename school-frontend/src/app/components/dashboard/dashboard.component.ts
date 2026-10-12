@@ -49,6 +49,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   fees: Fee[] = [];
   marks: Mark[] = [];
 
+  private rawAttendance: Attendance[] = [];
+  private rawFees: Fee[] = [];
+  private rawMarks: Mark[] = [];
+
   /*
    * IMPORTANT:
    * loading no longer blocks the dashboard.
@@ -61,7 +65,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   today = '';
   todayLabel = '';
   greeting = 'Good Evening';
-private greetingTimer: ReturnType<typeof setInterval> | undefined;
+  private greetingTimer: ReturnType<typeof setInterval> | undefined;
 
   todayMarked = 0;
   presentCount = 0;
@@ -96,7 +100,7 @@ private greetingTimer: ReturnType<typeof setInterval> | undefined;
 
   private readonly api =
     typeof window !== 'undefined' &&
-    window.location.hostname === 'localhost'
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'http://localhost:8080/api'
       : 'https://school-management-vy1j.onrender.com/api';
 
@@ -109,16 +113,18 @@ private greetingTimer: ReturnType<typeof setInterval> | undefined;
   ) {}
 
   ngOnInit(): void {
-  this.updateGreeting();
-
-  this.greetingTimer = setInterval(() => {
     this.updateGreeting();
-  }, 60 * 1000);
 
-  this.setToday();
-  this.restoreCache();
-  this.refreshInBackground();
-}
+    if (typeof window !== 'undefined') {
+      this.greetingTimer = setInterval(() => {
+        this.updateGreeting();
+      }, 60 * 1000);
+    }
+
+    this.setToday();
+    this.restoreCache();
+    this.refreshInBackground();
+  }
 
 private updateGreeting(): void {
   const hour = new Date().getHours();
@@ -229,6 +235,10 @@ ngOnDestroy(): void {
 
       this.marks =
         cache.marks;
+
+      this.rawAttendance = [...this.attendance];
+      this.rawFees = [...this.fees];
+      this.rawMarks = [...this.marks];
 
       /*
        * Recalculate dashboard cards.
@@ -348,6 +358,7 @@ ngOnDestroy(): void {
 
           this.students = data ?? [];
           this.updateSectionCounts();
+          this.filterRelatedData();
 
           this.calculateDashboard();
 
@@ -378,6 +389,7 @@ ngOnDestroy(): void {
         next: data => {
 
           this.classes = data ?? [];
+          this.filterRelatedData();
 
           this.calculateDashboard();
 
@@ -442,7 +454,7 @@ ngOnDestroy(): void {
 
         next: data => {
 
-          this.attendance =
+          this.rawAttendance =
             data ?? [];
 
           this.filterRelatedData();
@@ -475,7 +487,7 @@ ngOnDestroy(): void {
 
         next: data => {
 
-          this.fees =
+          this.rawFees =
             data ?? [];
 
           this.filterRelatedData();
@@ -508,7 +520,7 @@ ngOnDestroy(): void {
 
         next: data => {
 
-          this.marks =
+          this.rawMarks =
             data ?? [];
 
           this.filterRelatedData();
@@ -560,62 +572,73 @@ ngOnDestroy(): void {
       );
 
     /*
-     * Attendance
+     * If students or classes are loaded, filter against valid active IDs.
+     * If neither has arrived yet, display raw incoming data so cards
+     * populate immediately without zeroing out records during asynchronous arrival.
      */
-    this.attendance =
-      this.attendance.filter(record =>
+    if (studentIds.size > 0 || classIds.size > 0) {
+      /*
+       * Attendance
+       */
+      this.attendance =
+        this.rawAttendance.filter(record =>
 
-        (
+          (
+            record.student?.id !== undefined &&
+            studentIds.has(
+              record.student.id
+            )
+          )
+
+          ||
+
+          (
+            record.classRoom?.id !== undefined &&
+            classIds.has(
+              record.classRoom.id
+            )
+          )
+        );
+
+      /*
+       * Fees
+       */
+      this.fees =
+        this.rawFees.filter(record =>
+
           record.student?.id !== undefined &&
           studentIds.has(
             record.student.id
           )
-        )
+        );
 
-        ||
+      /*
+       * Marks
+       */
+      this.marks =
+        this.rawMarks.filter(record =>
 
-        (
-          record.classRoom?.id !== undefined &&
-          classIds.has(
-            record.classRoom.id
+          (
+            record.student?.id !== undefined &&
+            studentIds.has(
+              record.student.id
+            )
           )
-        )
-      );
 
-    /*
-     * Fees
-     */
-    this.fees =
-      this.fees.filter(record =>
+          ||
 
-        record.student?.id !== undefined &&
-        studentIds.has(
-          record.student.id
-        )
-      );
-
-    /*
-     * Marks
-     */
-    this.marks =
-      this.marks.filter(record =>
-
-        (
-          record.student?.id !== undefined &&
-          studentIds.has(
-            record.student.id
+          (
+            record.classRoom?.id !== undefined &&
+            classIds.has(
+              record.classRoom.id
+            )
           )
-        )
-
-        ||
-
-        (
-          record.classRoom?.id !== undefined &&
-          classIds.has(
-            record.classRoom.id
-          )
-        )
-      );
+        );
+    } else {
+      this.attendance = [...this.rawAttendance];
+      this.fees = [...this.rawFees];
+      this.marks = [...this.rawMarks];
+    }
   }
 
   /*

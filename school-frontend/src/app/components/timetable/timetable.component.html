@@ -768,11 +768,19 @@
 
       <h3>Import Preview</h3>
 
-
-
-
-
-
+      <div class="import-mode-selector">
+        <label class="import-mode-title">Import Mode:</label>
+        <div class="import-mode-options">
+          <label class="radio-label">
+            <input type="radio" name="importMode" [(ngModel)]="importMode" value="merge" [disabled]="importing">
+            <span><strong>Merge (Safe Upsert)</strong> — Update matching class slots and preserve other entries</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="importMode" [(ngModel)]="importMode" value="overwrite" [disabled]="importing">
+            <span><strong>Overwrite Section Schedule</strong> — Replace all existing classes for the imported section(s)</span>
+          </label>
+        </div>
+      </div>
 
       <div class="preview-table">
 
@@ -2102,7 +2110,9 @@
 
         <div class="official-table-wrap" *ngIf="!teacherLoading && selectedTeacherName">
 
-
+          <div *ngIf="teacherClashesCount > 0" class="clash-warning-banner">
+            ⚠️ <strong>Schedule Conflict Warning:</strong> This teacher has {{ teacherClashesCount }} overlapping or conflicting class {{ teacherClashesCount === 1 ? 'entry' : 'entries' }} scheduled at the same time.
+          </div>
 
           <table class="official-timetable teacher-table">
 
@@ -2176,6 +2186,8 @@
                             <small>{{ duration(teacherItem) }} · {{ teacherItem.startTime }}–{{ teacherItem.endTime }}</small>
 
                             <span class="lab" *ngIf="teacherItem.practical">LAB</span>
+
+                            <span class="clash-badge" *ngIf="hasTeacherClash(teacherItem)">⚠️ Conflict</span>
 
                           </div>
 

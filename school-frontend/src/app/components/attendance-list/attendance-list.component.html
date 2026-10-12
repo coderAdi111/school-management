@@ -56,9 +56,22 @@
         <select
           class="form-control"
           [(ngModel)]="selectedSubject"
+          [disabled]="subjectsLoading || !selectedSection"
         >
 
-          <option value="">
+          <option value="" *ngIf="subjectsLoading">
+            -- Loading subjects... --
+          </option>
+
+          <option value="" *ngIf="!subjectsLoading && !selectedSection">
+            -- Select Section first --
+          </option>
+
+          <option value="" *ngIf="!subjectsLoading && selectedSection && subjects.length === 0">
+            -- No subjects in timetable --
+          </option>
+
+          <option value="" *ngIf="!subjectsLoading && subjects.length > 0">
             -- Select Subject --
           </option>
 
@@ -70,6 +83,8 @@
           </option>
 
         </select>
+
+        <small class="error-text" *ngIf="subjectsError">{{ subjectsError }}</small>
 
       </div>
 

@@ -11,6 +11,7 @@ import { forkJoin } from 'rxjs';
 import { AttendanceService } from '../../services/attendance.services';
 import { ClassroomService } from '../../services/classroom.services';
 import { StudentService } from '../../services/student.services';
+import { TimetableService } from '../../services/timetable.service';
 
 import {
   Attendance,
@@ -109,22 +110,12 @@ export class AttendanceListComponent implements OnInit {
 
 
   // =========================
-  // SUBJECTS
+  // SUBJECTS (Loaded dynamically from Timetable)
   // =========================
 
-  subjects: string[] = [
-    'IDS',
-    'CCDT',
-    'CN',
-    'COA',
-    'IB',
-    'ML',
-    'OS',
-    'CN LAB',
-    'MAD LAB',
-    'ML LAB',
-    'IT LAB'
-  ];
+  subjects: string[] = [];
+  subjectsLoading = false;
+  subjectsError = '';
 
 
   // =========================
@@ -135,6 +126,7 @@ export class AttendanceListComponent implements OnInit {
     private attendanceService: AttendanceService,
     private classRoomService: ClassroomService,
     private studentService: StudentService,
+    private timetableService: TimetableService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -281,6 +273,7 @@ export class AttendanceListComponent implements OnInit {
     if (this.selectedSemester !== '' && !this.semesterOptions.includes(Number(this.selectedSemester))) this.selectedSemester = '';
     if (this.selectedSection && !this.sectionOptions.includes(this.selectedSection)) this.selectedSection = '';
     this.resolveSelectedClass();
+    this.loadSubjects();
   }
 
   onDepartmentChange(): void {
@@ -289,6 +282,7 @@ export class AttendanceListComponent implements OnInit {
     this.selectedSection = '';
     this.selectedClassId = null;
     this.onClassChange();
+    this.loadSubjects();
     this.cdr.detectChanges();
   }
 
@@ -297,6 +291,7 @@ export class AttendanceListComponent implements OnInit {
     this.selectedSection = '';
     this.selectedClassId = null;
     this.onClassChange();
+    this.loadSubjects();
     this.cdr.detectChanges();
   }
 
@@ -304,12 +299,14 @@ export class AttendanceListComponent implements OnInit {
     this.selectedSection = '';
     this.selectedClassId = null;
     this.onClassChange();
+    this.loadSubjects();
     this.cdr.detectChanges();
   }
 
   onSectionChange(): void {
     this.resolveSelectedClass();
     this.onClassChange();
+    this.loadSubjects();
     this.cdr.detectChanges();
   }
 
@@ -324,10 +321,65 @@ export class AttendanceListComponent implements OnInit {
   }
 
   // =========================
+  // DYNAMIC TIMETABLE SUBJECTS
+  // =========================
+
+  loadSubjects(): void {
+    if (
+      !this.selectedDepartment ||
+      !this.selectedBranch ||
+      this.selectedSemester === '' ||
+      !this.selectedSection
+    ) {
+      this.subjects = [];
+      this.selectedSubject = '';
+      this.subjectsLoading = false;
+      this.subjectsError = '';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.subjectsLoading = true;
+    this.subjectsError = '';
+    this.subjects = [];
+    this.cdr.detectChanges();
+
+    this.timetableService
+      .getSubjects(
+        this.selectedSection,
+        this.selectedDepartment,
+        this.selectedBranch,
+        Number(this.selectedSemester)
+      )
+      .subscribe({
+        next: (data: string[]) => {
+          this.subjects = data ?? [];
+          this.subjectsLoading = false;
+          this.subjectsError = '';
+
+          if (this.selectedSubject && !this.subjects.includes(this.selectedSubject)) {
+            this.selectedSubject = '';
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err: any) => {
+          console.error('Failed to load timetable subjects for class:', err);
+          this.subjects = [];
+          this.selectedSubject = '';
+          this.subjectsLoading = false;
+          this.subjectsError = 'Failed to load timetable subjects. Please check connection.';
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  // =========================
   // CLASS CHANGE
   // =========================
 
   onClassChange(): void {
+
+    this.selectedSubject = '';
 
     this.attendanceList = [];
 

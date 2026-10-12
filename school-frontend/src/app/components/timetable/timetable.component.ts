@@ -71,6 +71,8 @@ export class TimetableComponent implements OnInit {
   importFileName = '';
   importing = false;
   importMessage = '';
+  importMode: 'merge' | 'overwrite' = 'merge';
+  teacherClashesCount = 0;
 
   // Live import progress/status
   importProgress = 0;
@@ -903,6 +905,7 @@ export class TimetableComponent implements OnInit {
           const dayDiff = this.days.indexOf(a.dayOfWeek) - this.days.indexOf(b.dayOfWeek);
           return dayDiff || a.startTime.localeCompare(b.startTime);
         });
+      this.calculateTeacherClashes();
     } catch (err: any) {
       console.error('Teacher timetable loading error:', err);
       this.teacherEntries = [];
@@ -915,8 +918,15 @@ export class TimetableComponent implements OnInit {
     }
   }
 
+  private stripHonorifics(name: string): string {
+    return (name || '')
+      .replace(/\b(dr|prof|professor|mr|mrs|ms|er|shri|smt)\b\.?/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   private normalizeTeacherName(value: string): string {
-    return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    return this.stripHonorifics(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   }
 
   private teacherMatches(faculty: string | undefined, wantedName: string, wantedCode: string): boolean {
@@ -925,38 +935,84 @@ export class TimetableComponent implements OnInit {
     const raw = faculty.trim();
     if (!raw) return false;
 
-    const actualName = this.normalizeTeacherName(raw);
-    const actualCompact = actualName.replace(/[^a-z0-9]/g, '');
-    const wantedCompact = wantedCode.replace(/[^a-z0-9]/g, '');
+    const normalizedWantedCode = (wantedCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanWantedName = this.normalizeTeacherName(wantedName || '');
+    const wantedWords = cleanWantedName.split(' ').filter(Boolean);
+    const wantedInitials = wantedWords.map(part => part.charAt(0)).join('');
 
-    // 1) Exact faculty-code match.
-    if (wantedCompact && actualCompact === wantedCompact) return true;
+    // Split multi-faculty entries by delimiters: / \ , & + or 'and'
+    const tokens = raw
+      .split(/[/\\,&+|]|\band\b/i)
+      .map(t => t.trim())
+      .filter(Boolean);
 
-    // 2) Some old timetable rows store "A.B.", "A B", or "AB".
-    //    Match the selected teacher's initials as well.
-    if (wantedName) {
-      const wantedParts = wantedName.split(' ').filter(Boolean);
-      const initials = wantedParts.map(part => part.charAt(0)).join('');
-      if (initials && actualCompact === initials) return true;
-    }
+    for (const token of tokens) {
+      const cleanToken = this.normalizeTeacherName(token);
+      const compactToken = cleanToken.replace(/[^a-z0-9]/g, '');
+      const tokenWords = cleanToken.split(' ').filter(Boolean);
 
-    // 3) Timetable may contain the complete teacher name.
-    if (wantedName && actualName === wantedName) return true;
+      // 1. Exact faculty-code match against token
+      if (normalizedWantedCode && compactToken === normalizedWantedCode) {
+        return true;
+      }
+      // If token is composed of words (e.g. "DG (Deepak)"), check if one word equals faculty code
+      if (normalizedWantedCode && tokenWords.includes(normalizedWantedCode)) {
+        return true;
+      }
 
-    // 4) Backward-compatible partial full-name match.
-    if (wantedName) {
-      const wantedParts = wantedName.split(' ').filter(Boolean);
-      const actualParts = actualName.split(' ').filter(Boolean);
-      if (wantedParts.length > 1 && wantedParts.every(part => actualParts.includes(part))) {
+      // 2. Initials match (if teacher name has >= 2 words, e.g. "Deepak Gupta" -> "dg")
+      if (wantedInitials.length >= 2) {
+        if (compactToken === wantedInitials || tokenWords.includes(wantedInitials)) {
+          return true;
+        }
+      }
+
+      // 3. Complete teacher name exact match
+      if (cleanWantedName && cleanToken === cleanWantedName) {
+        return true;
+      }
+
+      // 4. Multi-word name containment: all wanted words appear as standalone words in token
+      if (wantedWords.length >= 2 && wantedWords.every(w => tokenWords.includes(w))) {
         return true;
       }
     }
 
-    // 5) Rows such as "AB - Ashok Kumar" / "Ashok Kumar (AB)".
-    if (wantedCompact && actualCompact.includes(wantedCompact)) return true;
-    if (wantedName && actualName.includes(wantedName)) return true;
-
     return false;
+  }
+
+  hasTeacherClash(entry: TimetableEntry): boolean {
+    if (!entry.dayOfWeek || !entry.startTime || !entry.endTime) return false;
+    const startA = this.timeToMinutes(entry.startTime);
+    const endA = this.timeToMinutes(entry.endTime);
+    if (startA < 0 || endA <= startA) return false;
+
+    return this.teacherEntries.some(other => {
+      if (other === entry || (entry.id && other.id && entry.id === other.id)) return false;
+      if (other.dayOfWeek !== entry.dayOfWeek) return false;
+      const startB = this.timeToMinutes(other.startTime);
+      const endB = this.timeToMinutes(other.endTime);
+      if (startB < 0 || endB <= startB) return false;
+
+      // Check if time intervals overlap
+      const overlaps = startA < endB && endA > startB;
+      if (!overlaps) return false;
+
+      // Legitimate combined class across sections (same subject, start, end, and room)
+      const sameSubject = (entry.subject || '').trim().toLowerCase() === (other.subject || '').trim().toLowerCase();
+      const sameTimes = startA === startB && endA === endB;
+      const sameRoom = !(entry.room && other.room) || (entry.room.trim().toLowerCase() === other.room.trim().toLowerCase());
+
+      if (sameSubject && sameTimes && sameRoom) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private calculateTeacherClashes(): void {
+    const clashing = this.teacherEntries.filter(e => this.hasTeacherClash(e));
+    this.teacherClashesCount = clashing.length;
   }
 
   duration(entry: TimetableEntry): string {
@@ -1312,8 +1368,11 @@ export class TimetableComponent implements OnInit {
   downloadTemplate(): void {
 
     const csv =
-      'section,dayOfWeek,subject,startTime,endTime,faculty,room,practical\n' +
-      'YOUR_CLASS,Monday,SUBJECT,09:00,10:00,FACULTY,ROOM,false';
+      'department,branch,semester,section,dayOfWeek,subject,startTime,endTime,faculty,room,practical\n' +
+      'Computer Science And Engineering,IT,5,CA1,Monday,Cloud Computing,09:00,10:00,Dr. Deepak Gupta,Room 401,false\n' +
+      'Computer Science And Engineering,IT,5,CA2,Monday,Cloud Computing,09:00,10:00,Dr. Deepak Gupta,Room 401,false\n' +
+      'Computer Science And Engineering,IT,5,CA1,Tuesday,Web Development Lab,14:00,16:00,ML,Lab 3,true\n' +
+      'Computer Science And Engineering,IT,5,CA2,Tuesday,Data Structures Lab,14:00,16:00,AB,Lab 4,true';
 
     const blob = new Blob(
       [csv],
@@ -1400,17 +1459,20 @@ export class TimetableComponent implements OnInit {
           const cells = this.parseCsvLine(line);
 
           const val = (name: string) =>
-            cells[idx(name)] || '';
+            (cells[idx(name)] || '').trim();
 
           const section = val('section').toUpperCase();
           const day = val('dayofweek');
 
-          const startTime = val('starttime');
-          const endTime = val('endtime');
+          let startTime = val('starttime');
+          let endTime = val('endtime');
+
+          if (/^\d:\d{2}$/.test(startTime)) startTime = '0' + startTime;
+          if (/^\d:\d{2}$/.test(endTime)) endTime = '0' + endTime;
 
           if (!section || section.length > 10) {
             throw new Error(
-              `Row ${rowIndex + 2}: enter a valid class/section.`
+              `Row ${rowIndex + 2}: enter a valid class/section (max 10 characters).`
             );
           }
 
@@ -1431,15 +1493,21 @@ export class TimetableComponent implements OnInit {
             startTime >= endTime
           ) {
             throw new Error(
-              `Row ${rowIndex + 2}: check the subject and start/end time.`
+              `Row ${rowIndex + 2}: check the subject and start/end time (${startTime} - ${endTime}).`
             );
           }
 
+          const department = val('department') || this.selectedDepartment || 'Computer Science And Engineering';
+          const branch = val('branch') || this.selectedBranch || 'IT';
+          const semester = val('semester') ? Number(val('semester')) : (this.selectedSemester || 5);
+          const sectionGroup = val('sectiongroup') || (section.replace(/\d+$/, '') || section);
+
           return {
-            department: this.selectedDepartment,
-            branch: this.selectedBranch,
-            semester: this.selectedSemester,
+            department,
+            branch,
+            semester,
             section,
+            sectionGroup,
 
             dayOfWeek: this.days.find(
               d => d.toLowerCase() === day.toLowerCase()
@@ -1510,11 +1578,11 @@ export class TimetableComponent implements OnInit {
       return;
     }
 
-    if (
-      !confirm(
-        `Add ${this.importPreview.length} timetable entries to the database? Existing entries will not be deleted.`
-      )
-    ) {
+    const confirmMessage = this.importMode === 'overwrite'
+      ? `OVERWRITE MODE: This will replace all existing timetable entries for the imported section(s). Are you sure?`
+      : `Add/update ${this.importPreview.length} timetable entries? Merge mode will update matching class slots and preserve other entries.`;
+
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -1531,10 +1599,6 @@ export class TimetableComponent implements OnInit {
       // ============================================================
       // 1. GROUP TEACHER ASSIGNMENTS BY FACULTY CODE
       // ============================================================
-      // Different teachers can be synced in parallel. Entries of the
-      // same teacher stay sequential because TeacherService updates the
-      // teacher's teachingAssignments JSON and parallel writes could
-      // otherwise overwrite each other.
       const teacherGroups = new Map<string, TimetableEntry[]>();
 
       for (const entry of this.importPreview) {
@@ -1568,7 +1632,6 @@ export class TimetableComponent implements OnInit {
 
         await Promise.all(
           teacherJobs.map(async entries => {
-            // Same teacher -> sequential, different teachers -> parallel.
             for (const entry of entries) {
               await this.syncTeacherForTimetable(
                 entry,
@@ -1591,39 +1654,22 @@ export class TimetableComponent implements OnInit {
       }
 
       // ============================================================
-      // 3. SAVE TIMETABLE ROWS IN SMALL PARALLEL BATCHES
+      // 3. ATOMIC BULK UPSERT / OVERWRITE VIA BACKEND API
       // ============================================================
-      // Instead of waiting for every request one-by-one, 10 rows are
-      // sent together. This keeps the browser/backend stable while
-      // removing most of the unnecessary network waiting time.
       this.importStage = 'Saving timetable';
-      this.importMessage = 'Saving timetable classes...';
+      this.importMessage = `Saving timetable classes via safe ${this.importMode}...`;
       this.cdr.detectChanges();
 
       const entries = [...this.importPreview];
-      // Keep the exact sections from this import so the timetable view can
-      // switch to the imported classes after the database writes complete.
       const importedSections = [...new Set(
         entries.map(entry => (entry.section || '').trim().toUpperCase()).filter(Boolean)
       )].sort();
-      const BATCH_SIZE = 10;
 
-      for (let start = 0; start < entries.length; start += BATCH_SIZE) {
-        const batch = entries.slice(start, start + BATCH_SIZE);
-
-        await Promise.all(
-          batch.map(entry =>
-            firstValueFrom(this.service.create(entry))
-          )
-        );
-
-        saved += batch.length;
-        this.importProgress =
-          30 + Math.round((saved / entries.length) * 70);
-        this.importMessage =
-          `Saving timetable classes... ${saved}/${entries.length}`;
-        this.cdr.detectChanges();
-      }
+      const savedEntries = await firstValueFrom(this.service.bulkUpsert(entries, this.importMode));
+      saved = savedEntries.length;
+      this.importProgress = 100;
+      this.importMessage = `Successfully saved ${saved}/${entries.length} classes.`;
+      this.cdr.detectChanges();
 
       // ============================================================
       // 4. IMPORT COMPLETE
